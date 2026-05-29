@@ -19,10 +19,11 @@ import pyarrow.parquet as pq
 ARQUIVO_PARQUET = r"C:\enem_analise\dados_processados\enem_completo_2019_2024_.parquet"
 
 # Credenciais do Supabase (já preenchidas, exceto a senha)
+# Se o pooler estiver em modo read-only, use a conexão direta (host = [project-ref].supabase.co)
 SUPABASE_HOST = "aws-1-us-east-2.pooler.supabase.com"
 SUPABASE_PORT = "6543"
 SUPABASE_DB   = "postgres"
-SUPABASE_USER = "postgres.txfdpmelppfibftwwcty"
+SUPABASE_USER = "postgres.nksajuzoidcvwklxaxns"
 SUPABASE_PASS = "s@Ms@R@28mai"  # <-- DIGITE SUA SENHA AQUI
 
 # Tamanho do batch para inserção (número de linhas)
