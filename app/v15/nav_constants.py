@@ -1,0 +1,24 @@
+"""Constantes de navegação — hub e drill-down territorial."""
+
+_NIVEL_TERRITORIO_ESTADO = "Estado (visão CREs)"
+_NIVEL_TERRITORIO_CRE = "CRE"
+_NIVEL_TERRITORIO_MUN = "Município"
+_NIVEL_TERRITORIO_ESC = "Escola (2024)"
+_NIVEIS_TERRITORIO = (
+    _NIVEL_TERRITORIO_ESTADO,
+    _NIVEL_TERRITORIO_CRE,
+    _NIVEL_TERRITORIO_MUN,
+    _NIVEL_TERRITORIO_ESC,
+)
+
+_SUBABA_PANORAMA = "Participação"
+_SUBABA_DESEMPENHO = "Desempenho"
+_SUBABA_TERRITORIO = "Território"
+_SUBABA_NACIONAL = "Nacional"
+_SUBABA_HUB = "__hub__"
+_SUBABAS_GESTAO = (
+    _SUBABA_PANORAMA,
+    _SUBABA_DESEMPENHO,
+    _SUBABA_TERRITORIO,
+    _SUBABA_NACIONAL,
+)

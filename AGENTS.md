@@ -8,8 +8,9 @@ Single Python **Streamlit** app: ENEM 2019–2024 analytics for Mato Grosso do S
 
 | Mode | Entry | Data |
 |------|--------|------|
-| **Supabase (recommended in cloud)** | `dashboard_enem_supabase.py` | Pre-aggregated tables on hosted PostgreSQL |
-| **Local files** | `dashboard_enem_v14.py` (and dated variants) | Large local `.parquet` + optional `cres.xlsx` — paths in those files are **Windows** and must be edited before use |
+| **Local (recommended)** | `dashboard.py` | Pre-aggregated parquet in `data/agregados/` via `dados_agregados_loader.py` |
+| **Supabase (cloud)** | `dashboard_enem_supabase.py` | Pre-aggregated tables on hosted PostgreSQL |
+| **Full BI (local/Supabase)** | `dashboard_enem_v15.py` | Hub denso, boxplots, histogramas — same aggregates |
 
 `cres.xlsx` / `cres__.xlsx` live at repo root for local/ETL use. The multi-GB ENEM parquet is **not** in the repo.
 
@@ -31,6 +32,52 @@ python3 -m venv .venv
 ```
 
 `importar_supabase.py` uses `tqdm`, which is not in `requirements.txt` — only needed for bulk ETL imports.
+
+### Run the app (local path)
+
+Reads `data/agregados/*.parquet` by default (`DATA_SOURCE=local`). Override folder with `PASTA_AGREGADOS`.
+
+```bash
+.venv/bin/streamlit run dashboard.py --server.headless true
+```
+
+```bash
+.venv/bin/streamlit run dashboard_enem_v15.py --server.headless true
+```
+
+### Refatoração v15 (`app/v15/`)
+
+Modularização incremental do monolito (layout inalterado):
+
+| Fase | Módulo | Conteúdo |
+|------|--------|----------|
+| 1 ✅ | `app/v15/theme.py`, `styles.py` | Constantes + ~1100 linhas CSS |
+| 2 ✅ | `app/v15/formatting.py`, `ui.py`, `paths.py` | fmt_*, render HTML, logo |
+| 3a ✅ | `app/v15/plotly_theme.py` | aplicar_tema, _hex_rgba, _legenda_padrao |
+| 3b ✅ | `app/v15/boxplots.py`, `hub_charts.py` | boxplots, hover, eixos/legendas hub, _fechar_fig_hub |
+| 4 ✅ | `app/v15/pages/` | aba_* (wrappers + `*_body.py`; helpers ainda no monolito) |
+| 5a ✅ | `nav_constants`, `constants`, `components`, `classifiers`, `charts_render`, `runtime` | helpers UI/classificação/render; wrappers usam `page_globals` |
+| 5b ✅ | `paths`, `participation`, `ms_enrich`, `concluintes_data`, `territory_data`, `charts/hub` | dados territoriais + gráficos hub; monolito ~1.8k após 5c |
+| 5c ✅ | `charts/detail` | figuras das abas detalhe (histogramas, rankings, evolução, boxplots) |
+| 5d ✅ | `page_helpers`, `page_imports`, páginas sem `exec` | helpers compartilhados + funções Python normais nos `*_body.py` |
+
+Reparar módulos 5b corrompidos: `python scripts/recover_phase5b.py` (fonte: monolito em `git HEAD`)
+
+Regenerar páginas 5d: `python scripts/phase5d_from_git.py` (fonte: monolito em `git HEAD`)
+
+Reextrair fase 5c: `python scripts/extract_v15_phase5c.py` + `python scripts/patch_v15_phase5c.py`
+
+**Não** rodar `extract_v15_phase5b.py` / `patch_v15_phase5b.py` no monolito atual (~1.1k linhas): marcadores de linha desatualizados; use `recover_phase5b.py`.
+
+`page_imports.py` define `__all__` para que `from app.v15.page_imports import *` nos `*_body.py` exporte símbolos com prefixo `_` (ex.: `_render_hub_panorama`).
+
+Reextrair após editar helpers da fase 5: `python scripts/extract_v15_phase5.py` + `python scripts/patch_v15_phase5.py`
+
+Reparar wrappers de página: `python scripts/fix_v15_phase5_pages.py`
+
+Reextrair boxplots/hub após editar no monolito: `python scripts/extract_v15_phase3b.py` + `python scripts/patch_v15_phase3b.py`
+
+Páginas (fase 4): corpos em `app/v15/pages/*_body.py`; reparar wrappers com `python scripts/fix_v15_phase4_pages.py`
 
 ### Run the app (Supabase path)
 
