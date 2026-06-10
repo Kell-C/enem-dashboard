@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mock · Painel ENEM MS — temporal + drill-down</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="mock_data.js"></script>
+<style>
+  :root{
+    --bg-app:#DCE3EC; --bg-card:#FFFFFF; --bg-subtle:#E8EDF3; --insight:#F1F5F9;
+    --txt:#0F172A; --txt2:#334155; --muted:#475569; --borda:#B8C4D4;
+    --azul:#0A4D8C; --azul-esc:#053B71; --azul-sed:#1B7FD6; --azul-claro:#3BA4E8;
+    --verde:#2EAD6E; --laranja:#F07A28; --dourado:#F2C230; --critico:#D6453D; --brasil:#7B8794;
+    --radius:12px; --shadow:0 1px 3px rgba(8,30,60,.08),0 4px 18px rgba(8,30,60,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg-app);color:var(--txt);
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;font-size:14px}
+  .wrap{max-width:1320px;margin:0 auto;padding:18px 22px 60px}
+
+  .cab{background:linear-gradient(135deg,#0A4D8C 0%,#053B71 100%);border-radius:16px;
+    padding:18px 24px;color:#fff;box-shadow:var(--shadow)}
+  .cab-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .cab h1{margin:0;font-size:22px;letter-spacing:.2px}
+  .cab .sub{margin:2px 0 0;font-size:13px;color:#CADBF0}
+  .cohort{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pill{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);
+    border-radius:999px;padding:6px 12px;font-size:12px;color:#fff;display:flex;gap:8px;align-items:center}
+  .pill select{background:transparent;border:none;color:#fff;font-size:12px;font-weight:600;outline:none}
+  .pill select option{color:#0F172A}
+  .refbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;
+    background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:8px 14px}
+  .refbar .tag{background:var(--dourado);color:#3a2c00;font-weight:700;font-size:11px;
+    padding:3px 9px;border-radius:6px;text-transform:uppercase;letter-spacing:.4px}
+  .refbar .it{font-size:12.5px;color:#EaF1Fb} .refbar .sep{color:#7FA8D6}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px}
+  .kpi{background:var(--bg-card);border:1px solid var(--borda);border-radius:var(--radius);
+    padding:14px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--azul)}
+  .kpi.neg::before{background:var(--critico)}
+  .kpi .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0 0 6px;display:flex;align-items:center;gap:5px}
+  .kpi .rowv{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+  .kpi .val{font-size:25px;font-weight:800;color:var(--azul-esc);line-height:1}
+  .kpi .spark{width:96px;height:34px}
+  .kpi .vsub{font-size:11px;color:var(--muted);margin-top:7px}
+  .trend{font-weight:700} .trend.up{color:var(--verde)} .trend.down{color:var(--critico)}
+  .funil{margin-top:16px;background:var(--bg-card);border:1px solid var(--borda);border-radius:var(--radius);padding:12px 18px 14px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .funil .fl{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .funil .fh{font-weight:700;color:var(--azul);font-size:14px}
+  .funil .fsub{font-size:11.5px;color:var(--muted)}
+  .fstages{display:flex;align-items:stretch;flex-wrap:wrap;margin-top:8px}
+  .fstage{flex:1;min-width:150px;padding:4px 14px;position:relative}
+  .fstage+.fstage{border-left:1px dashed var(--borda)}
+  .fstage .fv{font-size:23px;font-weight:800;color:var(--azul-esc);line-height:1}
+  .fstage .fk{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+  .fstage .fp{font-size:12px;font-weight:700;color:var(--brasil);margin-top:3px}
+  .fstage.hl .fv{color:var(--azul-sed)} .fstage.hl .fp{color:var(--verde)}
+
+  .sech{display:flex;align-items:center;gap:10px;margin:22px 2px 10px}
+  .sech h2{margin:0;font-size:15px;color:var(--azul);font-weight:700}
+  .sech .hint{font-size:12px;color:var(--muted)}
+  .sech .line{flex:1;height:1px;background:var(--borda)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid2u{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
+  .card{background:var(--bg-card);border:1px solid var(--borda);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:14px 16px}
+  .card h3{margin:0;font-size:14px;color:var(--txt);font-weight:700;display:flex;align-items:center;gap:6px}
+  .card .coh{font-size:11px;color:var(--muted);margin:3px 0 8px;display:flex;gap:6px;align-items:center}
+  .card .coh .dot{width:7px;height:7px;border-radius:50%;background:var(--azul)}
+  .card .nota{font-size:11px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--borda);padding-top:7px}
+  .plot{width:100%}
+
+  /* tooltip "como ler" */
+  .help{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;
+    background:var(--bg-subtle);color:var(--muted);font-size:10px;font-weight:800;cursor:help;position:relative;border:1px solid var(--borda)}
+  .help:hover .tip{display:block}
+  .tip{display:none;position:absolute;z-index:30;top:20px;left:50%;transform:translateX(-50%);
+    width:248px;background:#0F172A;color:#EAF1FB;font-size:11px;font-weight:400;line-height:1.45;
+    padding:9px 11px;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.25);text-transform:none;letter-spacing:0}
+  .tip b{color:#fff}
+
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--txt2);margin-top:4px}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .sw{width:12px;height:3px;border-radius:2px;display:inline-block} .sw.box{height:11px;width:11px;border-radius:3px}
+
+  /* drill-down */
+  .crow{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:6px}
+  .ctile{border:1px solid var(--borda);border-radius:9px;padding:6px 8px 2px;cursor:pointer;background:var(--bg-card);transition:.12s}
+  .ctile:hover{border-color:var(--azul-sed);box-shadow:0 2px 10px rgba(10,77,140,.12)}
+  .ctile.sel{border-color:var(--azul);box-shadow:0 0 0 2px rgba(10,77,140,.18)}
+  .ctile .ct{font-size:11px;font-weight:600;color:var(--txt2);display:flex;justify-content:space-between}
+  .ctile .ct .arr{font-weight:800}
+
+  .bread{display:flex;align-items:center;gap:8px;font-size:13px;margin:2px 0 4px;flex-wrap:wrap}
+  .bread .crumb{padding:4px 10px;border-radius:7px;background:var(--bg-subtle);color:var(--azul);font-weight:600;cursor:pointer}
+  .bread .crumb.active{background:var(--azul);color:#fff;cursor:default}
+  .bread .sepc{color:var(--muted)}
+
+  .areagrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px 12px;margin-top:6px}
+  .atile{border:1px solid var(--bg-subtle);border-radius:8px;padding:5px 7px 2px}
+  .atile.warn{border-color:var(--critico);background:rgba(214,69,61,.045)}
+  .atile .at{font-size:11px;font-weight:700;color:var(--txt2);display:flex;justify-content:space-between}
+  .atile .at .fl{font-size:9px;font-weight:800}
+
+  .attbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+  .attbl th{text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.3px;
+    border-bottom:1.5px solid var(--borda);padding:5px 7px;position:sticky;top:0;background:#fff}
+  .attbl td{padding:6px 7px;border-bottom:1px solid var(--bg-subtle)}
+  .attbl th:nth-child(n+3),.attbl td:nth-child(n+3){text-align:center}
+  .attbl td.bad{color:var(--critico);font-weight:800} .attbl td.ok{color:var(--verde);font-weight:700}
+  .attbl tbody tr:hover{background:var(--insight)}
+  .scroll{max-height:330px;overflow:auto}
+  .muted{color:var(--muted)} .b{font-weight:700}
+
+  details.more{margin-top:16px}
+  details.more>summary{cursor:pointer;list-style:none;background:var(--bg-card);border:1px solid var(--borda);
+    border-radius:10px;padding:10px 14px;font-weight:600;color:var(--azul);box-shadow:var(--shadow);display:flex;align-items:center;gap:8px}
+  details.more>summary::-webkit-details-marker{display:none}
+  details.more>summary .chev{transition:transform .2s} details.more[open]>summary .chev{transform:rotate(90deg)}
+  .footer{margin-top:26px;font-size:11px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="cab">
+    <div class="cab-top">
+      <div>
+        <h1>Painel ENEM · Mato Grosso do Sul</h1>
+        <p class="sub">Evolução de desempenho e participação · Coordenadoria do Ensino Médio — SED/MS · 2019–2024</p>
+      </div>
+      <div class="cohort">
+        <span class="pill">Período <select><option>2019–2024</option><option>2022–2024</option></select></span>
+        <span class="pill">Comparar com <select><option>Brasil — rede estadual</option><option>Brasil — todas as redes</option></select></span>
+        <span class="pill">Rede <select><option>Estadual</option><option>Todas as redes</option><option>Federal</option><option>Privada</option></select></span>
+      </div>
+    </div>
+    <div class="refbar">
+      <span class="tag">População de referência</span>
+      <span class="it">Prováveis concluintes do EM (3º ano) · presentes nos 2 dias · não eliminados
+        <span class="help">i<span class="tip"><b>Concluinte</b> = estudante cursando o 3º ano e concluindo o EM no ano da edição. <b>2019–2023:</b> identificado pela autodeclaração do participante (<code>TP_ST_CONCLUSAO = 2</code>), <b>sem egressos</b>. <b>2024:</b> o INEP não divulga a autodeclaração por escola, mas vincula cada participante à sua escola cruzando o <b>CPF com a matrícula no Censo Escolar</b>, filtrando as etapas de <b>prováveis concluintes do EM</b> (3º ano / séries finais). Assim, <b>todo participante com escola identificada em 2024 é um provável concluinte</b> — e os recortes por escola/município/CRE, bem como as comparações por rede entre MS, demais UFs e Brasil, já consideram <b>apenas essa população de referência</b> (presentes nos 2 dias, não eliminados). O denominador da participação continua sendo a matrícula de concluintes (Censo SED/MS).</span></span></span>
+      <span class="sep">·</span><span class="it"><b>Mesma população de referência</b> em MS, demais UFs e Brasil (2024 via vínculo Censo)</span>
+      <span class="sep">·</span><span class="it">Participação efetiva = presentes ÷ concluintes</span>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi">
+      <p class="lbl">Média geral · estadual <span class="help">i<span class="tip"><b>O que é:</b> média das 5 notas (CN, CH, LC, MT, Redação) dos concluintes presentes. <b>Como ler:</b> o número é 2024; a mini-linha mostra a trajetória 2019–2024. Subir é melhor.</span></span></p>
+      <div class="rowv"><div class="val">513,2</div><div id="s_media" class="spark"></div></div>
+      <div class="vsub">2024 · <span class="trend up">▲ +8,3</span> vs 2019 · pico 515,6 em 2022</div>
+    </div>
+    <div class="kpi">
+      <p class="lbl">Participação efetiva <span class="help">i<span class="tip"><b>O que é:</b> presentes nos 2 dias ÷ <b>concluintes</b> do EM (não os inscritos). Mede quantos concluintes a rede leva à prova. <b>Como ler:</b> o vale de 2020–2021 é a pandemia.</span></span></p>
+      <div class="rowv"><div class="val">52,4%</div><div id="s_part" class="spark"></div></div>
+      <div class="vsub" id="kpiPartSub">2024 · <span class="trend up">▲ recuperada</span> após vale de 20% (2020)</div>
+    </div>
+    <div class="kpi">
+      <p class="lbl">Posição nacional <span class="help">i<span class="tip"><b>O que é:</b> posição de MS entre as 27 redes estaduais, pela média geral. <b>Como ler:</b> 1º = melhor; a linha cai quando MS perde posições.</span></span></p>
+      <div class="rowv"><div class="val">12º<span style="font-size:14px;color:var(--muted)">/27</span></div><div id="s_rank" class="spark"></div></div>
+      <div class="vsub">2024 · <span class="trend up">▲ subiu 2</span> desde 2023 (14º)</div>
+    </div>
+    <div class="kpi neg">
+      <p class="lbl">Defasagem vs Brasil <span class="help">i<span class="tip"><b>O que é:</b> média de MS menos média do Brasil <b>na mesma população</b> (rede estadual). <b>Como ler:</b> negativo = abaixo do Brasil; aproximar-se de zero é melhor.</span></span></p>
+      <div class="rowv"><div class="val" style="color:var(--critico)">−3,3</div><div id="s_gap" class="spark"></div></div>
+      <div class="vsub">2024 · <span class="trend up">▲ reduziu</span> (era −7,3 em 2022)</div>
+    </div>
+  </div>
+
+  <!-- FUNIL 2024 -->
+  <div class="funil">
+    <div class="fl">
+      <span class="fh">Funil de 2024 · rede estadual</span>
+      <span class="help">i<span class="tip"><b>O que é:</b> do universo de <b>concluintes do EM</b> (matrícula da rede) até os participantes efetivos. A <b>participação efetiva</b> = participantes efetivos (presentes nos 2 dias, não eliminados) ÷ concluintes. Fonte: microdados de participantes ENEM 2024 + matrícula SED/MS.</span></span>
+      <span class="fsub">extraído dos microdados de participantes de 2024</span>
+    </div>
+    <div class="fstages" id="fstages"></div>
+  </div>
+
+  <!-- ÂNCORAS TEMPORAIS -->
+  <div class="sech"><h2>Trajetória 2019–2024</h2><span class="hint">Como desempenho e participação evoluíram juntos · rede estadual</span><span class="line"></span></div>
+  <div class="grid2u">
+    <div class="card">
+      <h3>Trajetória conjunta · participação × desempenho
+        <span class="help">i<span class="tip"><b>Como ler:</b> cada bolinha é um ano; a posição horizontal é a participação, a vertical é a média. A seta aponta de 2019 a 2024. <b>Ideal:</b> caminhar para cima e para a direita (mais alunos e melhores notas).</span></span></h3>
+      <div class="coh"><span class="dot"></span> Cada ponto = um ano · seta = sentido 2019 → 2024</div>
+      <div id="g_traj" class="plot"></div>
+      <div class="nota">O vale 2020–2021 derrubou a participação pela metade; 2024 recupera a adesão mantendo o desempenho.</div>
+    </div>
+    <div class="card">
+      <h3>Evolução por área · índice 2019 = 100
+        <span class="help">i<span class="tip"><b>Por que indexar:</b> as áreas têm médias muito diferentes (Redação ~600, CN ~470). Pondo todas em 100 no ano-base, comparamos o <b>ritmo</b> de crescimento, não o nível. <b>Acima de 100</b> = cresceu desde 2019.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Ritmo de cada componente em base comparável</div>
+      <div id="g_index" class="plot"></div>
+      <div class="nota">Redação cresce mais; Linguagens sofreu choque em 2021; Matemática é a mais estagnada.</div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:16px">
+    <div class="card">
+      <h3>Posição de MS entre as UFs ao longo do tempo
+        <span class="help">i<span class="tip"><b>Bump chart:</b> mostra a posição relativa, não a nota. <b>Como ler:</b> a linha sobe quando MS ultrapassa estados; cai quando é ultrapassado. A média absoluta pode subir e a posição cair ao mesmo tempo.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Rede estadual · 1º = melhor · entre 27 UFs</div>
+      <div id="g_bump" class="plot"></div>
+      <div class="nota">MS caiu de 10º (2019) para 14º (2023) e reagiu para 12º (2024).</div>
+    </div>
+    <div class="card">
+      <h3>Média geral · MS × Brasil estadual
+        <span class="help">i<span class="tip"><b>Como ler:</b> linha cheia = MS, pontilhada = Brasil (mesma população). A distância vertical entre elas é a defasagem. A faixa cinza marca a pandemia — variações ali devem ser lidas com cautela.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Faixa cinza = anos de pandemia (leitura cautelosa)</div>
+      <div id="g_evol" class="plot"></div>
+      <div class="nota">A defasagem abriu em 2022 (−7,3) e vem se fechando (−3,3 em 2024).</div>
+    </div>
+  </div>
+
+  <!-- COMPARAÇÃO ENTRE REDES (MS) -->
+  <div class="sech"><h2>Comparação entre redes de MS</h2>
+    <span class="hint">Mesma população (concluintes presentes, não eliminados) · redes do estado de MS</span><span class="line"></span></div>
+  <div class="grid2" style="margin-top:4px">
+    <div class="card">
+      <h3>Média geral por rede de MS · 2019–2024
+        <span class="help">i<span class="tip"><b>Como ler:</b> cada linha é uma rede dentro de MS (Estadual, Municipal, Federal, Privada), na mesma população de referência. A <b>linha azul grossa</b> é a rede estadual (foco do painel). Quanto mais alto, melhor. <b>Atenção:</b> a rede municipal de MS tem pouquíssimos alunos por ano (≈9–26) → leitura cautelosa.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Azul grosso = estadual (foco) · demais = outras redes de MS</div>
+      <div id="g_redes" class="plot"></div>
+      <div class="nota">Privada e Federal de MS partem de patamar mais alto; a municipal tem N muito pequeno (linha tracejada) e oscila bastante.</div>
+    </div>
+    <div class="card">
+      <h3>Distância por área · estadual − outras redes de MS (2024)
+        <span class="help">i<span class="tip"><b>Como ler:</b> barras agrupadas por área mostram a diferença entre a rede estadual de MS e cada outra rede de MS em 2024. <b>Negativo (abaixo de zero)</b> = estadual abaixo da rede; positivo = acima. Cor = rede.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Estadual menos a outra rede de MS · abaixo de zero = estadual atrás</div>
+      <div id="g_redegap" class="plot"></div>
+      <div class="nota">A maior distância está ante a rede privada de MS; ante a municipal a comparação é frágil pelo N pequeno.</div>
+    </div>
+  </div>
+
+  <!-- INTEGRIDADE / QUALIDADE DA PARTICIPACAO -->
+  <div class="sech"><h2>Integridade &amp; qualidade da participação</h2>
+    <span class="hint">Eliminados, notas zeradas e sem nota · por edição, área, rede e território</span><span class="line"></span></div>
+
+  <div class="grid2" style="margin-top:4px">
+    <div class="card">
+      <h3>Eliminados por edição
+        <span class="help">i<span class="tip"><b>O que é:</b> candidatos eliminados em alguma área (presença = 2) ou na redação (status = 4). <b>Como ler:</b> barras empilhadas por motivo (CN/CH/LC/MT + redação). A linha vermelha = taxa de eliminação sobre o compareceu (%). Quanto menor, melhor. <b>Atenção:</b> eliminação na redação costuma ser o vetor dominante.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Barras = eliminados absolutos · linha = % do compareceu · seletor de rede abaixo</div>
+      <div id="g_integ_elim" class="plot"></div>
+      <div class="legend" style="margin-top:6px">
+        <span><span class="sw" style="background:#E74C3C"></span> Redação (elim.)</span>
+        <span><span class="sw" style="background:#9B59B6"></span> CN</span>
+        <span><span class="sw" style="background:#3498DB"></span> CH</span>
+        <span><span class="sw" style="background:#1ABC9C"></span> LC</span>
+        <span><span class="sw" style="background:#F1C40F"></span> MT</span>
+      </div>
+      <div class="nota">A redação é o principal vetor de eliminação (falta de assinatura, cópia, tema fuga etc.). Áreas objetivas raramente eliminam.</div>
+    </div>
+    <div class="card">
+      <h3>Comparação entre redes · eliminação e sem nota (2024)
+        <span class="help">i<span class="tip"><b>Como ler:</b> barras agrupadas. <b>Vermelho</b> = taxa de eliminação (% do compareceu); <b>azul</b> = taxa de sem nota na redação (% dos presentes efetivos). A municipal de MS tem N muito pequeno — leitura cautelosa.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Vermelho = eliminados · azul = sem nota na redação · 2024</div>
+      <div id="g_integ_comp" class="plot"></div>
+      <div class="nota">Brasil estadual serve de referência. MS estadual está próximo ou levemente abaixo da média nacional em eliminação.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>Pontos de atencao · CREs e municipios (2019-2024)
+      <span class="help">i<span class="tip"><b>Como ler:</b> tabela ordenada pelo maior risco (taxa de eliminacao). <b>Vermelho</b> = taxa acima da media estadual; <b>laranja</b> = taxa de sem nota acima da media. <b>Elim. multipla</b> = eliminados em 2+ areas objetivas; <b>Zeros multiplo</b> = zeros em 2+ areas; <b>Sem nota multipla</b> = sem nota em 2+ areas. <b>Clique</b> numa CRE para ver os municipios; clique num municipio para ver as escolas (2024).</span></span></h3>
+    <div class="coh"><span class="dot"></span> Ordenado por taxa de eliminação · clique CRE → municípios · clique município → escolas</div>
+    <div id="g_integ_table" class="plot"></div>
+  </div>
+
+  <!-- DRILL-DOWN TERRITORIAL -->
+  <div class="sech"><h2>Detalhamento territorial — clique para explorar</h2>
+    <span class="hint">Coordenadoria → Município → Escola (escola só 2024)</span><span class="line"></span></div>
+
+  <div class="bread" id="bread"></div>
+
+  <!-- Passo 1: CREs -->
+  <div class="card">
+    <h3>Coordenadorias (CRE) · evolução participação × desempenho
+      <span class="help">i<span class="tip"><b>Como ler:</b> cada quadro é uma CRE. A linha liga 2019→2024 (participação no eixo X, média no Y). O ponto cheio é 2024: <b>verde</b> se a média subiu vs 2019, <b>vermelho</b> se caiu. <b>Clique</b> numa CRE para ver os municípios.</span></span></h3>
+    <div class="coh"><span class="dot"></span> Clique numa CRE para abrir os municípios · ● = 2024</div>
+    <div id="creRow" class="crow"></div>
+    <div class="legend" style="margin-top:10px">
+      <span><span class="sw" style="background:var(--azul)"></span> trajetória</span>
+      <span><span class="sw box" style="background:var(--verde)"></span> 2024 ≥ 2019 (avanço)</span>
+      <span><span class="sw box" style="background:var(--critico)"></span> 2024 &lt; 2019 (recuo)</span>
+    </div>
+  </div>
+
+  <!-- Passo 1b: evolução por área da CRE selecionada -->
+  <div class="card" id="creAreaCard" style="margin-top:16px;display:none">
+    <h3 id="creAreaTitle">Evolução por área · <span></span>
+      <span class="help">i<span class="tip"><b>Como ler:</b> uma mini-série por área (CN, CH, LC, MT, Redação). A linha colorida (cor da área) = a CRE; a pontilhada cinza = MS estadual (referência). Painel com <b>borda vermelha</b> = a CRE está abaixo de MS naquela área em 2024 → ponto de atenção.</span></span></h3>
+    <div class="coh"><span class="dot"></span> Linha colorida = CRE (cor da área) · pontilhado cinza = MS estadual · borda vermelha = abaixo de MS (2024)</div>
+    <div id="creAreas" class="areagrid"></div>
+  </div>
+
+  <!-- Passo 2: municípios -->
+  <div class="grid2" id="munRow" style="margin-top:16px;display:none">
+    <div class="card">
+      <h3 id="munTitle">Municípios · participação × desempenho (2024)
+        <span class="help">i<span class="tip"><b>Como ler:</b> cada bolha é um município da CRE. X = participação efetiva, Y = média geral, <b>tamanho</b> = nº de concluintes (peso do município). Bolhas no canto inferior-esquerdo (vermelhas) são prioridade. <b>Clique</b> numa bolha para ver as escolas.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Bolha = município · tamanho = concluintes · clique para abrir escolas</div>
+      <div id="g_mun" class="plot"></div>
+      <div class="nota" id="munNota"></div>
+    </div>
+    <div class="card">
+      <h3 id="munAttTitle">Atenção por área · municípios da CRE (2024)
+        <span class="help">i<span class="tip"><b>Como ler:</b> mapa de calor município × 5 áreas (CN, CH, LC, MT, Redação). Cor = desvio vs a média de MS na área. <b>Vermelho</b> = abaixo de MS (atenção). Ordena os municípios do mais frágil ao mais forte.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Desvio vs média MS · vermelho = abaixo · 5 áreas (inclui Redação)</div>
+      <div id="g_munheat" class="plot"></div>
+    </div>
+  </div>
+
+  <!-- Passo 3: escolas 2024 -->
+  <div class="card" id="escCard" style="margin-top:16px;display:none">
+    <h3 id="escTitle">Escolas · 2024
+      <span class="help">i<span class="tip"><b>Como ler:</b> uma linha por escola. Células em <b>vermelho</b> = abaixo da média de MS naquela área (atenção); verde = acima. <b>Part.</b> = nº de participantes presentes; <b>Tx</b> = participantes ÷ concluintes da escola. Disponível só para 2024. <b>População:</b> presentes nos 2 dias da rede estadual — em 2024 ainda inclui não-concluintes (a conclusão não é identificável por aluno).</span></span></h3>
+    <div class="coh"><span class="dot"></span> Rede estadual · presentes 2 dias (2024 inclui não-concluintes) · ordenado por menor média · célula vermelha = abaixo de MS na área</div>
+    <div class="scroll">
+      <table class="attbl">
+        <thead><tr><th>Escola</th><th>Concl.</th><th>Part.</th><th>Tx</th><th>CN</th><th>CH</th><th>LC</th><th>Mat.</th><th>Red.</th><th>Geral</th></tr></thead>
+        <tbody id="escBody"></tbody>
+      </table>
+    </div>
+    <div class="nota"><b>2024 com concluintes por escola:</b> taxa calculada cruzando participantes com <code>Concluintes EM 2019 a 2024.xlsx</code> (município + nome, ~83% de match). Escolas sem correspondência exibem "—" na taxa.</div>
+  </div>
+
+  <!-- SNAPSHOT recolhível -->
+  <details class="more">
+    <summary><span class="chev">▶</span> Recorte de um ano (snapshot) — comparações estáticas MS × Brasil × UFs</summary>
+    <div class="grid2" style="margin-top:14px">
+      <div class="card"><h3>MS × Brasil por área · 2024 (dumbbell)</h3>
+        <div class="coh"><span class="dot"></span> Distância = diferença MS − Brasil</div><div id="g_areas" class="plot"></div></div>
+      <div class="card"><h3>Ranking das UFs · 2023</h3>
+        <div class="coh"><span class="dot"></span> MS destacado · linha = média nacional</div><div id="g_ufrank" class="plot"></div></div>
+    </div>
+  </details>
+
+  <div class="footer">Protótipo (mock) · dados reais de <code>data/agregados/</code> + concluintes por escola · paleta SED/MS · temporal + drill-down</div>
+</div>
+
+<script>
+const C={azul:'#0A4D8C',azulEsc:'#053B71',brasil:'#7B8794',verde:'#2EAD6E',laranja:'#F07A28',
+  dourado:'#F2C230',critico:'#D6453D',roxo:'#6B4A9F',azulC:'#3BA4E8',muted:'#475569',borda:'#B8C4D4',subtle:'#E8EDF3'};
+const BL={paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#FFFFFF',
+  font:{family:'Segoe UI, system-ui, sans-serif',size:12,color:C.muted},margin:{l:46,r:14,t:8,b:34}};
+const CFG={displayModeBar:false,responsive:true};
+const ANOS=MOCK.anos;
+const MED_MS=[504.9,503.7,501.4,515.6,514.9,513.2];
+const MED_BR=[504.8,507.8,508.3,522.9,521.2,516.5];
+const TX_MS=[51.6,20.2,22.1,25.4,27.5,52.4];
+const RANK=[10,11,13,13,14,12];
+const GAP=MED_MS.map((v,i)=>+(v-MED_BR[i]).toFixed(1));
+const AREAKEYS=['CN','CH','LC','MT','RED'];
+const AREANOME={CN:'Ciências Nat.',CH:'Ciências Hum.',LC:'Linguagens',MT:'Matemática',RED:'Redação'};
+const ACOR={CN:C.verde,CH:C.dourado,LC:C.azulC,MT:C.critico,RED:C.roxo};
+const MS_AREA_2024={CN:469.6,CH:486.4,LC:505.3,MT:488.7,RED:610.1};
+const MS_GERAL_2024=513.2;
+
+function spark(id,vals,col,inv){Plotly.newPlot(id,[
+  {x:ANOS,y:vals,mode:'lines',line:{color:col,width:2},hoverinfo:'skip'},
+  {x:[ANOS[5]],y:[vals[5]],mode:'markers',marker:{color:col,size:5},hoverinfo:'skip'}],
+  {...BL,margin:{l:2,r:2,t:4,b:2},height:34,showlegend:false,xaxis:{visible:false},yaxis:{visible:false,autorange:inv?'reversed':true}},CFG);}
+spark('s_media',MED_MS,'#0A4D8C');spark('s_part',TX_MS,'#2EAD6E');spark('s_rank',RANK,'#F07A28',true);spark('s_gap',GAP,'#D6453D');
+const NF=n=>(n==null?'—':Number(n).toLocaleString('pt-BR'));
+/* dimensão absoluta no KPI de participação */
+(function(){const N=MOCK.estadualN[5],Cc=MOCK.estadualConcl[5];
+  document.getElementById('kpiPartSub').innerHTML='2024 · <b>'+NF(N)+'</b> participantes efetivos de <b>'+NF(Cc)+'</b> concluintes · <span class="trend up">▲ recuperada</span>';})();
+
+/* trajetória */
+(function(){const grad=['#9DC3E6','#6BA6DC','#3BA4E8','#1A6FB5','#0A4D8C','#053B71'];
+  Plotly.newPlot('g_traj',[{x:TX_MS,y:MED_MS,mode:'lines+markers+text',line:{color:'rgba(10,77,140,.45)',width:2},
+    marker:{size:ANOS.map(a=>a===2024?16:11),color:grad,line:{color:'#fff',width:1.5}},
+    text:ANOS.map(String),textposition:'bottom center',textfont:{size:10,color:C.muted},
+    customdata:MOCK.estadualN.map(n=>NF(n)),
+    hovertemplate:'<b>%{text}</b><br>Part.: %{x:.1f}% · %{customdata} participantes efetivos<br>Média: %{y:.1f}<extra></extra>'}],
+    {...BL,height:300,showlegend:false,
+     xaxis:{title:{text:'participação efetiva (% dos concluintes)',font:{size:10}},gridcolor:C.subtle,range:[15,58]},
+     yaxis:{title:{text:'média geral',font:{size:10}},gridcolor:C.subtle,range:[498,520]},
+     annotations:[{x:TX_MS[5],y:MED_MS[5],ax:TX_MS[4],ay:MED_MS[4],xref:'x',yref:'y',axref:'x',ayref:'y',showarrow:true,arrowhead:3,arrowsize:1.4,arrowwidth:2,arrowcolor:C.azulEsc}]},CFG);})();
+
+/* índice por área */
+(function(){const AS={CN:[458.5,470.3,461.1,470.7,474.3,469.6],CH:[490.6,491.0,488.1,501.2,503.1,486.4],LC:[509.1,512.4,477.1,493.0,501.5,505.3],MT:[496.4,494.0,498.4,502.9,498.1,488.7],RED:[565.8,546.2,577.6,601.7,590.8,610.1]};
+  const tr=AREAKEYS.map(k=>{const b=AS[k][0];return{x:ANOS,y:AS[k].map(v=>+(v/b*100).toFixed(1)),mode:'lines+markers',name:AREANOME[k],line:{color:ACOR[k],width:2.2},marker:{size:4},hovertemplate:AREANOME[k]+' %{x}<br>índice %{y:.1f}<extra></extra>'};});
+  Plotly.newPlot('g_index',tr,{...BL,height:300,legend:{orientation:'h',y:-0.22,font:{size:9.5}},xaxis:{dtick:1,gridcolor:'rgba(0,0,0,0)'},yaxis:{title:{text:'índice (2019=100)',font:{size:10}},gridcolor:C.subtle},shapes:[{type:'line',x0:2019,x1:2024,y0:100,y1:100,line:{color:C.borda,width:1,dash:'dot'}}]},CFG);})();
+
+/* bump */
+Plotly.newPlot('g_bump',[{x:ANOS,y:RANK,mode:'lines+markers+text',line:{color:C.laranja,width:3},marker:{size:15,color:C.laranja,line:{color:'#fff',width:1.5}},text:RANK.map(r=>r+'º'),textposition:'middle center',textfont:{size:8.5,color:'#fff'},hovertemplate:'%{x}: %{y}º de 27<extra></extra>'}],
+  {...BL,height:280,showlegend:false,xaxis:{dtick:1,gridcolor:'rgba(0,0,0,0)'},yaxis:{autorange:'reversed',dtick:2,gridcolor:C.subtle,title:{text:'posição (1=melhor)',font:{size:10}},range:[16,8]},shapes:[{type:'line',x0:2019,x1:2024,y0:13.5,y1:13.5,line:{color:C.brasil,width:1,dash:'dot'}}]},CFG);
+
+/* evol MS x BR */
+Plotly.newPlot('g_evol',[{x:ANOS,y:MED_BR,mode:'lines+markers',name:'Brasil estadual',line:{color:C.brasil,width:2,dash:'dot'},marker:{size:6}},
+  {x:ANOS,y:MED_MS,mode:'lines+markers+text',name:'MS estadual',line:{color:C.azul,width:2.6},marker:{size:7},text:MED_MS.map(v=>v.toFixed(0)),textposition:'bottom center',textfont:{size:9,color:C.azulEsc}}],
+  {...BL,height:280,legend:{orientation:'h',y:-0.2,font:{size:10}},xaxis:{dtick:1,gridcolor:'rgba(0,0,0,0)'},yaxis:{range:[495,528],gridcolor:C.subtle},shapes:[{type:'rect',x0:2019.6,x1:2021.4,y0:495,y1:528,fillcolor:'rgba(120,135,148,.10)',line:{width:0}}],annotations:[{x:2020.5,y:526,text:'pandemia',showarrow:false,font:{size:9,color:C.muted}}]},CFG);
+
+/* funil 2024 · rede estadual */
+(function(){
+  const f=MOCK.funil2024&&MOCK.funil2024['Estadual']; if(!f) return;
+  const nf=n=>n.toLocaleString('pt-BR');
+  const pc=n=>(100*n/f.concluintes).toFixed(0)+'%';
+  const st=[
+    {k:'Concluintes do EM',v:f.concluintes,p:'universo da rede (matrícula)',hl:false},
+    {k:'Inscritos no ENEM',v:f.inscritos,p:pc(f.inscritos)+' dos concluintes',hl:false},
+    {k:'Presentes · 2 dias',v:f.presentes,p:pc(f.presentes)+' dos concluintes',hl:false},
+    {k:'Participantes efetivos',v:f.presfilt,p:pc(f.presfilt)+' = participação efetiva',hl:true}
+  ];
+  document.getElementById('fstages').innerHTML = st.map(s=>
+    '<div class="fstage'+(s.hl?' hl':'')+'"><div class="fk">'+s.k+'</div><div class="fv">'+nf(s.v)+'</div><div class="fp">'+s.p+'</div></div>'
+  ).join('');
+})();
+
+/* comparação entre redes DE MS */
+(function(){
+  const RC={Estadual:C.azul,Municipal:C.dourado,Federal:C.verde,Privada:C.roxo};
+  const RN={Estadual:'Estadual (MS)',Municipal:'Municipal (MS)',Federal:'Federal (MS)',Privada:'Privada (MS)'};
+  const deps=Object.keys(MOCK.redes);
+  const tr=deps.map(dep=>{
+    const est=dep==='Estadual', mun=dep==='Municipal';
+    const t={x:ANOS,y:MOCK.redes[dep].med,mode:'lines'+(est?'+markers':''),name:RN[dep]+(mun?' · N pequeno':''),
+      line:{color:RC[dep],width:est?3.4:1.8,dash:mun?'dot':'solid'},
+      hovertemplate:RN[dep]+' %{x}<br>Média: %{y:.0f}<br>Participantes efetivos: %{customdata}<extra></extra>',
+      customdata:MOCK.redes[dep].n.map(n=>NF(n))};
+    if(est) t.marker={size:6};
+    return t;
+  });
+  Plotly.newPlot('g_redes',tr,{...BL,height:300,legend:{orientation:'h',y:-0.22,font:{size:9}},
+    xaxis:{dtick:1,gridcolor:'rgba(0,0,0,0)'},yaxis:{title:{text:'média geral',font:{size:10}},gridcolor:C.subtle}},CFG);
+
+  const others=deps.filter(d=>d!=='Estadual');
+  const estA=MOCK.redes['Estadual'].areas;
+  const gtr=others.map(dep=>({x:AREAKEYS,y:AREAKEYS.map(k=>+(estA[k][5]-MOCK.redes[dep].areas[k][5]).toFixed(0)),
+    type:'bar',name:RN[dep],marker:{color:RC[dep]},hovertemplate:RN[dep]+' · %{x}: %{y}<extra></extra>'}));
+  Plotly.newPlot('g_redegap',gtr,{...BL,height:300,barmode:'group',legend:{orientation:'h',y:-0.22,font:{size:9}},
+    xaxis:{tickfont:{size:11}},yaxis:{title:{text:'estadual − rede (pontos)',font:{size:10}},gridcolor:C.subtle,zeroline:true,zerolinecolor:C.borda,zerolinewidth:1.4}},CFG);
+})();
+
+/* ---------- INTEGRIDADE / QUALIDADE DA PARTICIPACAO ---------- */
+(function(){
+  const INT=MOCK.integ||{};
+  const AN=MOCK.anos;
+  const IAREAS=['CN','CH','LC','MT'];
+  const ICOL={CN:'#9B59B6',CH:'#3498DB',LC:'#1ABC9C',MT:'#F1C40F',RED:'#E74C3C'};
+  // (a) Eliminados por edicao — barras empilhadas + linha taxa
+  function renderElim(dep){
+    const d=INT.rede[dep]; if(!d) return;
+    const bars=[
+      {x:AN,y:d.areaElim['CN'],name:'CN',type:'bar',marker:{color:ICOL.CN},hovertemplate:'CN elim. %{x}: %{y}<extra></extra>'},
+      {x:AN,y:d.areaElim['CH'],name:'CH',type:'bar',marker:{color:ICOL.CH},hovertemplate:'CH elim. %{x}: %{y}<extra></extra>'},
+      {x:AN,y:d.areaElim['LC'],name:'LC',type:'bar',marker:{color:ICOL.LC},hovertemplate:'LC elim. %{x}: %{y}<extra></extra>'},
+      {x:AN,y:d.areaElim['MT'],name:'MT',type:'bar',marker:{color:ICOL.MT},hovertemplate:'MT elim. %{x}: %{y}<extra></extra>'},
+      {x:AN,y:d.er,name:'Redacao',type:'bar',marker:{color:ICOL.RED},hovertemplate:'Redacao elim. %{x}: %{y}<extra></extra>'}
+    ];
+    const line={x:AN,y:d.txE,mode:'lines+markers',name:'Taxa elim. (%)',yaxis:'y2',
+      line:{color:C.critico,width:2},marker:{size:5},
+      hovertemplate:'Taxa eliminacao %{x}: %{y:.2f}%<extra></extra>'};
+    Plotly.newPlot('g_integ_elim',bars.concat([line]),{
+      ...BL,height:300,barmode:'stack',
+      xaxis:{dtick:1,gridcolor:'rgba(0,0,0,0)'},
+      yaxis:{title:{text:'eliminados',font:{size:10}},gridcolor:C.subtle},
+      yaxis2:{overlaying:'y',side:'right',title:{text:'% do compareceu',font:{size:10}},showgrid:false,tickfont:{size:10}},
+      legend:{orientation:'h',y:-0.22,font:{size:9}}
+    },CFG);
+  }
+  // Seletor de rede
+  const sel=document.createElement('select');
+  sel.style.cssText='margin-top:8px;padding:4px 8px;border:1px solid '+C.borda+';border-radius:6px;font-size:12px;background:#fff;color:'+C.azul;
+  const opts=['Estadual','Federal','Municipal','Privada','Brasil-Estadual'];
+  opts.forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o==='Brasil-Estadual'?'Brasil — rede estadual':o;sel.appendChild(op);});
+  sel.value='Estadual';
+  sel.onchange=()=>renderElim(sel.value);
+  document.getElementById('g_integ_elim').parentNode.appendChild(sel);
+  renderElim('Estadual');
+
+  // (b) Comparacao entre redes — eliminacao vs sem nota (2024)
+  const comps=INT.rede||{};
+  const depOrd=['Estadual','Federal','Municipal','Privada','Brasil-Estadual'];
+  const compX=depOrd.filter(k=>comps[k]);
+  const txE2024=compX.map(k=>comps[k].txE[5]); // indice 5 = 2024
+  const txS2024=compX.map(k=>comps[k].txS[5]);
+  const compTr=[
+    {x:compX,y:txE2024,name:'Taxa eliminacao (%)',type:'bar',marker:{color:C.critico},hovertemplate:'%{x}<br>Eliminacao: %{y:.2f}%<extra></extra>'},
+    {x:compX,y:txS2024,name:'Sem nota redacao (%)',type:'bar',marker:{color:C.azul},hovertemplate:'%{x}<br>Sem nota: %{y:.2f}%<extra></extra>'}
+  ];
+  Plotly.newPlot('g_integ_comp',compTr,{...BL,height:300,barmode:'group',
+    xaxis:{tickfont:{size:11}},yaxis:{title:{text:'%',font:{size:10}},gridcolor:C.subtle},
+    legend:{orientation:'h',y:-0.22,font:{size:9}}
+  },CFG);
+
+  // (c) Tabela de pontos de atencao — CREs e municipios (2024)
+  function renderIntegTable(mode,filterCre){
+    const host=document.getElementById('g_integ_table');
+    let rows=[];
+    if(mode==='cre'){
+      Object.entries(INT.cre||{}).forEach(([name,o])=>{
+        const i5=5; // 2024
+        rows.push({nome:name,cre:name,filt:o.filt[i5]||0,et:o.et[i5]||0,em:o.em[i5]||0,zm:o.zm[i5]||0,sm:o.sm[i5]||0,txE:o.txE[i5],txS:o.txS[i5],tipo:'cre'});
+      });
+    }else{
+      Object.entries(INT.mun||{}).forEach(([name,o])=>{
+        if(filterCre && o.cre!==filterCre) return;
+        const i5=5;
+        rows.push({nome:name,cre:o.cre,filt:o.filt[i5]||0,et:o.et[i5]||0,em:o.em[i5]||0,zm:o.zm[i5]||0,sm:o.sm[i5]||0,txE:o.txE[i5],txS:o.txS[i5],tipo:'mun'});
+      });
+    }
+    // Ordena por txE desc
+    rows.sort((a,b)=>(b.txE||0)-(a.txE||0));
+    // Medias estaduais 2024 para benchmark
+    const est=INT.rede['Estadual']||{};
+    const medE=est.txE?est.txE[5]:null;
+    const medS=est.txS?est.txS[5]:null;
+    let html='<div class="scroll"><table class="attbl"><thead><tr><th>'+(mode==='cre'?'CRE':'Municipio')+
+      '</th><th>Part. efetivos</th><th>Eliminados</th><th>Taxa elim. (%)</th><th>Sem nota red.</th><th>Taxa sem nota (%)</th><th title="Eliminados em >=2 areas objetivas">Elim. multipla</th><th title="Zeros em >=2 areas">Zeros multiplo</th><th title="Sem nota em >=2 areas objetivas">Sem nota multipla</th></tr></thead><tbody>';
+    rows.forEach(r=>{
+      const warnE=medE!=null && (r.txE||0)>medE;
+      const warnS=medS!=null && (r.txS||0)>medS;
+      html+='<tr onclick="integClick(\''+r.tipo+'\',\''+String(r.nome).replace(/\\/g,'\\\\').replace(/\'/g,"\\'")+'\')">'+
+        '<td><b>'+r.nome+'</b>'+(mode==='cre'?'':' <span style="font-size:11px;color:'+C.borda+'">'+r.cre+'</span>')+'</td>'+
+        '<td>'+NF(r.filt)+'</td><td>'+r.et+'</td>'+
+        '<td style="color:'+(warnE?C.critico:'')+'">'+(r.txE!=null?r.txE.toFixed(2):'—')+'</td>'+
+        '<td>'+(r.et>0?Math.round(r.filt*r.txS/100):'—')+'</td>'+
+        '<td style="color:'+(warnS?'#E67E22':'')+'">'+(r.txS!=null?r.txS.toFixed(2):'—')+'</td>'+
+        '<td>'+(r.em||'—')+'</td><td>'+(r.zm||'—')+'</td><td>'+(r.sm||'—')+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+    if(mode==='mun'){
+      html='<div style="margin-bottom:8px"><span class="pill" style="cursor:pointer" onclick="renderIntegTable(\'cre\')">← Voltar as CREs</span></div>'+html;
+    }
+    host.innerHTML=html;
+  }
+  window.renderIntegTable=renderIntegTable;
+  window.integClick=function(tipo,nome){
+    if(tipo==='cre') renderIntegTable('mun',nome);
+    else if(tipo==='mun'){
+      // abre escolas do municipio na secao drill-down
+      selectMun(nome);
+      document.getElementById('escCard').scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+  };
+  renderIntegTable('cre');
+})();
+
+/* ---------- DRILL-DOWN ---------- */
+const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+let SEL_CRE=null, SEL_MUN=null;
+
+function bread(){
+  const b=document.getElementById('bread'); let h='<span class="crumb '+(SEL_CRE?'':'active')+'" onclick="resetDrill()">Estado · MS</span>';
+  if(SEL_CRE){h+='<span class="sepc">›</span><span class="crumb '+(SEL_MUN?'':'active')+'" onclick="selectCre(\''+SEL_CRE.replace(/'/g,"\\'")+'\')">'+SEL_CRE+'</span>';}
+  if(SEL_MUN){h+='<span class="sepc">›</span><span class="crumb active">'+SEL_MUN+'</span>';}
+  b.innerHTML=h;
+}
+function resetDrill(){SEL_CRE=null;SEL_MUN=null;document.querySelectorAll('.ctile').forEach(t=>t.classList.remove('sel'));
+  ['creAreaCard','munRow','escCard'].forEach(id=>document.getElementById(id).style.display='none');bread();}
+
+/* Passo 1: tiles CRE */
+(function(){const row=document.getElementById('creRow');
+  Object.keys(MOCK.cre).forEach(name=>{const o=MOCK.cre[name];const adv=o.med[5]>=o.med[0];const sid='ct_'+norm(name).replace(/ /g,'_');
+    const t=document.createElement('div');t.className='ctile';t.onclick=()=>selectCre(name);
+    t.innerHTML='<div class="ct"><span>'+name+'</span><span class="arr" style="color:'+(adv?C.verde:C.critico)+'">'+(adv?'▲':'▼')+'</span></div><div id="'+sid+'" style="height:78px"></div>';
+    row.appendChild(t);
+    const cd=ANOS.map((a,i)=>[a,NF(o.n&&o.n[i])]);
+    Plotly.newPlot(sid,[{x:o.tx,y:o.med,customdata:cd,mode:'lines',line:{color:'rgba(10,77,140,.45)',width:1.5},
+        hovertemplate:'<b>%{customdata[0]}</b><br>Participação: %{x:.1f}%<br>Média: %{y:.0f}<br>Part. efetivos: %{customdata[1]}<extra></extra>'},
+      {x:[o.tx[0]],y:[o.med[0]],customdata:[cd[0]],mode:'markers',marker:{color:C.borda,size:5},
+        hovertemplate:'<b>%{customdata[0]}</b><br>Participação: %{x:.1f}%<br>Média: %{y:.0f}<br>Part. efetivos: %{customdata[1]}<extra></extra>'},
+      {x:[o.tx[5]],y:[o.med[5]],customdata:[cd[5]],mode:'markers',marker:{color:adv?C.verde:C.critico,size:8,line:{color:'#fff',width:1}},
+        hovertemplate:'<b>%{customdata[0]}</b><br>Participação: %{x:.1f}%<br>Média: %{y:.0f}<br>Part. efetivos: %{customdata[1]}<extra></extra>'}],
+      {...BL,height:78,margin:{l:4,r:6,t:4,b:4},showlegend:false,hovermode:'closest',
+        xaxis:{visible:false,range:[10,75]},yaxis:{visible:false,range:[460,535]}},CFG);
+  });bread();})();
+
+function renderAreas(containerId,areas,refMap){
+  const host=document.getElementById(containerId);host.innerHTML='';
+  AREAKEYS.forEach(k=>{const v=areas[k];const last=v[v.length-1];const ref=refMap[k];const warn=last<ref;
+    const tile=document.createElement('div');tile.className='atile'+(warn?' warn':'');
+    const delta=(last-ref);
+    tile.innerHTML='<div class="at"><span>'+k+'</span><span class="fl" style="color:'+(warn?C.critico:C.verde)+'">'+(delta>=0?'+':'')+delta.toFixed(0)+'</span></div><div id="'+containerId+'_'+k+'" style="height:74px"></div>';
+    host.appendChild(tile);
+    Plotly.newPlot(containerId+'_'+k,[
+      {x:ANOS,y:MOCK.msArea[k].ms,mode:'lines',line:{color:C.brasil,width:1.4,dash:'dot'},hovertemplate:AREANOME[k]+' · MS estadual<br><b>%{x}</b> · %{y:.0f} pts<extra></extra>'},
+      {x:ANOS,y:v,mode:'lines+markers',line:{color:ACOR[k],width:2},marker:{size:3},hovertemplate:AREANOME[k]+'<br><b>%{x}</b> · %{y:.0f} pts<extra></extra>'}],
+      {...BL,height:74,margin:{l:4,r:6,t:4,b:14},showlegend:false,xaxis:{visible:false},yaxis:{visible:false}},CFG);
+  });
+}
+
+function selectCre(name){
+  SEL_CRE=name;SEL_MUN=null;
+  document.querySelectorAll('.ctile').forEach(t=>t.classList.toggle('sel',t.querySelector('.ct span').textContent===name));
+  document.getElementById('escCard').style.display='none';
+  // áreas da CRE
+  document.getElementById('creAreaCard').style.display='block';
+  document.querySelector('#creAreaTitle span').textContent=name+' · 2019–2024';
+  renderAreas('creAreas',MOCK.cre[name].areas,MS_AREA_2024_refSeries());
+  // municípios
+  const muns=(MOCK.creMuns[name]||[]).map(m=>MOCK.mun[m]?{nome:m,...MOCK.mun[m]}:null).filter(Boolean);
+  document.getElementById('munRow').style.display=muns.length?'grid':'none';
+  renderMun(name,muns);
+  bread();
+  document.getElementById('munRow').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+// referência MS por área usando a própria série (para warn por ano final)
+function MS_AREA_2024_refSeries(){return MS_AREA_2024;}
+
+function renderMun(creName,muns){
+  document.getElementById('munTitle').childNodes[0].nodeValue='Municípios de '+creName+' · participação × desempenho (2024) ';
+  document.getElementById('munAttTitle').childNodes[0].nodeValue='Atenção por área · municípios de '+creName+' (2024) ';
+  const xs=[],ys=[],sz=[],tt=[],col=[],cd=[];const semtx=[];
+  muns.forEach(m=>{const g=m.med[5];const t=m.tx[5];const c=m.concl||30;
+    if(t==null){semtx.push(m.nome);return;}
+    xs.push(t);ys.push(g);sz.push(Math.max(8,Math.sqrt(c)*1.6));
+    col.push((g<MS_GERAL_2024&&t<27)?C.critico:C.azul);tt.push(m.nome);
+    cd.push([m.nome,NF(m.n&&m.n[5]),NF(m.concl)]);});
+  const xmin=xs.length?Math.min(...xs):0, xmax=xs.length?Math.max(...xs):60;
+  const ymin=ys.length?Math.min(...ys):470, ymax=ys.length?Math.max(...ys):520;
+  Plotly.react('g_mun',[{x:xs,y:ys,text:tt,customdata:cd,mode:'markers+text',type:'scatter',textposition:'top center',textfont:{size:9,color:C.muted},
+    marker:{size:sz,color:col,opacity:.7,line:{color:'#fff',width:1}},
+    hovertemplate:'<b>%{text}</b><br>Part.: %{x:.1f}% · %{customdata[1]} part. efetivos<br>Média: %{y:.1f}<br>Concluintes: %{customdata[2]}<extra></extra>'}],
+    {...BL,height:300,showlegend:false,xaxis:{title:{text:'participação efetiva (%)',font:{size:10}},gridcolor:C.subtle},yaxis:{title:{text:'média geral',font:{size:10}},gridcolor:C.subtle},
+     shapes:[{type:'line',x0:27,x1:27,y0:ymin-5,y1:ymax+5,line:{color:C.borda,width:1,dash:'dot'}},
+       {type:'line',x0:xmin-3,x1:xmax+3,y0:MS_GERAL_2024,y1:MS_GERAL_2024,line:{color:C.brasil,width:1,dash:'dash'}}]},CFG)
+   .then(gd=>{gd.removeAllListeners&&gd.removeAllListeners('plotly_click');gd.on('plotly_click',e=>{selectMun(e.points[0].customdata[0]);});});
+  const nn=document.getElementById('munNota');
+  nn.innerHTML = semtx.length
+    ? '<b>Sem taxa de participação ('+semtx.length+'):</b> '+semtx.join(', ')+' — sem registro de concluintes na base municipal, então não há eixo de participação para posicioná-los aqui. Eles continuam no mapa de atenção por área abaixo (que usa apenas o desempenho).'
+    : '';
+  // heatmap atenção 4 áreas (CN,CH,LC,MT) desvio vs MS
+  const A4=['CN','CH','LC','MT','RED'];
+  const rows=muns.map(m=>({n:m.nome,z:A4.map(k=>{const val=m.a2024[k];return val==null?null:Math.round(val-MS_AREA_2024[k]);})}));
+  rows.sort((a,b)=>(a.z.reduce((s,v)=>s+(v||0),0))-(b.z.reduce((s,v)=>s+(v||0),0)));
+  Plotly.react('g_munheat',[{z:rows.map(r=>r.z),x:A4,y:rows.map(r=>r.n),type:'heatmap',
+    colorscale:[[0,'#B23A36'],[0.5,'#F2F4F7'],[1,'#1E7A4D']],zmid:0,zmin:-30,zmax:30,
+    text:rows.map(r=>r.z),texttemplate:'%{text}',textfont:{size:9},
+    colorbar:{thickness:9,len:.8,tickfont:{size:8}},hovertemplate:'%{y} · %{x}: %{z}<extra></extra>'}],
+    {...BL,height:300,margin:{l:120,r:8,t:6,b:22},xaxis:{side:'top',tickfont:{size:10}},yaxis:{tickfont:{size:8.5},autorange:'reversed'}},CFG);
+}
+
+function selectMun(name){
+  SEL_MUN=name;bread();
+  document.querySelector('#creAreaTitle span').textContent=name+' · 2019–2024';
+  if(MOCK.mun[name])renderAreas('creAreas',MOCK.mun[name].areas,MS_AREA_2024);
+  // escolas 2024
+  const list=(MOCK.esc[name]||[]).slice().sort((a,b)=>a.geral-b.geral);
+  document.getElementById('escCard').style.display=list.length?'block':'none';
+  document.getElementById('escTitle').childNodes[0].nodeValue='Escolas de '+name+' · 2024 ';
+  const body=document.getElementById('escBody');body.innerHTML='';
+  const cell=(v,k)=>{const cls=v<MS_AREA_2024[k]?'bad':(v>=MS_AREA_2024[k]+8?'ok':'');return '<td class="'+cls+'">'+v.toFixed(0)+'</td>';};
+  list.forEach(s=>{const tr=document.createElement('tr');
+    tr.innerHTML='<td>'+s.nome+'</td><td>'+(s.concl!=null?s.concl:'<span class="muted">—</span>')+'</td><td>'+s.part+'</td><td>'+(s.tx!=null?s.tx.toFixed(0)+'%':'<span class="muted">—</span>')+'</td>'+
+      cell(s.cn,'CN')+cell(s.ch,'CH')+cell(s.lc,'LC')+cell(s.mt,'MT')+cell(s.red,'RED')+
+      '<td class="b'+(s.geral<MS_GERAL_2024?' bad':'')+'">'+s.geral.toFixed(0)+'</td>';
+    body.appendChild(tr);});
+  document.getElementById('escCard').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+/* SNAPSHOT */
+(function(){const areas=['CN','CH','LC','Mat.','Redação'];const ms=[469.6,486.4,505.3,488.7,610.1],br=[467.1,483.8,505.0,491.2,626.6];const t=[];
+  for(let i=0;i<areas.length;i++){const up=ms[i]>=br[i];t.push({x:[br[i],ms[i]],y:[areas[i],areas[i]],mode:'lines',line:{color:up?C.verde:C.critico,width:3},hoverinfo:'skip',showlegend:false});}
+  t.push({x:br,y:areas,mode:'markers',marker:{color:C.brasil,size:12},hovertemplate:'Brasil %{x:.0f}<extra></extra>'});
+  t.push({x:ms,y:areas,mode:'markers+text',marker:{color:C.azul,size:13},text:ms.map((v,i)=>{const d=v-br[i];return(d>=0?'+':'')+d.toFixed(0);}),textposition:ms.map((v,i)=>v>=br[i]?'middle right':'middle left'),textfont:{size:10,color:C.azulEsc},hovertemplate:'MS %{x:.0f}<extra></extra>'});
+  Plotly.newPlot('g_areas',t,{...BL,height:260,showlegend:false,xaxis:{range:[455,655],gridcolor:C.subtle},yaxis:{autorange:'reversed'}},CFG);
+  const d=[["RS",543],["MG",539],["ES",537],["SP",537],["SC",536],["DF",531],["PR",526],["PE",526],["RR",525],["RJ",524],["GO",522],["SE",516],["RN",515],["MS",515],["RO",514],["MT",511],["PB",511],["BA",511],["CE",508],["AP",506],["AC",505],["PA",504],["TO",499],["PI",499],["MA",498],["AL",494],["AM",492]];
+  Plotly.newPlot('g_ufrank',[{x:d.map(r=>r[0]),y:d.map(r=>r[1]),type:'bar',marker:{color:d.map(r=>r[0]==='MS'?C.laranja:C.azul)},hovertemplate:'%{x}: %{y}<extra></extra>'}],
+    {...BL,height:260,yaxis:{range:[480,555],gridcolor:C.subtle},xaxis:{tickfont:{size:9}},shapes:[{type:'line',x0:-0.5,x1:26.5,y0:521,y1:521,line:{color:C.critico,width:1.5,dash:'dash'}}]},CFG);})();
+</script>
+</body>
+</html>

@@ -219,11 +219,14 @@ def render_populacao_referencia() -> None:
     render_html(
         '<div class="ref-pop-bar">'
         '<span class="ref-pop-tag">População de referência</span>'
-        "<span class=\"ref-pop-item\">Presentes nos dois dias de prova; "
-        "Concluintes do Ensino Médio na rede estadual</span>"
+        "<span class=\"ref-pop-item\">Prováveis concluintes do Ensino Médio; "
+        "presentes nos dois dias de prova; não eliminados</span>"
         '<span class="ref-pop-sep">·</span>'
-        "<span class=\"ref-pop-item\"><strong>2019–2023</strong> concluintes do Ensino Médio · "
-        "<strong>2024</strong> inscritos na rede estadual</span>"
+        "<span class=\"ref-pop-item\"><strong>2019–2023</strong> concluintes autodeclarados "
+        "(<code>TP_ST_CONCLUSAO = 2</code>) · <strong>2024</strong> prováveis concluintes "
+        "pelo vínculo INEP/Censo (CPF × matrícula no 3º ano)</span>"
+        '<span class="ref-pop-sep">·</span>'
+        "<span class=\"ref-pop-item\">Mesma população em MS, demais UFs e Brasil</span>"
         '<span class="ref-pop-sep">·</span>'
         "<span class=\"ref-pop-item\"><strong>Taxa de participação efetiva</strong> = presentes ÷ concluintes</span>"
         "</div>"

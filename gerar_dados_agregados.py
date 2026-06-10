@@ -4,8 +4,18 @@ gerar_dados_agregados.py
 Script para gerar dados agregados/resumidos para todas as abas do dashboard ENEM.
 Elimina a necessidade de manter 26M de registros brutos na memória.
 
-PADRÃO: Estudantes de escolas ESTADUAIS, CONCLUINTES do Ensino Médio,
-        presentes nos 2 dias de prova, não eliminados.
+PADRÃO: Estudantes de escolas ESTADUAIS, CONCLUINTES do Ensino Médio
+        (cursando o 3o ano e concluindo no ano da edicao -- TP_ST_CONCLUSAO == 2,
+        NAO inclui egressos), presentes nos 2 dias de prova, não eliminados.
+        EXCECAO 2024: o INEP nao divulga TP_ST_CONCLUSAO por escola (fica nulo nos
+        resultados). Em vez disso, o INEP vincula cada participante a sua escola
+        cruzando o CPF com a matricula no Censo Escolar 2024, filtrando as etapas de
+        PROVAVEIS CONCLUINTES do EM (3o ano / series finais: 27,28,29,37,38,71,32,33,34).
+        Logo, ter escola identificada em 2024 (CO_ESCOLA preenchido) JA EQUIVALE a ser
+        provavel concluinte. Como todos os agregados (UF/nacional/rede/territorio)
+        agrupam por dependencia/escola, a populacao de referencia de 2024 -- inclusive
+        nas comparacoes entre MS, demais UFs e Brasil -- ja fica restrita aos provaveis
+        concluintes presentes nos 2 dias e nao eliminados.
 
 Uso:
     python gerar_dados_agregados.py
@@ -220,7 +230,19 @@ def processar_ano(df_ano, cres, mapa_muni_cre, df_concluintes, df_concluintes_cr
         (df_ano["TP_PRESENCA_MT"] == 1)
     )
     df_ano["ELIMINADO"] = df_ano["TP_STATUS_REDACAO"] == 4
-    df_ano["CONCLUINTE"] = df_ano["TP_ST_CONCLUSAO"].isin([1, 2])
+    # CONCLUINTE estrito = cursando o 3o ano e concluira o EM no ano da edicao.
+    # 2019-2023: autodeclaracao do participante (TP_ST_CONCLUSAO == 2), NAO inclui
+    #            egressos (codigo 1 = "ja conclui o EM").
+    # 2024: o INEP nao divulga TP_ST_CONCLUSAO por escola (fica nulo). Mas a escola so
+    #       foi atribuida a quem o INEP cruzou no Censo Escolar (CPF x matricula) nas
+    #       etapas de provaveis concluintes do EM. Logo, escola identificada
+    #       (CO_ESCOLA preenchido) EQUIVALE a provavel concluinte. Isso garante que as
+    #       comparacoes por rede entre MS, demais UFs e Brasil usem so a populacao de
+    #       referencia tambem em 2024.
+    if ano == 2024:
+        df_ano["CONCLUINTE"] = df_ano["CO_ESCOLA"].notna()
+    else:
+        df_ano["CONCLUINTE"] = (df_ano["TP_ST_CONCLUSAO"] == 2)
 
     # Calcular média geral
     if "MEDIA_GERAL" not in df_ano.columns:
@@ -315,7 +337,8 @@ def processar_ano(df_ano, cres, mapa_muni_cre, df_concluintes, df_concluintes_cr
     # --- Escolas 2024 ---
     if ano == 2024:
         for dep in DEPENDENCIAS:
-            # Para 2024, não filtrar concluintes (dados não disponíveis)
+            # 2024: a escola so existe para provaveis concluintes (vinculo INEP/Censo),
+            # entao filtrar por escola estadual MS ja seleciona a populacao de referencia.
             df_2024_dep = df_filt_ano[(df_filt_ano["SG_UF_ESC"] == "MS") & (df_filt_ano["DEP_ADM"] == dep)]
             if df_2024_dep.empty:
                 continue
@@ -398,17 +421,17 @@ def processar_ano(df_ano, cres, mapa_muni_cre, df_concluintes, df_concluintes_cr
         muni_agg["dependencia"] = dep
 
         if dep == "Estadual" and not df_concluintes_muni.empty:
-            conc_ano = df_concluintes_muni[df_concluintes_muni["NU_ANO"] == ano]
-            muni_agg = muni_agg.merge(
-                conc_ano[["MUNICIPIO", "Concluintes"]],
-                left_on="NO_MUNICIPIO_ESC",
-                right_on="MUNICIPIO",
-                how="left"
-            )
+            conc_ano = df_concluintes_muni[df_concluintes_muni["NU_ANO"] == ano].copy()
+            # Merge por nome normalizado (sem acento/caixa) para casar "Corumbá"x"Corumba",
+            # "Ladário"x"Ladario", "Anastácio"x"Anastacio" etc.
+            conc_ano["_mnorm"] = conc_ano["MUNICIPIO"].map(normalizar_texto)
+            conc_ano = conc_ano.groupby("_mnorm", as_index=False)["Concluintes"].sum()
+            muni_agg["_mnorm"] = muni_agg["NO_MUNICIPIO_ESC"].map(normalizar_texto)
+            muni_agg = muni_agg.merge(conc_ano, on="_mnorm", how="left")
             muni_agg["Concluintes"] = muni_agg["Concluintes"].fillna(0).astype(int)
             tx_part = muni_agg["estudantes"] / muni_agg["Concluintes"].replace(0, pd.NA) * 100
             muni_agg["tx_part_efetiva"] = pd.to_numeric(tx_part, errors="coerce").round(2)
-            muni_agg = muni_agg.drop(columns=["MUNICIPIO"], errors="ignore")
+            muni_agg = muni_agg.drop(columns=["MUNICIPIO", "_mnorm"], errors="ignore")
         else:
             muni_agg["Concluintes"] = pd.NA
             muni_agg["tx_part_efetiva"] = pd.NA
@@ -491,6 +514,125 @@ def processar_ano(df_ano, cres, mapa_muni_cre, df_concluintes, df_concluintes_cr
             resultados[chave] = [pd.DataFrame(resultados[chave])]
 
     return resultados
+
+
+# ============================================================
+# INTEGRIDADE / QUALIDADE DA PARTICIPACAO
+# ============================================================
+_INTEG_AREAS = ["CN", "CH", "LC", "MT"]
+_INTEG_DEP_MAP = {1: "Federal", 2: "Estadual", 3: "Municipal", 4: "Privada"}
+_INTEG_COLS = [
+    "NU_ANO", "SG_UF_ESC", "TP_DEPENDENCIA_ADM_ESC", "CO_ESCOLA", "NO_MUNICIPIO_ESC",
+    "TP_PRESENCA_CN", "TP_PRESENCA_CH", "TP_PRESENCA_LC", "TP_PRESENCA_MT",
+    "NU_NOTA_CN", "NU_NOTA_CH", "NU_NOTA_LC", "NU_NOTA_MT",
+    "TP_STATUS_REDACAO", "NU_NOTA_REDACAO",
+]
+_INTEG_MET = (
+    ["compareceu", "presentes_filt", "elim_total", "elim_redacao", "elim_multi", "zeros_multi", "semnota_multi"]
+    + [f"elim_{a.lower()}" for a in _INTEG_AREAS]
+    + [f"zeros_{a.lower()}" for a in _INTEG_AREAS]
+    + ["zeros_redacao", "semnota_redacao"]
+)
+
+
+def integ_indicadores(df):
+    """Cria colunas indicadoras (0/1) das metricas de integridade para somar."""
+    pres = {a: (df[f"TP_PRESENCA_{a}"] == 1) for a in _INTEG_AREAS}
+    elim_area = {a: (df[f"TP_PRESENCA_{a}"] == 2) for a in _INTEG_AREAS}
+    elim_red = df["TP_STATUS_REDACAO"] == 4
+    p2 = pres["CN"] & pres["CH"] & pres["LC"] & pres["MT"]
+    filt = p2 & ~elim_red
+    comp = pres["CN"] | pres["CH"] | pres["LC"] | pres["MT"]
+    elim_total = elim_area["CN"] | elim_area["CH"] | elim_area["LC"] | elim_area["MT"] | elim_red
+    # eliminacao em >=2 areas objetivas (exclui redacao)
+    elim_count = sum(elim_area[a].astype(int) for a in _INTEG_AREAS)
+    elim_multi = elim_count >= 2
+    # zeros em >=2 areas (entre presentes_filt)
+    zero_area = {a: (filt & (df[f"NU_NOTA_{a}"] == 0)) for a in _INTEG_AREAS}
+    zero_count = sum(zero_area[a].astype(int) for a in _INTEG_AREAS)
+    zeros_multi = zero_count >= 2
+    # sem nota em >=2 areas objetivas (entre presentes_filt)
+    sem_area = {a: (filt & df[f"NU_NOTA_{a}"].isna()) for a in _INTEG_AREAS}
+    sem_count = sum(sem_area[a].astype(int) for a in _INTEG_AREAS)
+    semnota_multi = sem_count >= 2
+    df = df.copy()
+    df["compareceu"] = comp.astype("int32")
+    df["presentes_filt"] = filt.astype("int32")
+    df["elim_total"] = elim_total.astype("int32")
+    df["elim_redacao"] = elim_red.astype("int32")
+    df["elim_multi"] = elim_multi.astype("int32")
+    df["zeros_multi"] = zeros_multi.astype("int32")
+    df["semnota_multi"] = semnota_multi.astype("int32")
+    for a in _INTEG_AREAS:
+        df[f"elim_{a.lower()}"] = elim_area[a].astype("int32")
+        df[f"zeros_{a.lower()}"] = zero_area[a].astype("int32")
+    df["zeros_redacao"] = (filt & (df["NU_NOTA_REDACAO"] == 0)).astype("int32")
+    df["semnota_redacao"] = (filt & (df["NU_NOTA_REDACAO"].isna())).astype("int32")
+    return df
+
+
+def integ_agg(df, chaves):
+    """Soma as metricas por `chaves` e calcula as taxas (%)."""
+    import numpy as _np
+    g = df.groupby(chaves, observed=True)[_INTEG_MET].sum().reset_index()
+    comp = g["compareceu"].replace(0, _np.nan)
+    filt = g["presentes_filt"].replace(0, _np.nan)
+    g["tx_elim"] = (g["elim_total"] / comp * 100).round(2)
+    g["tx_elim_redacao"] = (g["elim_redacao"] / comp * 100).round(2)
+    g["tx_semnota_redacao"] = (g["semnota_redacao"] / filt * 100).round(2)
+    return g
+
+
+def gerar_integridade(pasta_saida, cres=None, mapa_muni_cre=None):
+    """Gera os 4 parquets de integridade a partir do arquivo completo de microdados.
+
+    - integridade_rede.parquet      (ano x dependencia, MS + referencia Brasil estadual)
+    - integridade_cre.parquet       (ano x CRE, estadual MS)
+    - integridade_municipio.parquet (ano x municipio, estadual MS)
+    - integridade_escola_2024.parquet (escola, estadual MS, somente 2024)
+    """
+    import pyarrow.parquet as _pq
+    os.makedirs(pasta_saida, exist_ok=True)
+    if cres is None:
+        cres = carregar_cres()
+    if mapa_muni_cre is None:
+        mapa_muni_cre = carregar_mapa_municipio_cre()
+
+    print("   [integridade] lendo microdados MS...")
+    ms = _pq.read_table(ARQUIVO_ENTRADA, columns=_INTEG_COLS,
+                        filters=[("SG_UF_ESC", "=", "MS")]).to_pandas()
+    ms["DEP_ADM"] = ms["TP_DEPENDENCIA_ADM_ESC"].map(_INTEG_DEP_MAP)
+    ms = integ_indicadores(ms)
+    ms = enriquecer_ms(ms, cres, mapa_muni_cre)
+    ms["MUNICIPIO"] = ms["NO_MUNICIPIO_ESC"]
+    ms["CRE"] = ms["CRE"].fillna("Sem CRE").replace("", "Sem CRE")
+    ms["MUNICIPIO"] = ms["MUNICIPIO"].fillna("Sem municipio").replace("", "Sem municipio")
+    ms["NOME_ESCOLA"] = ms["NOME_ESCOLA"].fillna("").astype(str)
+
+    rede = integ_agg(ms.dropna(subset=["DEP_ADM"]), ["NU_ANO", "DEP_ADM"])
+    rede = rede.rename(columns={"NU_ANO": "ano", "DEP_ADM": "dependencia"})
+    rede["escopo"] = "MS"
+
+    print("   [integridade] lendo Brasil estadual (referencia)...")
+    br = _pq.read_table(ARQUIVO_ENTRADA, columns=_INTEG_COLS,
+                        filters=[("TP_DEPENDENCIA_ADM_ESC", "=", 2)]).to_pandas()
+    br = integ_indicadores(br)
+    br_rede = integ_agg(br, ["NU_ANO"]).rename(columns={"NU_ANO": "ano"})
+    br_rede["dependencia"] = "Estadual"
+    br_rede["escopo"] = "Brasil"
+    rede = pd.concat([rede, br_rede], ignore_index=True)
+    rede.to_parquet(os.path.join(pasta_saida, "integridade_rede.parquet"), index=False)
+
+    est = ms[ms["DEP_ADM"] == "Estadual"].copy()
+    cre = integ_agg(est, ["NU_ANO", "CRE"]).rename(columns={"NU_ANO": "ano"})
+    cre.to_parquet(os.path.join(pasta_saida, "integridade_cre.parquet"), index=False)
+    mun = integ_agg(est, ["NU_ANO", "MUNICIPIO", "CRE"]).rename(columns={"NU_ANO": "ano"})
+    mun.to_parquet(os.path.join(pasta_saida, "integridade_municipio.parquet"), index=False)
+    est24 = est[(est["NU_ANO"] == 2024) & est["CO_ESCOLA"].notna()].copy()
+    esc = integ_agg(est24, ["CO_ESCOLA", "NOME_ESCOLA", "MUNICIPIO", "CRE"])
+    esc["ano"] = 2024
+    esc.to_parquet(os.path.join(pasta_saida, "integridade_escola_2024.parquet"), index=False)
+    print(f"   [integridade] OK: rede={rede.shape[0]} cre={cre.shape[0]} mun={mun.shape[0]} esc24={esc.shape[0]}")
 
 
 # ============================================================
@@ -588,6 +730,13 @@ def main():
     print(f"📁 Pasta: {PASTA_SAIDA}")
     print(f"💾 Total: {total_mb:.2f} MB")
     print("=" * 60)
+
+    # Integridade / qualidade da participacao (eliminados, zeros, sem nota)
+    print("\n🔎 Gerando agregados de integridade...")
+    try:
+        gerar_integridade(PASTA_SAIDA, cres, mapa_muni_cre)
+    except Exception as e:  # nao quebra o ETL principal
+        print(f"   ⚠️ integridade falhou: {e}")
 
 
 if __name__ == "__main__":
