@@ -315,11 +315,17 @@ for area in ['CN','CH','LC','MT','RED']:
         desvio_padrao[area].append(src['std'])
         cv[area].append(round(src['std']/src['media']*100, 1))
 
-# dispersao escolas 2024: nota vs participacao (bubble) — ja disponivel em esc
-# Vamos enriquecer com CRE se possivel
+# dispersao escolas 2024: nota vs participacao (bubble) — so escolas com nome e tx valida
+# Escolas sem nome ou sem tx nao aparecem no grafico de dispersao
+# (sem nome = nao foi possivel cruzar com concluintes; sem tx = sem concluintes na base)
 dispersao = []
 for _, r in est.iterrows():
     if pd.isna(r['media_geral']) or pd.isna(r['estudantes']):
+        continue
+    if pd.isna(r['NOME_ESCOLA']):
+        continue
+    tx = r.get('tx_part_efetiva')
+    if pd.isna(tx) or tx == 0:
         continue
     dispersao.append({
         'nome': re.sub(r'^E\.?E\.?\s+','', str(r['NOME_ESCOLA'])).strip()[:34] or '(escola)',
@@ -327,7 +333,7 @@ for _, r in est.iterrows():
         'cre': clean_cre(r['cre']) if not pd.isna(r.get('cre')) else '—',
         'nota': round(float(r['media_geral']),1),
         'n': int(r['estudantes']),
-        'tx': round(float(r.get('tx_part_efetiva', 0)),1) if not pd.isna(r.get('tx_part_efetiva')) else None
+        'tx': round(float(tx),1)
     })
 
 out['boxplot'] = boxplot
