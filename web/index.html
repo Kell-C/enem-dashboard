@@ -17,7 +17,9 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg-app);color:var(--txt);
     font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;font-size:14px}
-  .wrap{max-width:1320px;margin:0 auto;padding:18px 22px 60px}
+  .wrap{max-width:1600px;margin:0 auto;padding:18px 22px 60px}
+  @media (max-width:1440px){.wrap{padding:14px 16px 40px}}
+  @media (max-width:1200px){.wrap{padding:12px 14px 30px}}
 
   .cab{background:linear-gradient(135deg,#0A4D8C 0%,#053B71 100%);border-radius:16px;
     padding:18px 24px;color:#fff;box-shadow:var(--shadow)}
@@ -35,7 +37,9 @@
     padding:3px 9px;border-radius:6px;text-transform:uppercase;letter-spacing:.4px}
   .refbar .it{font-size:12.5px;color:#EaF1Fb} .refbar .sep{color:#7FA8D6}
 
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:16px}
+  @media (max-width:1400px){.kpis{grid-template-columns:repeat(4,1fr)}}
+  @media (max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}}
   .kpi{background:var(--bg-card);border:1px solid var(--borda);border-radius:var(--radius);
     padding:14px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
   .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--azul)}
@@ -65,6 +69,8 @@
 
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .grid2u{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
+  @media (max-width:1200px){.grid2,.grid2u{grid-template-columns:1fr}}
+  @media (min-width:1601px){.grid2{gap:12px}.grid2u{gap:12px}}
   .card{background:var(--bg-card);border:1px solid var(--borda);border-radius:var(--radius);
     box-shadow:var(--shadow);padding:14px 16px}
   .card h3{margin:0;font-size:14px;color:var(--txt);font-weight:700;display:flex;align-items:center;gap:6px}
@@ -120,6 +126,24 @@
     border-radius:10px;padding:10px 14px;font-weight:600;color:var(--azul);box-shadow:var(--shadow);display:flex;align-items:center;gap:8px}
   details.more>summary::-webkit-details-marker{display:none}
   details.more>summary .chev{transition:transform .2s} details.more[open]>summary .chev{transform:rotate(90deg)}
+
+  /* accordion para secoes principais */
+  .secacc{margin-top:18px;border:1px solid var(--borda);border-radius:var(--radius);background:var(--bg-card);box-shadow:var(--shadow);overflow:hidden}
+  .secacc summary{cursor:pointer;list-style:none;padding:12px 18px;font-weight:700;color:var(--azul);font-size:15px;display:flex;align-items:center;gap:10px;background:var(--bg-subtle)}
+  .secacc summary::-webkit-details-marker{display:none}
+  .secacc summary .chev{transition:transform .2s;margin-left:auto;font-size:12px;color:var(--muted)} .secacc[open]>summary .chev{transform:rotate(90deg)}
+  .secacc .secbody{padding:14px 18px 18px}
+
+  /* modal drill-down */
+  .modal{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:100;display:none;align-items:center;justify-content:center}
+  .modal.on{display:flex}
+  .modalbox{background:var(--bg-card);border-radius:var(--radius);box-shadow:0 20px 60px rgba(0,0,0,.35);width:92vw;max-width:1100px;max-height:90vh;display:flex;flex-direction:column}
+  .modalhead{padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between}
+  .modalhead h3{margin:0;font-size:15px;color:var(--azul)}
+  .modalclose{cursor:pointer;background:var(--bg-subtle);border:1px solid var(--borda);border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700;color:var(--muted)}
+  .modalclose:hover{background:var(--critico);color:#fff;border-color:var(--critico)}
+  .modalbody{padding:14px 18px;overflow:auto;flex:1}
+
   .footer{margin-top:26px;font-size:11px;color:var(--muted);text-align:center}
 </style>
 </head>
@@ -182,7 +206,9 @@
   </div>
 
   <!-- ÂNCORAS TEMPORAIS -->
-  <div class="sech"><h2>Trajetória 2019–2024</h2><span class="hint">Como desempenho e participação evoluíram juntos · rede estadual</span><span class="line"></span></div>
+  <details class="secacc" open>
+    <summary>Trajetória 2019–2024 <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Como desempenho e participação evoluíram juntos · rede estadual</span><span class="chev">▶</span></summary>
+    <div class="secbody">
   <div class="grid2u">
     <div class="card">
       <h3>Trajetória conjunta · participação × desempenho
@@ -194,8 +220,8 @@
     <div class="card">
       <h3>Evolução por área · índice 2019 = 100
         <span class="help">i<span class="tip"><b>Por que indexar:</b> as áreas têm médias muito diferentes (Redação ~600, CN ~470). Pondo todas em 100 no ano-base, comparamos o <b>ritmo</b> de crescimento, não o nível. <b>Acima de 100</b> = cresceu desde 2019.</span></span></h3>
-      <div class="coh"><span class="dot"></span> Ritmo de cada componente em base comparável</div>
-      <div id="g_index" class="plot"></div>
+      <div class="coh"><span class="dot"></span> Ritmo de cada componente em base comparável · <b>clique num ponto para detalhes</b></div>
+      <div id="g_index" class="plot" style="cursor:pointer"></div>
       <div class="nota">Redação cresce mais; Linguagens sofreu choque em 2021; Matemática é a mais estagnada.</div>
     </div>
   </div>
@@ -216,10 +242,13 @@
       <div class="nota">A defasagem abriu em 2022 (−7,3) e vem se fechando (−3,3 em 2024).</div>
     </div>
   </div>
+    </div>
+  </details>
 
   <!-- COMPARAÇÃO ENTRE REDES (MS) -->
-  <div class="sech"><h2>Comparação entre redes de MS</h2>
-    <span class="hint">Mesma população (concluintes presentes, não eliminados) · redes do estado de MS</span><span class="line"></span></div>
+  <details class="secacc">
+    <summary>Comparação entre redes de MS <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Mesma população (concluintes presentes, não eliminados) · redes do estado de MS</span><span class="chev">▶</span></summary>
+    <div class="secbody">
   <div class="grid2" style="margin-top:4px">
     <div class="card">
       <h3>Média geral por rede de MS · 2019–2024
@@ -236,11 +265,13 @@
       <div class="nota">A maior distância está ante a rede privada de MS; ante a municipal a comparação é frágil pelo N pequeno.</div>
     </div>
   </div>
+    </div>
+  </details>
 
   <!-- INTEGRIDADE / QUALIDADE DA PARTICIPACAO -->
-  <div class="sech"><h2>Integridade &amp; qualidade da participação</h2>
-    <span class="hint">Eliminados, notas zeradas e sem nota · por edição, área, rede e território</span><span class="line"></span></div>
-
+  <details class="secacc">
+    <summary>Integridade &amp; qualidade da participação <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Eliminados, notas zeradas e sem nota · por edição, área, rede e território</span><span class="chev">▶</span></summary>
+    <div class="secbody">
   <div class="grid2" style="margin-top:4px">
     <div class="card">
       <h3>Eliminados por edição
@@ -271,10 +302,13 @@
     <div class="coh"><span class="dot"></span> Ordenado por taxa de eliminação · clique CRE → municípios · clique município → escolas</div>
     <div id="g_integ_table" class="plot"></div>
   </div>
+    </div>
+  </details>
 
   <!-- DRILL-DOWN TERRITORIAL -->
-  <div class="sech"><h2>Detalhamento territorial — clique para explorar</h2>
-    <span class="hint">Coordenadoria → Município → Escola (escola só 2024)</span><span class="line"></span></div>
+  <details class="secacc">
+    <summary>Detalhamento territorial — clique para explorar <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Coordenadoria → Município → Escola (escola só 2024)</span><span class="chev">▶</span></summary>
+    <div class="secbody">
 
   <div class="bread" id="bread"></div>
 
@@ -341,6 +375,35 @@
     </div>
   </details>
 
+  <!-- MODAL DRILL-DOWN EVOLUÇÃO POR ÁREA -->
+  <div class="modal" id="areaModal" onclick="if(event.target===this)closeAreaModal()">
+    <div class="modalbox">
+      <div class="modalhead">
+        <h3 id="areaModalTitle">Detalhes da área</h3>
+        <span class="modalclose" onclick="closeAreaModal()">Fechar</span>
+      </div>
+      <div class="modalbody">
+        <div class="grid2" style="gap:12px">
+          <div class="card" style="box-shadow:none;border-color:var(--bg-subtle)">
+            <h3>Histograma de notas</h3>
+            <div class="coh"><span class="dot"></span> Distribuição das notas na área/ano selecionados</div>
+            <div id="g_modal_hist" class="plot"></div>
+          </div>
+          <div class="card" style="box-shadow:none;border-color:var(--bg-subtle)">
+            <h3>Ranking das escolas · 2024</h3>
+            <div class="coh"><span class="dot"></span> Top 10 melhores e piores na área</div>
+            <div id="g_modal_rank" class="plot"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px;box-shadow:none;border-color:var(--bg-subtle)">
+          <h3>Comparação com Brasil estadual</h3>
+          <div class="coh"><span class="dot"></span> Média, mediana e dispersão da área vs referência nacional</div>
+          <div id="g_modal_comp" class="plot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="footer">Protótipo (mock) · dados reais de <code>data/agregados/</code> + concluintes por escola · paleta SED/MS · temporal + drill-down</div>
 </div>
 
@@ -387,7 +450,9 @@ const NF=n=>(n==null?'—':Number(n).toLocaleString('pt-BR'));
 /* índice por área */
 (function(){const AS={CN:[458.5,470.3,461.1,470.7,474.3,469.6],CH:[490.6,491.0,488.1,501.2,503.1,486.4],LC:[509.1,512.4,477.1,493.0,501.5,505.3],MT:[496.4,494.0,498.4,502.9,498.1,488.7],RED:[565.8,546.2,577.6,601.7,590.8,610.1]};
   const tr=AREAKEYS.map(k=>{const b=AS[k][0];return{x:ANOS,y:AS[k].map(v=>+(v/b*100).toFixed(1)),mode:'lines+markers',name:AREANOME[k],line:{color:ACOR[k],width:2.2},marker:{size:4},hovertemplate:AREANOME[k]+' %{x}<br>índice %{y:.1f}<extra></extra>'};});
-  Plotly.newPlot('g_index',tr,{...BL,height:300,legend:{orientation:'h',y:-0.22,font:{size:9.5}},xaxis:{dtick:1,gridcolor:'rgba(0,0,0,0)'},yaxis:{title:{text:'índice (2019=100)',font:{size:10}},gridcolor:C.subtle},shapes:[{type:'line',x0:2019,x1:2024,y0:100,y1:100,line:{color:C.borda,width:1,dash:'dot'}}]},CFG);})();
+  Plotly.newPlot('g_index',tr,{...BL,height:300,legend:{orientation:'h',y:-0.22,font:{size:9.5}},xaxis:{dtick:1,gridcolor:'rgba(0,0,0,0)'},yaxis:{title:{text:'índice (2019=100)',font:{size:10}},gridcolor:C.subtle},shapes:[{type:'line',x0:2019,x1:2024,y0:100,y1:100,line:{color:C.borda,width:1,dash:'dot'}}]},CFG)
+    .then(gd=>{gd.on('plotly_click',e=>{const pt=e.points[0];const ano=pt.x;const areaNome=pt.data.name;const areaKey=Object.keys(AREANOME).find(k=>AREANOME[k]===areaNome);openAreaModal(areaKey,ano);});});
+})();
 
 /* bump */
 Plotly.newPlot('g_bump',[{x:ANOS,y:RANK,mode:'lines+markers+text',line:{color:C.laranja,width:3},marker:{size:15,color:C.laranja,line:{color:'#fff',width:1.5}},text:RANK.map(r=>r+'º'),textposition:'middle center',textfont:{size:8.5,color:'#fff'},hovertemplate:'%{x}: %{y}º de 27<extra></extra>'}],
@@ -543,6 +608,39 @@ Plotly.newPlot('g_evol',[{x:ANOS,y:MED_BR,mode:'lines+markers',name:'Brasil esta
   };
   renderIntegTable('cre');
 })();
+
+/* ---------- MODAL DRILL-DOWN EVOLUÇÃO POR ÁREA ---------- */
+function openAreaModal(areaKey,ano){
+  const nome=AREANOME[areaKey]||areaKey;
+  document.getElementById('areaModalTitle').textContent=nome+' · '+ano+' — Detalhamento';
+  document.getElementById('areaModal').classList.add('on');
+  // histograma mock (distribuição de notas em 6 faixas)
+  const faixas=['0–200','200–400','400–500','500–600','600–800','800–1000'];
+  const histMs=[2,8,18,35,30,7]; const histBr=[3,10,20,32,28,7];
+  Plotly.newPlot('g_modal_hist',[
+    {x:faixas,y:histMs,name:'MS estadual',type:'bar',marker:{color:C.azul},hovertemplate:'%{x}: %{y}% dos alunos<extra></extra>'},
+    {x:faixas,y:histBr,name:'Brasil estadual',type:'bar',marker:{color:C.brasil},hovertemplate:'%{x}: %{y}% dos alunos<extra></extra>'}
+  ],{...BL,height:260,barmode:'group',xaxis:{title:{text:'faixa de nota',font:{size:10}}},yaxis:{title:{text:'% dos alunos',font:{size:10}},gridcolor:C.subtle},legend:{orientation:'h',y:-0.18,font:{size:9}}},CFG);
+  // ranking mock (top 10 melhores / piores escolas na área em 2024)
+  const escRank=(MOCK.escRank&&MOCK.escRank[areaKey])||[];
+  const top=escRank.slice(0,10); const bottom=escRank.slice(-10).reverse();
+  const rankX=top.map(e=>e.nome); const rankY=top.map(e=>e.nota);
+  const rankX2=bottom.map(e=>e.nome); const rankY2=bottom.map(e=>e.nota);
+  Plotly.newPlot('g_modal_rank',[
+    {x:rankX,y:rankY,name:'Top 10',type:'bar',marker:{color:C.verde},hovertemplate:'%{x}: %{y:.0f}<extra></extra>'},
+    {x:rankX2,y:rankY2,name:'Bottom 10',type:'bar',marker:{color:C.critico},hovertemplate:'%{x}: %{y:.0f}<extra></extra>'}
+  ],{...BL,height:260,barmode:'group',xaxis:{tickfont:{size:8}},yaxis:{title:{text:'nota média',font:{size:10}},gridcolor:C.subtle},legend:{orientation:'h',y:-0.18,font:{size:9}}},CFG);
+  // comparação boxplot-like: média, mediana, p25, p75, min, max
+  const statsMs={m:510,med:505,p25:470,p75:545,min:380,max:980};
+  const statsBr={m:515,med:510,p25:475,p75:550,min:390,max:990};
+  function boxTrace(label,s,c){return{
+    y:[label],name:label,type:'box',boxpoints:false,orientation:'h',
+      q1:[s.p25],median:[s.med],q3:[s.p75],lowerfence:[s.min],upperfence:[s.max],mean:[s.m],
+      marker:{color:c},line:{color:c,width:2},hovertemplate:label+'<br>Média: '+s.m+'<br>Mediana: '+s.med+'<br>Q1: '+s.p25+'<br>Q3: '+s.p75+'<extra></extra>'};}
+  Plotly.newPlot('g_modal_comp',[boxTrace('MS estadual',statsMs,C.azul),boxTrace('Brasil estadual',statsBr,C.brasil)],
+    {...BL,height:220,showlegend:false,xaxis:{title:{text:'nota',font:{size:10}},gridcolor:C.subtle},yaxis:{tickfont:{size:11}}},CFG);
+}
+function closeAreaModal(){document.getElementById('areaModal').classList.remove('on');}
 
 /* ---------- DRILL-DOWN ---------- */
 const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();

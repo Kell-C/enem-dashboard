@@ -253,7 +253,18 @@ for _, r in ie.iterrows():
 
 integ = {'rede':integRede,'cre':integCre,'mun':integMun,'esc':integEsc}
 
-out = {'anos':ANOS_ORD,'cre':cre,'creMuns':cre_to_muns,'mun':mun,'esc':esc,'msArea':msarea,'redes':redes,'funil2024':funil,'estadualN':estadualN,'estadualConcl':estadualConcl,'integ':integ}
+# --- escRank: ranking de escolas por área (mock a partir de escolas_2024) ---
+escRank = {}
+for area, col in AREAS:
+    rows = []
+    for _, r in est.iterrows():
+        v = r.get(col)
+        if pd.isna(v): continue
+        rows.append({'nome': re.sub(r'^E\.?E\.?\s+','', str(r['NOME_ESCOLA'])).strip()[:34] or '(escola)', 'nota': round(float(v),1)})
+    rows.sort(key=lambda x: x['nota'], reverse=True)
+    escRank[area] = rows
+
+out = {'anos':ANOS_ORD,'cre':cre,'creMuns':cre_to_muns,'mun':mun,'esc':esc,'msArea':msarea,'redes':redes,'funil2024':funil,'estadualN':estadualN,'estadualConcl':estadualConcl,'integ':integ,'escRank':escRank}
 with open('mock_data.js','w',encoding='utf-8') as f:
     f.write('window.MOCK=' + json.dumps(out, ensure_ascii=False) + ';')
 print('OK municipios:', len(mun), '| CREs:', list(cre.keys()))
