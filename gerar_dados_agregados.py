@@ -344,7 +344,7 @@ def processar_ano(df_ano, cres, mapa_muni_cre, df_concluintes, df_concluintes_cr
                 continue
 
             agg_dict = {
-                "estudantes": ("NU_INSCRICAO", "count"),
+                "estudantes": ("NU_SEQUENCIAL" if ano == 2024 else "NU_INSCRICAO", "count"),
                 "media_geral": ("MEDIA_GERAL", "mean"),
                 "media_cn": ("NU_NOTA_CN", "mean"),
                 "media_ch": ("NU_NOTA_CH", "mean"),
@@ -357,8 +357,10 @@ def processar_ano(df_ano, cres, mapa_muni_cre, df_concluintes, df_concluintes_cr
 
             muni_map = df_2024_dep.groupby("CO_ESCOLA")["NO_MUNICIPIO_ESC"].first().to_dict()
             cre_map = df_2024_dep.groupby("CO_ESCOLA")["CRE"].first().to_dict()
+            nome_map = df_2024_dep.groupby("CO_ESCOLA")["NOME_ESCOLA"].first().to_dict()
             df_escolas["municipio"] = df_escolas["CO_ESCOLA"].map(muni_map)
             df_escolas["cre"] = df_escolas["CO_ESCOLA"].map(cre_map)
+            df_escolas["NOME_ESCOLA"] = df_escolas["CO_ESCOLA"].map(nome_map)
 
             if dep == "Estadual" and not df_concluintes.empty:
                 conc_2024 = df_concluintes[df_concluintes["NU_ANO"] == 2024][["CO_ESCOLA", "Concluintes"]].copy()
@@ -645,7 +647,7 @@ def main():
     print("\nPadrão: Escolas ESTADUAIS | Concluintes EM | Presentes 2 dias")
 
     # Carregar dados auxiliares
-    print("\n📂 Carregando dados auxiliares...")
+    print("\n[LOAD] Carregando dados auxiliares...")
     cres = carregar_cres()
     mapa_muni_cre = carregar_mapa_municipio_cre()
     df_concluintes = carregar_concluintes()
@@ -657,8 +659,8 @@ def main():
     print(f"   Concluintes CRE: {len(df_concluintes_cre)} registros")
     print(f"   Concluintes município: {len(df_concluintes_muni)} registros")
 
-    # Processar por ano (economia de memória)
-    print(f"\n📂 Carregando {ARQUIVO_ENTRADA} por ano...")
+    # Processar por ano (economia de memoria)
+    print(f"\n[LOAD] Carregando {ARQUIVO_ENTRADA} por ano...")
 
     todos_resultados = {
         "sumario": [],
@@ -678,7 +680,7 @@ def main():
     print(f"   Anos encontrados: {sorted(anos)}")
 
     for ano in sorted(anos):
-        print(f"\n📅 Processando ano {ano}...")
+        print(f"\n[PROCESS] Ano {ano}...")
 
         # Carregar apenas o ano atual
         df_ano = pd.read_parquet(ARQUIVO_ENTRADA, filters=[("NU_ANO", "==", ano)])
@@ -694,7 +696,7 @@ def main():
         gc.collect()
 
     # Salvar todos os resultados
-    print("\n💾 Salvando arquivos agregados...")
+    print("\n[SAVE] Salvando arquivos agregados...")
 
     arquivos = {
         "sumario_executivo.parquet": todos_resultados["sumario"],
@@ -720,23 +722,23 @@ def main():
             df_out.to_parquet(caminho, index=False)
             size_mb = os.path.getsize(caminho) / (1024 * 1024)
             total_mb += size_mb
-            print(f"   ✓ {nome} ({size_mb:.2f} MB) — {len(df_out)} registros")
+            print(f"   [OK] {nome} ({size_mb:.2f} MB) — {len(df_out)} registros")
             del df_out
         else:
-            print(f"   ⚠️ {nome} — nenhum dado")
+            print(f"   [WARN] {nome} — nenhum dado")
 
     print("\n" + "=" * 60)
-    print("✅ TODOS OS DADOS AGREGADOS GERADOS!")
-    print(f"📁 Pasta: {PASTA_SAIDA}")
-    print(f"💾 Total: {total_mb:.2f} MB")
+    print("[OK] TODOS OS DADOS AGREGADOS GERADOS!")
+    print(f"[DIR] Pasta: {PASTA_SAIDA}")
+    print(f"[SIZE] Total: {total_mb:.2f} MB")
     print("=" * 60)
 
     # Integridade / qualidade da participacao (eliminados, zeros, sem nota)
-    print("\n🔎 Gerando agregados de integridade...")
+    print("\n[INFO] Gerando agregados de integridade...")
     try:
         gerar_integridade(PASTA_SAIDA, cres, mapa_muni_cre)
     except Exception as e:  # nao quebra o ETL principal
-        print(f"   ⚠️ integridade falhou: {e}")
+        print(f"   [WARN] integridade falhou: {e}")
 
 
 if __name__ == "__main__":
