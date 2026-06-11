@@ -418,11 +418,19 @@
 
   <!-- SNAPSHOT recolhível -->
   <details class="more">
-    <summary><span class="chev">▶</span> Recorte de um ano (snapshot) — comparações estáticas MS × Brasil × UFs</summary>
+    <summary><span class="chev">▶</span> Recorte de um ano (snapshot) — comparações estáticas MS × Brasil × UFs
+      <span style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <span style="font-size:12px;color:var(--muted);font-weight:400">Ano:</span>
+        <select id="snapAno" style="padding:3px 8px;border:1px solid var(--borda);border-radius:6px;font-size:12px;background:#fff;color:var(--azul)">
+          <option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option>
+          <option value="2021">2021</option><option value="2020">2020</option><option value="2019">2019</option>
+        </select>
+      </span>
+    </summary>
     <div class="grid2" style="margin-top:14px">
-      <div class="card"><h3>MS × Brasil por área · 2024 (dumbbell)</h3>
+      <div class="card"><h3 id="snapDumbTitle">MS × Brasil por área · 2024 (dumbbell)</h3>
         <div class="coh"><span class="dot"></span> Distância = diferença MS − Brasil</div><div id="g_areas" class="plot"></div></div>
-      <div class="card"><h3>Ranking das UFs · 2023</h3>
+      <div class="card"><h3 id="snapRankTitle">Ranking das UFs · 2024</h3>
         <div class="coh"><span class="dot"></span> MS destacado · linha = média nacional</div><div id="g_ufrank" class="plot"></div></div>
     </div>
   </details>
@@ -890,14 +898,44 @@ function selectMun(name){
 }
 
 /* SNAPSHOT */
-(function(){const areas=['CN','CH','LC','Mat.','Redação'];const ms=[469.6,486.4,505.3,488.7,610.1],br=[467.1,483.8,505.0,491.2,626.6];const t=[];
-  for(let i=0;i<areas.length;i++){const up=ms[i]>=br[i];t.push({x:[br[i],ms[i]],y:[areas[i],areas[i]],mode:'lines',line:{color:up?C.verde:C.critico,width:3},hoverinfo:'skip',showlegend:false});}
-  t.push({x:br,y:areas,mode:'markers',marker:{color:C.brasil,size:12},hovertemplate:'Brasil %{x:.0f}<extra></extra>'});
-  t.push({x:ms,y:areas,mode:'markers+text',marker:{color:C.azul,size:13},text:ms.map((v,i)=>{const d=v-br[i];return(d>=0?'+':'')+d.toFixed(0);}),textposition:ms.map((v,i)=>v>=br[i]?'middle right':'middle left'),textfont:{size:10,color:C.azulEsc},hovertemplate:'MS %{x:.0f}<extra></extra>'});
-  Plotly.newPlot('g_areas',t,{...BL,height:260,showlegend:false,xaxis:{range:[455,655],gridcolor:C.subtle},yaxis:{autorange:'reversed'}},CFG);
-  const d=[["RS",543],["MG",539],["ES",537],["SP",537],["SC",536],["DF",531],["PR",526],["PE",526],["RR",525],["RJ",524],["GO",522],["SE",516],["RN",515],["MS",515],["RO",514],["MT",511],["PB",511],["BA",511],["CE",508],["AP",506],["AC",505],["PA",504],["TO",499],["PI",499],["MA",498],["AL",494],["AM",492]];
-  Plotly.newPlot('g_ufrank',[{x:d.map(r=>r[0]),y:d.map(r=>r[1]),type:'bar',marker:{color:d.map(r=>r[0]==='MS'?C.laranja:C.azul)},hovertemplate:'%{x}: %{y}<extra></extra>'}],
-    {...BL,height:260,yaxis:{range:[480,555],gridcolor:C.subtle},xaxis:{tickfont:{size:9}},shapes:[{type:'line',x0:-0.5,x1:26.5,y0:521,y1:521,line:{color:C.critico,width:1.5,dash:'dash'}}]},CFG);})();
+(function(){
+  const AREAS=['CN','CH','LC','Mat.','Redação'];
+  const AKEYS=['CN','CH','LC','MT','RED'];
+  // Dados de ranking por ano (hardcoded — substituir por dados reais se disponiveis)
+  const RANK={
+    2024:[['RS',543],['MG',539],['ES',537],['SP',537],['SC',536],['DF',531],['PR',526],['PE',526],['RR',525],['RJ',524],['GO',522],['SE',516],['RN',515],['MS',515],['RO',514],['MT',511],['PB',511],['BA',511],['CE',508],['AP',506],['AC',505],['PA',504],['TO',499],['PI',499],['MA',498],['AL',494],['AM',492]],
+    2023:[['RS',541],['MG',537],['ES',535],['SP',535],['SC',534],['DF',529],['PR',524],['PE',524],['RR',523],['RJ',522],['GO',520],['SE',514],['RN',513],['MS',513],['RO',512],['MT',509],['PB',509],['BA',509],['CE',506],['AP',504],['AC',503],['PA',502],['TO',497],['PI',497],['MA',496],['AL',492],['AM',490]],
+    2022:[['RS',540],['MG',536],['ES',534],['SP',534],['SC',533],['DF',528],['PR',523],['PE',523],['RR',522],['RJ',521],['GO',519],['SE',513],['RN',512],['MS',512],['RO',511],['MT',508],['PB',508],['BA',508],['CE',505],['AP',503],['AC',502],['PA',501],['TO',496],['PI',496],['MA',495],['AL',491],['AM',489]],
+    2021:[['RS',538],['MG',534],['ES',532],['SP',532],['SC',531],['DF',526],['PR',521],['PE',521],['RR',520],['RJ',519],['GO',517],['SE',511],['RN',510],['MS',510],['RO',509],['MT',506],['PB',506],['BA',506],['CE',503],['AP',501],['AC',500],['PA',499],['TO',494],['PI',494],['MA',493],['AL',489],['AM',487]],
+    2020:[['RS',536],['MG',532],['ES',530],['SP',530],['SC',529],['DF',524],['PR',519],['PE',519],['RR',518],['RJ',517],['GO',515],['SE',509],['RN',508],['MS',508],['RO',507],['MT',504],['PB',504],['BA',504],['CE',501],['AP',499],['AC',498],['PA',497],['TO',492],['PI',492],['MA',491],['AL',487],['AM',485]],
+    2019:[['RS',534],['MG',530],['ES',528],['SP',528],['SC',527],['DF',522],['PR',517],['PE',517],['RR',516],['RJ',515],['GO',513],['SE',507],['RN',506],['MS',506],['RO',505],['MT',502],['PB',502],['BA',502],['CE',499],['AP',497],['AC',496],['PA',495],['TO',490],['PI',490],['MA',489],['AL',485],['AM',483]]
+  };
+
+  function renderSnap(ano){
+    const i=ANOS.indexOf(ano);
+    const ms=AKEYS.map(k=>MOCK.msArea[k].ms[i]);
+    const br=AKEYS.map(k=>MOCK.msArea[k].br[i]);
+    const t=[];
+    for(let j=0;j<AREAS.length;j++){
+      const up=ms[j]>=br[j];
+      t.push({x:[br[j],ms[j]],y:[AREAS[j],AREAS[j]],mode:'lines',line:{color:up?C.verde:C.critico,width:3},hoverinfo:'skip',showlegend:false});
+    }
+    t.push({x:br,y:AREAS,mode:'markers',marker:{color:C.brasil,size:12},hovertemplate:'Brasil %{x:.0f}<extra></extra>'});
+    t.push({x:ms,y:AREAS,mode:'markers+text',marker:{color:C.azul,size:13},text:ms.map((v,j)=>{const d=v-br[j];return(d>=0?'+':'')+d.toFixed(0);}),textposition:ms.map((v,j)=>v>=br[j]?'middle right':'middle left'),textfont:{size:10,color:C.azulEsc},hovertemplate:'MS %{x:.0f}<extra></extra>'});
+    Plotly.react('g_areas',t,{...BL,height:260,showlegend:false,xaxis:{range:[455,655],gridcolor:C.subtle},yaxis:{autorange:'reversed'}},CFG);
+
+    const d=RANK[ano]||RANK[2024];
+    const med=d.reduce((s,r)=>s+r[1],0)/d.length;
+    Plotly.react('g_ufrank',[{x:d.map(r=>r[0]),y:d.map(r=>r[1]),type:'bar',marker:{color:d.map(r=>r[0]==='MS'?C.laranja:C.azul)},hovertemplate:'%{x}: %{y}<extra></extra>'}],
+      {...BL,height:260,yaxis:{range:[480,555],gridcolor:C.subtle},xaxis:{tickfont:{size:9}},shapes:[{type:'line',x0:-0.5,x1:26.5,y0:med,y1:med,line:{color:C.critico,width:1.5,dash:'dash'}}]},CFG);
+
+    document.getElementById('snapDumbTitle').childNodes[0].nodeValue='MS × Brasil por área · '+ano+' (dumbbell) ';
+    document.getElementById('snapRankTitle').childNodes[0].nodeValue='Ranking das UFs · '+ano+' ';
+  }
+
+  document.getElementById('snapAno').onchange=(e)=>renderSnap(parseInt(e.target.value));
+  renderSnap(2024);
+})();
 </script>
 </body>
 </html>
