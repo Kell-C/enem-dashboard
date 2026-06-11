@@ -305,6 +305,58 @@
     </div>
   </details>
 
+  <!-- DISTRIBUIÇÃO DO DESEMPENHO -->
+  <details class="secacc">
+    <summary>Distribuição do desempenho <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Boxplot, histograma e dispersão por área ao longo dos anos</span><span class="chev">▶</span></summary>
+    <div class="secbody">
+      <div class="grid2u" style="margin-top:4px">
+        <div class="card">
+          <h3>Boxplot por área · evolução 2019–2024
+            <span class="help">i<span class="tip"><b>Como ler:</b> cada caixa mostra a distribuição das notas de uma área em um ano. A linha dentro da caixa é a mediana; a caixa vai de Q1 a Q3; os bigodes vão até o mínimo/máximo (excluindo outliers). Pontos isolados = outliers.</span></span></h3>
+          <div class="coh"><span class="dot"></span> Clique numa área na legenda para mostrar/ocultar · cor = área</div>
+          <div id="g_boxplot" class="plot"></div>
+        </div>
+        <div class="card">
+          <h3>Histograma de notas
+            <span class="help">i<span class="tip"><b>Como ler:</b> distribuição percentual das notas em 6 faixas. A barra colorida = MS estadual; cinza = Brasil estadual. Use o seletor abaixo para mudar área e ano.</span></span></h3>
+          <div class="coh"><span class="dot"></span> Seletor de área e ano abaixo · cor da barra = área selecionada</div>
+          <div id="g_histograma" class="plot"></div>
+          <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
+            <select id="histArea" style="padding:4px 8px;border:1px solid var(--borda);border-radius:6px;font-size:12px"></select>
+            <select id="histAno" style="padding:4px 8px;border:1px solid var(--borda);border-radius:6px;font-size:12px"></select>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Dispersão: nota vs participação por escola (2024)
+          <span class="help">i<span class="tip"><b>Como ler:</b> cada ponto é uma escola estadual de MS. <b>Eixo X</b> = taxa de participação efetiva; <b>Eixo Y</b> = média geral da escola. <b>Tamanho</b> = número de alunos. <b>Cor</b> = CRE. Passe o mouse para ver nome, município e valores.</span></span></h3>
+        <div class="coh"><span class="dot"></span> Bubble = escola · tamanho = alunos · cor = CRE · hover para detalhes</div>
+        <div id="g_dispersao" class="plot"></div>
+      </div>
+    </div>
+  </details>
+
+  <!-- CONSISTÊNCIA E VARIAÇÃO -->
+  <details class="secacc">
+    <summary>Consistência e variação <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Desvio padrão e coeficiente de variação por área ao longo do tempo</span><span class="chev">▶</span></summary>
+    <div class="secbody">
+      <div class="grid2" style="margin-top:4px">
+        <div class="card">
+          <h3>Evolução do desvio padrão por área
+            <span class="help">i<span class="tip"><b>Como ler:</b> o desvio padrão mede a dispersão das notas. <b>DP ↓</b> = notas mais concentradas em torno da média (mais homogêneo). <b>DP ↑</b> = maior heterogeneidade. Comparar o ritmo de cada área.</span></span></h3>
+          <div class="coh"><span class="dot"></span> Linha = área · cor consistente com o painel · unidade = pontos</div>
+          <div id="g_dp" class="plot"></div>
+        </div>
+        <div class="card">
+          <h3>Coeficiente de variação (CV = DP / média)
+            <span class="help">i<span class="tip"><b>Como ler:</b> o CV normaliza o desvio padrão pela média, permitindo comparar consistência entre áreas de escalas diferentes (ex: Redação ~600 vs CN ~470). <b>CV menor</b> = mais consistente.</span></span></h3>
+          <div class="coh"><span class="dot"></span> Barras por área/ano · % do valor médio · cor = área</div>
+          <div id="g_cv" class="plot"></div>
+        </div>
+      </div>
+    </div>
+  </details>
+
   <!-- DRILL-DOWN TERRITORIAL -->
   <details class="secacc">
     <summary>Detalhamento territorial — clique para explorar <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Coordenadoria → Município → Escola (escola só 2024)</span><span class="chev">▶</span></summary>
@@ -644,6 +696,85 @@ function openAreaModal(areaKey,ano){
     {...BL,height:180,showlegend:false,xaxis:{title:{text:'nota',font:{size:10}},gridcolor:C.subtle},yaxis:{tickfont:{size:11}},margin:{l:110,r:14,t:8,b:34}},CFG);
 }
 function closeAreaModal(){document.getElementById('areaModal').classList.remove('on');}
+
+/* ---------- ESTATÍSTICAS AVANÇADAS ---------- */
+(function(){
+  const BP=MOCK.boxplot||{};
+  const HIST=MOCK.histograma||{};
+  const DISP=MOCK.dispersao||[];
+  const DP=MOCK.desvio_padrao||{};
+  const CV=MOCK.cv||{};
+
+  // (a) Boxplot por área · evolução 2019-2024
+  const boxTr=[];
+  AREAKEYS.forEach(k=>{
+    const cor=ACOR[k];
+    ANOS.forEach((a,i)=>{
+      const d=(BP[k]||{})[a];
+      if(!d) return;
+      boxTr.push({
+        x:Array(5).fill(AREANOME[k]+' '+a),
+        q1:[d.q1],median:[d.med],q3:[d.q3],
+        lowerfence:[d.min],upperfence:[d.max],
+        type:'box',name:AREANOME[k]+' '+a,boxpoints:'outliers',
+        marker:{color:cor,outliercolor:cor,size:3},
+        line:{color:cor,width:1.5},
+        fillcolor:'rgba('+hexToRgb(cor)+',0.12)',
+        hovertemplate:AREANOME[k]+' '+a+'<br>Mediana: '+d.med+'<br>Q1: '+d.q1+'<br>Q3: '+d.q3+'<br>Min: '+d.min+'<br>Max: '+d.max+'<extra></extra>'
+      });
+    });
+  });
+  Plotly.newPlot('g_boxplot',boxTr,{...BL,height:360,showlegend:false,xaxis:{tickfont:{size:8},gridcolor:'rgba(0,0,0,0)'},yaxis:{title:{text:'nota',font:{size:10}},gridcolor:C.subtle}},CFG);
+
+  function hexToRgb(h){
+    const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);
+    return r+','+g+','+b;
+  }
+
+  // (b) Histograma interativo com seletor
+  const hArea=document.getElementById('histArea');
+  const hAno=document.getElementById('histAno');
+  AREAKEYS.forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=AREANOME[k];hArea.appendChild(o);});
+  ANOS.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;hAno.appendChild(o);});
+  hArea.value='CN'; hAno.value='2024';
+  function renderHist(){
+    const k=hArea.value, a=String(hAno.value);
+    const d=(HIST[k]||{})[a];
+    if(!d) return;
+    const cor=ACOR[k];
+    const faixas=['0–200','200–400','400–500','500–600','600–800','800–1000'];
+    Plotly.react('g_histograma',[
+      {x:faixas,y:d.ms,name:'MS estadual',type:'bar',marker:{color:cor},hovertemplate:'%{x}: %{y}% dos alunos<extra></extra>'},
+      {x:faixas,y:d.br,name:'Brasil estadual',type:'bar',marker:{color:C.brasil},hovertemplate:'%{x}: %{y}% dos alunos<extra></extra>'}
+    ],{...BL,height:260,barmode:'group',xaxis:{title:{text:'faixa de nota',font:{size:10}}},yaxis:{title:{text:'% dos alunos',font:{size:10}},gridcolor:C.subtle},legend:{orientation:'h',y:-0.18,font:{size:9}}},CFG);
+  }
+  hArea.onchange=renderHist; hAno.onchange=renderHist; renderHist();
+
+  // (c) Dispersão: nota vs participação por escola (2024)
+  const creColors={};
+  const creList=[...new Set(DISP.map(e=>e.cre).filter(Boolean))];
+  const crePalette=['#0A4D8C','#2EAD6E','#F07A28','#F2C230','#D6453D','#6B4A9F','#3BA4E8','#1ABC9C','#9B59B6','#E67E22','#34495E','#16A085'];
+  creList.forEach((c,i)=>creColors[c]=crePalette[i%crePalette.length]);
+  const dispTr=creList.map(cre=>{
+    const pts=DISP.filter(e=>e.cre===cre);
+    return{
+      x:pts.map(e=>e.tx||0),y:pts.map(e=>e.nota),
+      text:pts.map(e=>e.nome),
+      mode:'markers',type:'scatter',name:cre,
+      marker:{size:pts.map(e=>Math.max(6,Math.min(22,Math.sqrt(e.n)*1.2))),color:creColors[cre],opacity:0.7,line:{color:'#fff',width:1}},
+      hovertemplate:'<b>%{text}</b><br>CRE: '+cre+'<br>Participação: %{x:.1f}%<br>Média: %{y:.1f}<extra></extra>'
+    };
+  });
+  Plotly.newPlot('g_dispersao',dispTr,{...BL,height:340,legend:{orientation:'h',y:-0.22,font:{size:9}},xaxis:{title:{text:'participação efetiva (%)',font:{size:10}},gridcolor:C.subtle},yaxis:{title:{text:'média geral',font:{size:10}},gridcolor:C.subtle}},CFG);
+
+  // (d) Evolução do desvio padrão por área
+  const dpTr=AREAKEYS.map(k=>({x:ANOS,y:DP[k]||[],mode:'lines+markers',name:AREANOME[k],line:{color:ACOR[k],width:2},marker:{size:5},hovertemplate:AREANOME[k]+' %{x}<br>DP: %{y:.1f} pts<extra></extra>'}));
+  Plotly.newPlot('g_dp',dpTr,{...BL,height:300,legend:{orientation:'h',y:-0.22,font:{size:9}},xaxis:{dtick:1,gridcolor:'rgba(0,0,0,0)'},yaxis:{title:{text:'desvio padrão (pts)',font:{size:10}},gridcolor:C.subtle}},CFG);
+
+  // (e) Coeficiente de variação (CV)
+  const cvTr=AREAKEYS.map(k=>({x:ANOS,y:CV[k]||[],mode:'lines+markers',name:AREANOME[k],line:{color:ACOR[k],width:2},marker:{size:5},hovertemplate:AREANOME[k]+' %{x}<br>CV: %{y:.1f}%<extra></extra>'}));
+  Plotly.newPlot('g_cv',cvTr,{...BL,height:300,legend:{orientation:'h',y:-0.22,font:{size:9}},xaxis:{dtick:1,gridcolor:'rgba(0,0,0,0)'},yaxis:{title:{text:'coef. variação (%)',font:{size:10}},gridcolor:C.subtle}},CFG);
+})();
 
 /* ---------- DRILL-DOWN ---------- */
 const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();

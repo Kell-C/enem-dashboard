@@ -265,6 +265,93 @@ for area, col in AREAS:
     escRank[area] = rows
 
 out = {'anos':ANOS_ORD,'cre':cre,'creMuns':cre_to_muns,'mun':mun,'esc':esc,'msArea':msarea,'redes':redes,'funil2024':funil,'estadualN':estadualN,'estadualConcl':estadualConcl,'integ':integ,'escRank':escRank}
+
+# --- estatisticas avancadas (mock realista a partir das medias disponiveis) ---
+import random
+random.seed(42)
+
+# boxplot por area/ano: min, q1, mediana, q3, max, outliers
+# Usa as medias de msarea + desvio tipico por area para simular distribuicoes
+BOX_AREA = {
+    'CN': {'sd': 65, 'skew': -0.3},
+    'CH': {'sd': 60, 'skew': -0.2},
+    'LC': {'sd': 55, 'skew': -0.1},
+    'MT': {'sd': 70, 'skew': -0.4},
+    'RED': {'sd': 85, 'skew': 0.1},
+}
+boxplot = {}
+for area in ['CN','CH','LC','MT','RED']:
+    boxplot[area] = {}
+    for i, ano in enumerate(ANOS_ORD):
+        med = msarea[area]['ms'][i]
+        sd = BOX_AREA[area]['sd']
+        # simula estatisticas de ordem a partir de media e sd
+        q1 = max(0, round(med - 0.67*sd + random.uniform(-5,5), 1))
+        mediana = max(q1+5, round(med + random.uniform(-8,8), 1))
+        q3 = max(mediana+5, round(med + 0.67*sd + random.uniform(-5,5), 1))
+        minv = max(0, round(q1 - 0.5*sd + random.uniform(-10,10), 1))
+        maxv = min(1000, round(q3 + 0.6*sd + random.uniform(-10,20), 1))
+        boxplot[area][ano] = {
+            'min': minv, 'q1': q1, 'med': mediana, 'q3': q3, 'max': maxv,
+            'outliers': [round(random.uniform(0, minv-5),1) for _ in range(random.randint(0,2))] + [round(random.uniform(maxv+5, 1000),1) for _ in range(random.randint(0,3))]
+        }
+
+# histograma por area/ano: 6 faixas
+HIST_FAIXAS = ['0-200','200-400','400-500','500-600','600-800','800-1000']
+histograma = {}
+for area in ['CN','CH','LC','MT','RED']:
+    histograma[area] = {}
+    for i, ano in enumerate(ANOS_ORD):
+        med = msarea[area]['ms'][i]
+        sd = BOX_AREA[area]['sd']
+        # distribuicao normal truncada em faixas
+        import math
+        def phi(x): return 0.5*(1+math.erf(x/math.sqrt(2)))
+        probs = []
+        bounds = [0,200,400,500,600,800,1000]
+        for j in range(6):
+            p = phi((bounds[j+1]-med)/sd) - phi((bounds[j]-med)/sd)
+            probs.append(max(1, round(p*100, 1)))
+        # normaliza para somar 100
+        s = sum(probs)
+        probs = [round(p/s*100,1) for p in probs]
+        # ajuste para somar exatamente 100
+        diff = 100 - sum(probs)
+        probs[3] = round(probs[3] + diff, 1)
+        histograma[area][ano] = {'ms': probs, 'br': [round(p + random.uniform(-3,3),1) for p in probs]}
+
+# dispersao escolas 2024: nota vs participacao (bubble)
+dispersao = []
+for _, r in est.iterrows():
+    if pd.isna(r['media_geral']) or pd.isna(r['estudantes']):
+        continue
+    dispersao.append({
+        'nome': re.sub(r'^E\.?E\.?\s+','', str(r['NOME_ESCOLA'])).strip()[:34] or '(escola)',
+        'mun': str(r['municipio']),
+        'cre': clean_cre(r['cre']) if not pd.isna(r.get('cre')) else '—',
+        'nota': round(float(r['media_geral']),1),
+        'n': int(r['estudantes']),
+        'tx': round(float(r.get('tx_part_efetiva', 0)),1) if not pd.isna(r.get('tx_part_efetiva')) else None
+    })
+
+# desvio padrao e CV por area/ano
+desvio_padrao = {}
+cv = {}
+for area in ['CN','CH','LC','MT','RED']:
+    desvio_padrao[area] = []
+    cv[area] = []
+    for i, ano in enumerate(ANOS_ORD):
+        med = msarea[area]['ms'][i]
+        sd = BOX_AREA[area]['sd'] + random.uniform(-8, 8)
+        desvio_padrao[area].append(round(sd, 1))
+        cv[area].append(round(sd/med*100, 1))
+
+out['boxplot'] = boxplot
+out['histograma'] = histograma
+out['dispersao'] = dispersao
+out['desvio_padrao'] = desvio_padrao
+out['cv'] = cv
+
 with open('mock_data.js','w',encoding='utf-8') as f:
     f.write('window.MOCK=' + json.dumps(out, ensure_ascii=False) + ';')
 print('OK municipios:', len(mun), '| CREs:', list(cre.keys()))
