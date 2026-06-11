@@ -272,6 +272,8 @@ import json, os
 # Carrega estatisticas reais calculadas dos microdados
 STATS_2019_2023 = json.load(open(os.path.join(os.path.dirname(__file__), '..', 'stats_2019_2023.json')))
 STATS_2024 = json.load(open(os.path.join(os.path.dirname(__file__), '..', 'stats_2024.json')))
+STATS_BR_2019_2023 = json.load(open(os.path.join(os.path.dirname(__file__), '..', 'stats_br_2019_2023.json')))
+STATS_BR_2024 = json.load(open(os.path.join(os.path.dirname(__file__), '..', 'stats_br_2024.json')))
 
 # boxplot por area/ano: min, q1, mediana, q3, max
 boxplot = {}
@@ -287,15 +289,16 @@ for area in ['CN','CH','LC','MT','RED']:
             'outliers': []
         }
 
-# histograma por area/ano: 6 faixas (reais)
+# histograma por area/ano: 6 faixas (reais MS + BR)
 histograma = {}
 for area in ['CN','CH','LC','MT','RED']:
     histograma[area] = {}
     for ano in ANOS_ORD:
-        src = STATS_2024.get(area) if ano == 2024 else STATS_2019_2023.get(area, {}).get(str(ano))
-        if not src:
+        src_ms = STATS_2024.get(area) if ano == 2024 else STATS_2019_2023.get(area, {}).get(str(ano))
+        src_br = STATS_BR_2024.get(area) if ano == 2024 else STATS_BR_2019_2023.get(area, {}).get(str(ano))
+        if not src_ms or not src_br:
             continue
-        histograma[area][ano] = {'ms': src['hist'], 'br': src['hist']}  # br sera preenchido depois se disponivel
+        histograma[area][ano] = {'ms': src_ms['hist'], 'br': src_br['hist']}
 
 # desvio padrao e CV por area/ano (reais)
 desvio_padrao = {}
