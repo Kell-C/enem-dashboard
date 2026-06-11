@@ -732,29 +732,44 @@ function closeAreaModal(){document.getElementById('areaModal').classList.remove(
   const CV=MOCK.cv||{};
 
   // (a) Boxplot por área · evolução 2019-2024
-  const boxTr=[];
-  AREAKEYS.forEach(k=>{
-    const cor=ACOR[k];
-    ANOS.forEach((a,i)=>{
-      const d=(BP[k]||{})[a];
-      if(!d) return;
-      boxTr.push({
-        x:Array(5).fill(AREANOME[k]+' '+a),
-        q1:[d.q1],median:[d.med],q3:[d.q3],
-        lowerfence:[d.min],upperfence:[d.max],
-        type:'box',name:AREANOME[k]+' '+a,boxpoints:'outliers',
-        marker:{color:cor,outliercolor:cor,size:3},
-        line:{color:cor,width:1.5},
-        fillcolor:'rgba('+hexToRgb(cor)+',0.12)',
-        hovertemplate:AREANOME[k]+' '+a+'<br>Mediana: '+d.med+'<br>Q1: '+d.q1+'<br>Q3: '+d.q3+'<br>Min: '+d.min+'<br>Max: '+d.max+'<extra></extra>'
-      });
+  // Agrupado por ano no eixo X, com 5 boxplots por ano (uma por área)
+  const boxTr = [];
+  AREAKEYS.forEach(k => {
+    const cor = ACOR[k];
+    const xVals = [], q1Vals = [], medVals = [], q3Vals = [], minVals = [], maxVals = [];
+    ANOS.forEach(a => {
+      const d = (BP[k] || {})[a];
+      if (!d) return;
+      xVals.push(String(a));
+      q1Vals.push(d.q1);
+      medVals.push(d.med);
+      q3Vals.push(d.q3);
+      minVals.push(d.min);
+      maxVals.push(d.max);
+    });
+    if (xVals.length === 0) return;
+    boxTr.push({
+      y: xVals,
+      q1: q1Vals, median: medVals, q3: q3Vals,
+      lowerfence: minVals, upperfence: maxVals,
+      type: 'box', name: AREANOME[k], orientation: 'h',
+      boxpoints: false,
+      marker: { color: cor },
+      line: { color: cor, width: 1.5 },
+      fillcolor: 'rgba(' + hexToRgb(cor) + ',0.15)',
+      hovertemplate: AREANOME[k] + ' %{y}<br>Mediana: %{median:.1f}<br>Q1: %{q1:.1f}<br>Q3: %{q3:.1f}<br>Min: %{lowerfence:.1f}<br>Max: %{upperfence:.1f}<extra></extra>'
     });
   });
-  Plotly.newPlot('g_boxplot',boxTr,{...BL,height:360,showlegend:false,xaxis:{tickfont:{size:8},gridcolor:'rgba(0,0,0,0)'},yaxis:{title:{text:'nota',font:{size:10}},gridcolor:C.subtle}},CFG);
+  Plotly.newPlot('g_boxplot', boxTr, {
+    ...BL, height: 400,
+    legend: { orientation: 'h', y: -0.18, font: { size: 10 } },
+    xaxis: { title: { text: 'nota', font: { size: 10 } }, gridcolor: C.subtle },
+    yaxis: { title: { text: '', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)', dtick: 1, tickfont: { size: 11 } }
+  }, CFG);
 
-  function hexToRgb(h){
-    const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);
-    return r+','+g+','+b;
+  function hexToRgb(h) {
+    const r = parseInt(h.slice(1, 3), 16), g = parseInt(h.slice(3, 5), 16), b = parseInt(h.slice(5, 7), 16);
+    return r + ',' + g + ',' + b;
   }
 
   // (b) Histograma interativo com seletor
