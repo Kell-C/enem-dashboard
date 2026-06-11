@@ -612,16 +612,17 @@ Plotly.newPlot('g_evol',[{x:ANOS,y:MED_BR,mode:'lines+markers',name:'Brasil esta
 /* ---------- MODAL DRILL-DOWN EVOLUÇÃO POR ÁREA ---------- */
 function openAreaModal(areaKey,ano){
   const nome=AREANOME[areaKey]||areaKey;
+  const areaCor=ACOR[areaKey]||C.azul;
   document.getElementById('areaModalTitle').textContent=nome+' · '+ano+' — Detalhamento';
   document.getElementById('areaModal').classList.add('on');
-  // histograma mock (distribuição de notas em 6 faixas)
+  // histograma mock (distribuição de notas em 6 faixas) — cor da área para MS, cinza para Brasil
   const faixas=['0–200','200–400','400–500','500–600','600–800','800–1000'];
   const histMs=[2,8,18,35,30,7]; const histBr=[3,10,20,32,28,7];
   Plotly.newPlot('g_modal_hist',[
-    {x:faixas,y:histMs,name:'MS estadual',type:'bar',marker:{color:C.azul},hovertemplate:'%{x}: %{y}% dos alunos<extra></extra>'},
+    {x:faixas,y:histMs,name:'MS estadual',type:'bar',marker:{color:areaCor},hovertemplate:'%{x}: %{y}% dos alunos<extra></extra>'},
     {x:faixas,y:histBr,name:'Brasil estadual',type:'bar',marker:{color:C.brasil},hovertemplate:'%{x}: %{y}% dos alunos<extra></extra>'}
   ],{...BL,height:260,barmode:'group',xaxis:{title:{text:'faixa de nota',font:{size:10}}},yaxis:{title:{text:'% dos alunos',font:{size:10}},gridcolor:C.subtle},legend:{orientation:'h',y:-0.18,font:{size:9}}},CFG);
-  // ranking mock (top 10 melhores / piores escolas na área em 2024)
+  // ranking mock (top 10 melhores / piores escolas na área em 2024) — semântico verde/vermelho
   const escRank=(MOCK.escRank&&MOCK.escRank[areaKey])||[];
   const top=escRank.slice(0,10); const bottom=escRank.slice(-10).reverse();
   const rankX=top.map(e=>e.nome); const rankY=top.map(e=>e.nota);
@@ -630,7 +631,7 @@ function openAreaModal(areaKey,ano){
     {x:rankX,y:rankY,name:'Top 10',type:'bar',marker:{color:C.verde},hovertemplate:'%{x}: %{y:.0f}<extra></extra>'},
     {x:rankX2,y:rankY2,name:'Bottom 10',type:'bar',marker:{color:C.critico},hovertemplate:'%{x}: %{y:.0f}<extra></extra>'}
   ],{...BL,height:300,barmode:'group',xaxis:{tickangle:-35,tickfont:{size:9}},yaxis:{title:{text:'nota média',font:{size:10}},gridcolor:C.subtle},legend:{orientation:'h',y:-0.22,font:{size:9}},margin:{l:46,r:14,t:8,b:90}},CFG);
-  // comparação boxplot-like: média, mediana, p25, p75, min, max
+  // comparação boxplot-like: média, mediana, p25, p75, min, max — cor da área para MS, cinza para Brasil
   const statsMs={m:510,med:505,p25:470,p75:545,min:380,max:980};
   const statsBr={m:515,med:510,p25:475,p75:550,min:390,max:990};
   function boxTrace(label,s,c){return{
@@ -639,7 +640,7 @@ function openAreaModal(areaKey,ano){
       marker:{color:c},line:{color:c,width:2},
       text:[label],textposition:'outside',cliponaxis:false,
       hovertemplate:label+'<br>Média: '+s.m+'<br>Mediana: '+s.med+'<br>Q1: '+s.p25+'<br>Q3: '+s.p75+'<extra></extra>'};}
-  Plotly.newPlot('g_modal_comp',[boxTrace('MS estadual',statsMs,C.azul),boxTrace('Brasil estadual',statsBr,C.brasil)],
+  Plotly.newPlot('g_modal_comp',[boxTrace('MS estadual',statsMs,areaCor),boxTrace('Brasil estadual',statsBr,C.brasil)],
     {...BL,height:180,showlegend:false,xaxis:{title:{text:'nota',font:{size:10}},gridcolor:C.subtle},yaxis:{tickfont:{size:11}},margin:{l:110,r:14,t:8,b:34}},CFG);
 }
 function closeAreaModal(){document.getElementById('areaModal').classList.remove('on');}
