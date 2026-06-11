@@ -343,6 +343,10 @@ out['dispersao'] = dispersao
 out['desvio_padrao'] = desvio_padrao
 out['cv'] = cv
 
+# taxa de eliminacao estadual por ano (para KPI)
+txElim = integRede.get('Estadual', {}).get('txE', [None]*len(ANOS_ORD))
+out['txElim'] = txElim
+
 with open('mock_data.js','w',encoding='utf-8') as f:
     f.write('window.MOCK=' + json.dumps(out, ensure_ascii=False) + ';')
 print('OK municipios:', len(mun), '| CREs:', list(cre.keys()))

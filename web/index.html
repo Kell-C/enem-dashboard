@@ -193,6 +193,11 @@
       <div class="rowv"><div class="val" style="color:var(--critico)">−3,3</div><div id="s_gap" class="spark"></div></div>
       <div class="vsub">2024 · <span class="trend up">▲ reduziu</span> (era −7,3 em 2022)</div>
     </div>
+    <div class="kpi">
+      <p class="lbl">Taxa de eliminação <span class="help">i<span class="tip"><b>O que é:</b> % de participantes efetivos que foram eliminados em alguma prova (presença = 2) ou na redação (status = 4). <b>Como ler:</b> quanto menor, melhor. A redação é o principal vetor.</span></span></p>
+      <div class="rowv"><div class="val" id="kpiElimVal">1,2%</div><div id="s_elim" class="spark"></div></div>
+      <div class="vsub" id="kpiElimSub">2024 · <span class="trend up">▲ estável</span> vs 2019</div>
+    </div>
   </div>
 
   <!-- FUNIL 2024 -->
@@ -490,6 +495,19 @@ function spark(id,vals,col,inv){Plotly.newPlot(id,[
   {x:[ANOS[5]],y:[vals[5]],mode:'markers',marker:{color:col,size:5},hoverinfo:'skip'}],
   {...BL,margin:{l:2,r:2,t:4,b:2},height:34,showlegend:false,xaxis:{visible:false},yaxis:{visible:false,autorange:inv?'reversed':true}},CFG);}
 spark('s_media',MED_MS,'#0A4D8C');spark('s_part',TX_MS,'#2EAD6E');spark('s_rank',RANK,'#F07A28',true);spark('s_gap',GAP,'#D6453D');
+/* sparkline taxa de eliminacao */
+(function(){
+  const tx=MOCK.txElim||[];
+  const valid=tx.filter(v=>v!=null);
+  const last=valid.length?valid[valid.length-1]:null;
+  const first=valid.length?valid[0]:null;
+  const trend=last!=null&&first!=null?(last<first?'down':(last>first?'up':'stable')):'stable';
+  const trendTxt={down:'▼ reduziu',up:'▲ aumentou',stable:'▲ estável'};
+  const trendCls={down:'trend up',up:'trend down',stable:'trend up'};
+  document.getElementById('kpiElimVal').textContent=(last!=null?last.toFixed(1).replace('.',',')+'%':'—');
+  document.getElementById('kpiElimSub').innerHTML='2024 · <span class="'+trendCls[trend]+'">'+trendTxt[trend]+'</span> vs 2019';
+  spark('s_elim',tx,'#9B59B6',true);
+})();
 const NF=n=>(n==null?'—':Number(n).toLocaleString('pt-BR'));
 /* dimensão absoluta no KPI de participação */
 (function(){const N=MOCK.estadualN[5],Cc=MOCK.estadualConcl[5];
