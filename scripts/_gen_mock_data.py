@@ -316,8 +316,9 @@ for area in ['CN','CH','LC','MT','RED']:
         cv[area].append(round(src['std']/src['media']*100, 1))
 
 # dispersao escolas 2024: nota vs participacao (bubble) — so escolas com nome e tx valida
-# Escolas sem nome ou sem tx nao aparecem no grafico de dispersao
-# (sem nome = nao foi possivel cruzar com concluintes; sem tx = sem concluintes na base)
+# Escolas sem nome, sem tx, ou com tx > 100% nao aparecem no grafico de dispersao
+# (tx > 100% indica problema nos dados de concluintes: mais participantes efetivos
+#  que concluintes registrados na planilha da SED/MS)
 dispersao = []
 for _, r in est.iterrows():
     if pd.isna(r['media_geral']) or pd.isna(r['estudantes']):
@@ -325,7 +326,7 @@ for _, r in est.iterrows():
     if pd.isna(r['NOME_ESCOLA']):
         continue
     tx = r.get('tx_part_efetiva')
-    if pd.isna(tx) or tx == 0:
+    if pd.isna(tx) or tx == 0 or tx > 100:
         continue
     dispersao.append({
         'nome': re.sub(r'^E\.?E\.?\s+','', str(r['NOME_ESCOLA'])).strip()[:34] or '(escola)',
