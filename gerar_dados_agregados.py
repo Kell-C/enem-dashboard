@@ -363,8 +363,20 @@ def processar_ano(df_ano, cres, mapa_muni_cre, df_concluintes, df_concluintes_cr
             df_escolas["NOME_ESCOLA"] = df_escolas["CO_ESCOLA"].map(nome_map)
 
             if dep == "Estadual" and not df_concluintes.empty:
-                conc_2024 = df_concluintes[df_concluintes["NU_ANO"] == 2024][["CO_ESCOLA", "Concluintes"]].copy()
-                df_escolas = df_escolas.merge(conc_2024, on="CO_ESCOLA", how="left")
+                conc_2024 = df_concluintes[df_concluintes["NU_ANO"] == 2024][["CO_ESCOLA", "NOME_ESCOLA", "MUNICIPIO", "Concluintes"]].copy()
+                # Merge por CO_ESCOLA (ambos usam 8 digitos)
+                df_escolas = df_escolas.merge(conc_2024[["CO_ESCOLA", "Concluintes"]], on="CO_ESCOLA", how="left")
+                # Para escolas nao encontradas, tentar merge por nome + municipio
+                sem_match = df_escolas["Concluintes"].isna()
+                if sem_match.any():
+                    # Criar chave nome+municipio nos dois dataframes
+                    df_escolas["_key"] = df_escolas["NOME_ESCOLA"].astype(str).str.strip().str.upper() + "|" + df_escolas["municipio"].astype(str).str.strip().str.upper()
+                    conc_2024["_key"] = conc_2024["NOME_ESCOLA"].astype(str).str.strip().str.upper() + "|" + conc_2024["MUNICIPIO"].astype(str).str.strip().str.upper()
+                    # Merge por chave
+                    df_escolas = df_escolas.merge(conc_2024[["_key", "Concluintes"]], on="_key", how="left", suffixes=("", "_nome"))
+                    # Preencher Concluintes faltantes com o valor do merge por nome
+                    df_escolas["Concluintes"] = df_escolas["Concluintes"].fillna(df_escolas["Concluintes_nome"])
+                    df_escolas = df_escolas.drop(columns=["_key", "Concluintes_nome"])
                 df_escolas["Concluintes"] = df_escolas["Concluintes"].fillna(0).astype(int)
                 tx_part = df_escolas["estudantes"] / df_escolas["Concluintes"].replace(0, pd.NA) * 100
                 df_escolas["tx_part_efetiva"] = pd.to_numeric(tx_part, errors="coerce").round(2)

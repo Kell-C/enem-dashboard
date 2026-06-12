@@ -11,11 +11,21 @@ def norm(s):
     s = re.sub(r'\s+', ' ', s).strip()
     return s
 
-CLEAN = {1:'Aquidauana',2:'CG Metrop.',3:'Corumbá',4:'Coxim',5:'Dourados',
-         6:'Iguatemi',7:'Jardim',8:'Naviraí',9:'Nova Andradina',10:'Paranaíba',
-         11:'Ponta Porã',12:'Três Lagoas'}
+CLEAN = {1:'Aquidauana',2:'CG Metrop.',3:'Corumbá',4:'Coxim',5:'Dourados',6:'Iguatemi',7:'Jardim',8:'Naviraí',9:'Nova Andradina',10:'Paranaíba',11:'Ponta Porã',12:'Três Lagoas'}
+
+def fix_mojibake(s):
+    """Corrige strings UTF-8 duplamente codificadas (mojibake) dos parquets."""
+    if pd.isna(s):
+        return ''
+    s = str(s)
+    try:
+        # Tentar decodificar como UTF-8 bytes em latin1, depois UTF-8
+        return s.encode('latin1').decode('utf-8')
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return s
+
 def clean_cre(raw):
-    s = str(raw)
+    s = fix_mojibake(raw)
     if s.strip().upper().endswith('SED') or s.strip().upper() == 'SED':
         return 'SED/Capital'
     m = re.search(r'CRE\s*(\d+)', s)
@@ -26,15 +36,21 @@ def clean_cre(raw):
 AREAS = [('CN','media_cn'),('CH','media_ch'),('LC','media_lc'),('MT','media_mt'),('RED','media_redacao')]
 
 # ---------- CRE (estadual) ----------
-pc = L('participacao_cre')
+# evolucao_cre tem medias por area; participacao_cre tem tx_part_efetiva
+pc = L('evolucao_cre')
 pc = pc[pc.dependencia == 'Estadual'].copy()
 pc['CREc'] = pc['CRE'].map(clean_cre)
+# merge com participacao_cre para obter tx_part_efetiva
+pc_tx = L('participacao_cre')
+pc_tx = pc_tx[pc_tx.dependencia == 'Estadual'].copy()
+pc_tx['CREc'] = pc_tx['CRE'].map(clean_cre)
+pc = pc.merge(pc_tx[['CREc','ano','tx_part_efetiva','Concluintes']], on=['CREc','ano'], how='left')
 cre = {}
 for name, g in pc.groupby('CREc'):
     g = g.sort_values('ano')
     cre[name] = {
         'med': [round(float(x),1) for x in g.media_geral],
-        'tx':  [round(float(x),1) for x in g.tx_part_efetiva],
+        'tx':  [round(float(x),1) if pd.notna(x) else None for x in g.tx_part_efetiva],
         'n':   [int(x) for x in g.estudantes],
         'areas': {k: [round(float(x),1) for x in g[col]] for k,col in AREAS}
     }
@@ -84,30 +100,29 @@ for name, g in mu.groupby('NO_MUNICIPIO_ESC'):
     mun[name] = rec
     cre_to_muns.setdefault(crek, []).append(name)
 
-# ---------- escolas 2024 (estadual) com tx via concluintes excel ----------
-xl = pd.read_excel(r'data/Concluintes EM 2019 a 2024.xlsx', sheet_name='2024-2019')
-mcol = [c for c in xl.columns if 'unic' in c.lower()][0]
-xl = xl[xl.NU_ANO == 2024].copy()
-xl['k'] = xl[mcol].map(norm) + '|' + xl['Unidade Escolar'].map(norm)
-cg = xl.groupby('k')['Concluintes'].sum()
-
+# ---------- escolas 2024 (estadual) com tx via concluintes do parquet ----------
+# Usa os valores de Concluintes e tx_part_efetiva ja calculados no ETL
 esc = {}
 for _, r in est.iterrows():
-    if pd.isna(r['NOME_ESCOLA']) or pd.isna(r['media_geral']):
+    if pd.isna(r['media_geral']) or pd.isna(r['estudantes']):
         continue
-    k = norm(r['municipio']) + '|' + norm(r['NOME_ESCOLA'])
-    concl = cg.get(k)
-    tx = None
-    if concl and concl > 0:
-        t = r['estudantes'] / concl * 100
-        tx = round(float(t),1) if t <= 100 else None
-        concl = int(concl)
+    # Usar nome da escola; se vazio, usar código CO_ESCOLA como identificador
+    nome = ''
+    if pd.notna(r.get('NOME_ESCOLA')) and str(r['NOME_ESCOLA']).strip():
+        nome = re.sub(r'^E\.?E\.?\s+','', str(r['NOME_ESCOLA'])).strip()[:34]
+    if not nome:
+        nome = 'Escola ' + str(int(r.get('CO_ESCOLA', 0)))[:12]
+    tx = r.get('tx_part_efetiva')
+    if pd.isna(tx) or tx == 0:
+        continue
+    if pd.notna(r.get('Concluintes')):
+        concl = int(r.get('Concluintes'))
     else:
         concl = None
     esc.setdefault(r['municipio'], []).append({
-        'nome': re.sub(r'^E\.?E\.?\s+','', str(r['NOME_ESCOLA']))[:34],
+        'nome': nome,
         'part': int(r['estudantes']),
-        'concl': concl, 'tx': tx,
+        'concl': concl, 'tx': round(float(tx),1),
         'cn': round(float(r['media_cn']),0), 'ch': round(float(r['media_ch']),0),
         'lc': round(float(r['media_lc']),0), 'mt': round(float(r['media_mt']),0),
         'red': round(float(r['media_redacao']),0), 'geral': round(float(r['media_geral']),1)
@@ -260,7 +275,12 @@ for area, col in AREAS:
     for _, r in est.iterrows():
         v = r.get(col)
         if pd.isna(v): continue
-        rows.append({'nome': re.sub(r'^E\.?E\.?\s+','', str(r['NOME_ESCOLA'])).strip()[:34] or '(escola)', 'nota': round(float(v),1)})
+        nome_raw = r.get('NOME_ESCOLA')
+        if pd.isna(nome_raw) or not str(nome_raw).strip():
+            nome = 'Escola ' + str(int(r.get('CO_ESCOLA', 0)))[:12]
+        else:
+            nome = re.sub(r'^E\.?E\.?\s+','', str(nome_raw)).strip()[:34] or '(escola)'
+        rows.append({'nome': nome, 'nota': round(float(v),1)})
     rows.sort(key=lambda x: x['nota'], reverse=True)
     escRank[area] = rows
 
@@ -315,10 +335,8 @@ for area in ['CN','CH','LC','MT','RED']:
         desvio_padrao[area].append(src['std'])
         cv[area].append(round(src['std']/src['media']*100, 1))
 
-# dispersao escolas 2024: nota vs participacao (bubble) — so escolas com nome e tx valida
-# Escolas sem nome, sem tx, ou com tx > 100% nao aparecem no grafico de dispersao
-# (tx > 100% indica problema nos dados de concluintes: mais participantes efetivos
-#  que concluintes registrados na planilha da SED/MS)
+# dispersao escolas 2024: nota vs participacao (bubble) — escolas com nome e tx valida
+# Inclui escolas com tx > 100% (dados de concluintes da SED podem nao incluir todas as modalidades)
 dispersao = []
 for _, r in est.iterrows():
     if pd.isna(r['media_geral']) or pd.isna(r['estudantes']):
@@ -326,7 +344,7 @@ for _, r in est.iterrows():
     if pd.isna(r['NOME_ESCOLA']):
         continue
     tx = r.get('tx_part_efetiva')
-    if pd.isna(tx) or tx == 0 or tx > 100:
+    if pd.isna(tx) or tx == 0:
         continue
     dispersao.append({
         'nome': re.sub(r'^E\.?E\.?\s+','', str(r['NOME_ESCOLA'])).strip()[:34] or '(escola)',
@@ -346,6 +364,16 @@ out['cv'] = cv
 # taxa de eliminacao estadual por ano (para KPI)
 txElim = integRede.get('Estadual', {}).get('txE', [None]*len(ANOS_ORD))
 out['txElim'] = txElim
+
+# ---------- ranking UF real (do desempenho_uf.parquet) ----------
+ranking_uf = {}
+for ano in ANOS_ORD:
+    pa = L('desempenho_uf')
+    pa = pa[pa['ano'] == ano]
+    pa = pa[pa['dependencia'] == 'Estadual']
+    pa = pa.sort_values('media_media_geral', ascending=False).reset_index(drop=True)
+    ranking_uf[ano] = [[row['uf'], round(row['media_media_geral'])] for _, row in pa.iterrows()]
+out['rankingUF'] = ranking_uf
 
 with open('mock_data.js','w',encoding='utf-8') as f:
     f.write('window.MOCK=' + json.dumps(out, ensure_ascii=False) + ';')
