@@ -8,7 +8,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from enem_config import ANOS, COLS_NOTAS, DEPENDENCIAS, PARQUET, PASTA_AGREGADOS, PRES_COLS
+from enem_config import ANOS, AREA_KEYS, COLS_NOTAS, DEPENDENCIAS, NOTA_MAP, PARQUET, PASTA_AGREGADOS, PRES_COLS
 from enem_helpers import (
     aplicar_flags,
     carregar_concluintes_sed,
@@ -20,6 +20,52 @@ from enem_helpers import (
     preparar_ano,
     quantis_serie,
 )
+
+HIST_EDGES = [0, 200, 400, 500, 600, 800, 1000.0001]
+
+
+def _hist_pct(s: pd.Series) -> list[float]:
+    s = pd.to_numeric(s, errors="coerce").dropna()
+    if s.empty:
+        return [0.0] * 6
+    counts = []
+    for lo, hi in zip(HIST_EDGES[:-1], HIST_EDGES[1:]):
+        if hi > 1000:
+            counts.append(int(((s >= lo) & (s <= 1000)).sum()))
+        else:
+            counts.append(int(((s >= lo) & (s < hi)).sum()))
+    total = len(s)
+    return [round(100 * c / total, 1) for c in counts]
+
+
+def _integridade_row(base: pd.DataFrame, val: pd.DataFrame, extra: dict) -> dict:
+    comp = int(base["PRESENTE_2_DIAS"].sum())
+    present = base[base["PRESENTE_2_DIAS"]]
+    elim_red = int((base["PRESENTE_2_DIAS"] & base["ELIM_RED"]).sum())
+    branco = int((base["PRESENTE_2_DIAS"] & base["RED_BRANCO"]).sum())
+    em = zm = sm = 0
+    if len(present):
+        em = int(((present[PRES_COLS] == 2).sum(axis=1) >= 2).sum())
+        obj_cols = COLS_NOTAS[:4]
+        zm = int(((present[obj_cols] == 0).sum(axis=1) >= 2).sum())
+        sm = int(((present[PRES_COLS] == 0).sum(axis=1) >= 2).sum())
+    row = {
+        "compareceu_2d": comp,
+        "filt": len(val),
+        "elim_redacao": elim_red,
+        "elim_cn": int((base["TP_PRESENCA_CN"] == 2).sum()),
+        "elim_ch": int((base["TP_PRESENCA_CH"] == 2).sum()),
+        "elim_lc": int((base["TP_PRESENCA_LC"] == 2).sum()),
+        "elim_mt": int((base["TP_PRESENCA_MT"] == 2).sum()),
+        "em": em,
+        "zm": zm,
+        "sm": sm,
+        "red_branco": branco,
+        "tx_elim": round(100 * elim_red / comp, 2) if comp else 0,
+        "tx_sem_nota": round(100 * branco / comp, 2) if comp else 0,
+    }
+    row.update(extra)
+    return row
 
 
 def _cols_parquet() -> list[str]:
@@ -64,6 +110,10 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         "evolucao_cre": [],
         "evolucao_muni": [],
         "integridade": [],
+        "integridade_cre": [],
+        "integridade_muni": [],
+        "histograma": [],
+        "desvio_cv": [],
     }
 
     ms = df[df["SG_UF_ESC"] == "MS"]
@@ -96,21 +146,7 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
                 row[f"media_{c.lower()}"] = val[c].mean()
             out["desempenho"].append(row)
 
-        comp = int(base["PRESENTE_2_DIAS"].sum())
-        out["integridade"].append({
-            "ano": ano,
-            "escopo": dep,
-            "compareceu_2d": comp,
-            "filt": len(val),
-            "elim_redacao": elim_red,
-            "elim_cn": int((base["TP_PRESENCA_CN"] == 2).sum()),
-            "elim_ch": int((base["TP_PRESENCA_CH"] == 2).sum()),
-            "elim_lc": int((base["TP_PRESENCA_LC"] == 2).sum()),
-            "elim_mt": int((base["TP_PRESENCA_MT"] == 2).sum()),
-            "red_branco": branco,
-            "tx_elim": round(100 * elim_red / comp, 2) if comp else 0,
-            "tx_sem_nota": round(100 * branco / comp, 2) if comp else 0,
-        })
+        out["integridade"].append(_integridade_row(base, val, {"ano": ano, "escopo": dep}))
 
     br_val = valido[valido["DEP_ADM"] == "Estadual"]
     br_base = df[(df["DEP_ADM"] == "Estadual") & df["CONCLUINTE"]]
@@ -129,20 +165,9 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
             "concluintes": None,
             "presentes_filt": len(br_val),
         })
-        out["integridade"].append({
-            "ano": ano,
-            "escopo": "Brasil-Estadual",
-            "compareceu_2d": comp_br,
-            "filt": len(br_val),
-            "elim_redacao": elim_br,
-            "elim_cn": int((br_base["TP_PRESENCA_CN"] == 2).sum()),
-            "elim_ch": int((br_base["TP_PRESENCA_CH"] == 2).sum()),
-            "elim_lc": int((br_base["TP_PRESENCA_LC"] == 2).sum()),
-            "elim_mt": int((br_base["TP_PRESENCA_MT"] == 2).sum()),
-            "red_branco": branco_br,
-            "tx_elim": round(100 * elim_br / comp_br, 2) if comp_br else 0,
-            "tx_sem_nota": round(100 * branco_br / comp_br, 2) if comp_br else 0,
-        })
+        out["integridade"].append(
+            _integridade_row(br_base, br_val, {"ano": ano, "escopo": "Brasil-Estadual"})
+        )
 
     if not br_val.empty:
         uf = br_val.groupby("SG_UF_ESC").agg(
@@ -196,6 +221,32 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         out["participacao_municipios"].append(muni_g)
         out["evolucao_muni"].append(muni_g)
 
+    ms_base_est = ms[(ms["DEP_ADM"] == "Estadual") & ms["CONCLUINTE"]]
+    ms_val_est = ms_valido[ms_valido["DEP_ADM"] == "Estadual"]
+    if not ms_base_est.empty:
+        base_e = enriquecer_ms(ms_base_est, cres, mapa_muni)
+        val_e = enriquecer_ms(ms_val_est, cres, mapa_muni)
+        if "CRE" in base_e.columns:
+            base_e = base_e.copy()
+            base_e["cre_curto"] = base_e["CRE"].map(cre_curto)
+            val_e = val_e.copy()
+            val_e["cre_curto"] = val_e["CRE"].map(cre_curto)
+            for cname, grp in base_e.groupby("cre_curto", observed=True):
+                val_g = val_e[val_e["cre_curto"] == cname]
+                out["integridade_cre"].append(
+                    _integridade_row(grp, val_g, {"ano": ano, "cre_curto": str(cname)})
+                )
+            for mname, grp in base_e.groupby("NO_MUNICIPIO_ESC", observed=True):
+                val_g = val_e[val_e["NO_MUNICIPIO_ESC"] == mname]
+                cre_nm = cre_curto(grp["CRE"].mode().iloc[0]) if len(grp["CRE"].mode()) else "SED"
+                out["integridade_muni"].append(
+                    _integridade_row(
+                        grp,
+                        val_g,
+                        {"ano": ano, "NO_MUNICIPIO_ESC": str(mname), "cre_curto": str(cre_nm)},
+                    )
+                )
+
     if ano == 2024:
         sub24 = enriquecer_ms(ms_valido[ms_valido["DEP_ADM"] == "Estadual"], cres, mapa_muni)
         if not sub24.empty and sub24["CO_ESCOLA"].notna().any():
@@ -242,10 +293,26 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
             "media_br": br_val[c].mean() if len(br_val) else None,
         })
 
-    for area, col in zip(["CN", "CH", "LC", "MT", "RED"], COLS_NOTAS):
+    for area, col in zip(AREA_KEYS, COLS_NOTAS):
         q = quantis_serie(ms_est_val[col]) if len(ms_est_val) else quantis_serie(pd.Series(dtype=float))
         q.update({"ano": ano, "area": area, "escopo": "MS-Estadual"})
         out.setdefault("quantis", []).append(q)
+        ms_s = ms_est_val[col] if len(ms_est_val) else pd.Series(dtype=float)
+        br_s = br_val[col] if len(br_val) else pd.Series(dtype=float)
+        out["histograma"].append({
+            "ano": ano,
+            "area": area,
+            "ms": _hist_pct(ms_s),
+            "br": _hist_pct(br_s),
+        })
+        std = ms_s.std()
+        mean = ms_s.mean()
+        out["desvio_cv"].append({
+            "ano": ano,
+            "area": area,
+            "desvio": round(float(std), 1) if pd.notna(std) else None,
+            "cv": round(100 * float(std) / float(mean), 1) if pd.notna(std) and mean else None,
+        })
 
     del df, ms, valido, ms_valido
     limpar()
@@ -271,7 +338,8 @@ def main():
         k: [] for k in [
             "participacao_ano", "participacao_cre", "participacao_municipios",
             "desempenho", "desempenho_uf", "escolas_2024", "sumario",
-            "referencias", "evolucao_cre", "evolucao_muni", "integridade", "quantis",
+            "referencias", "evolucao_cre", "evolucao_muni", "integridade",
+            "integridade_cre", "integridade_muni", "histograma", "desvio_cv", "quantis",
         ]
     }
 

@@ -114,6 +114,70 @@ def _histograma_bins(df_quantis, area: str) -> dict:
     return out
 
 
+def _histograma_faixas(df_hist, area: str) -> dict:
+    out = {}
+    for a in ANOS:
+        row = df_hist[(df_hist["ano"] == a) & (df_hist["area"] == area)]
+        if row.empty:
+            out[str(a)] = {"ms": [0.0] * 6, "br": [0.0] * 6}
+        else:
+            r = row.iloc[0]
+            out[str(a)] = {"ms": list(r["ms"]), "br": list(r["br"])}
+    return out
+
+
+def _serie_desvio_cv(df: pd.DataFrame, area: str, col: str) -> tuple[list, list]:
+    desvio, cv = [], []
+    for a in ANOS:
+        row = df[(df["ano"] == a) & (df["area"] == area)]
+        if row.empty:
+            desvio.append(None)
+            cv.append(None)
+        else:
+            desvio.append(float(row.iloc[0][col]) if pd.notna(row.iloc[0][col]) else None)
+            cv.append(float(row.iloc[0]["cv"]) if pd.notna(row.iloc[0]["cv"]) else None)
+    return desvio, cv
+
+
+def _integ_territorial(df: pd.DataFrame, key_col: str, cre_col: str | None = None) -> dict:
+    out = {}
+    if df.empty or key_col not in df.columns:
+        return out
+    for name, grp in df.groupby(key_col, observed=True):
+        item = {
+            "filt": [],
+            "et": [],
+            "em": [],
+            "zm": [],
+            "sm": [],
+            "txE": [],
+            "txS": [],
+        }
+        if cre_col and cre_col in grp.columns:
+            item["cre"] = str(grp.iloc[0][cre_col])
+        for a in ANOS:
+            row = grp[grp["ano"] == a]
+            if row.empty:
+                item["filt"].append(0)
+                item["et"].append(0)
+                item["em"].append(0)
+                item["zm"].append(0)
+                item["sm"].append(0)
+                item["txE"].append(None)
+                item["txS"].append(None)
+            else:
+                r = row.iloc[0]
+                item["filt"].append(int(r["filt"]))
+                item["et"].append(int(r["elim_redacao"]))
+                item["em"].append(int(r.get("em", 0)))
+                item["zm"].append(int(r.get("zm", 0)))
+                item["sm"].append(int(r.get("sm", 0)))
+                item["txE"].append(float(r["tx_elim"]) if pd.notna(r["tx_elim"]) else None)
+                item["txS"].append(float(r["tx_sem_nota"]) if pd.notna(r["tx_sem_nota"]) else None)
+        out[str(name)] = item
+    return out
+
+
 def build_painel_data() -> dict:
     part = _ler("participacao_ano")
     des = _ler("desempenho")
@@ -124,6 +188,10 @@ def build_painel_data() -> dict:
     refs = _ler("referencias")
     quantis = _ler("quantis")
     integ_df = _ler("integridade")
+    integ_cre_df = _ler("integridade_cre")
+    integ_muni_df = _ler("integridade_muni")
+    hist_df = _ler("histograma")
+    desvio_df = _ler("desvio_cv")
     _, conc_esc = carregar_concluintes_sed()
 
     ms_part = part[part["dependencia"] == "Estadual"].sort_values("ano")
@@ -280,13 +348,20 @@ def build_painel_data() -> dict:
                 "LC": [int(sub[sub["ano"] == a].iloc[0]["elim_lc"]) if not sub[sub["ano"] == a].empty else 0 for a in ANOS],
                 "MT": [int(sub[sub["ano"] == a].iloc[0]["elim_mt"]) if not sub[sub["ano"] == a].empty else 0 for a in ANOS],
             },
-            "em": [0] * len(ANOS),
-            "zm": [0] * len(ANOS),
-            "sm": [0] * len(ANOS),
+            "em": [int(sub[sub["ano"] == a].iloc[0]["em"]) if not sub[sub["ano"] == a].empty and "em" in sub.columns else 0 for a in ANOS],
+            "zm": [int(sub[sub["ano"] == a].iloc[0]["zm"]) if not sub[sub["ano"] == a].empty and "zm" in sub.columns else 0 for a in ANOS],
+            "sm": [int(sub[sub["ano"] == a].iloc[0]["sm"]) if not sub[sub["ano"] == a].empty and "sm" in sub.columns else 0 for a in ANOS],
             "sn": [0] * len(ANOS),
         }
+    integ["cre"] = _integ_territorial(integ_cre_df, "cre_curto")
+    integ["mun"] = _integ_territorial(integ_muni_df, "NO_MUNICIPIO_ESC", cre_col="cre_curto")
 
     boxplot = {k: _histograma_bins(quantis, k) for k in AREA_KEYS}
+    histograma = {k: _histograma_faixas(hist_df, k) for k in AREA_KEYS}
+    desvio_padrao = {}
+    cv = {}
+    for k in AREA_KEYS:
+        desvio_padrao[k], cv[k] = _serie_desvio_cv(desvio_df, k, "desvio")
     esc_rank = {k: [] for k in AREA_KEYS}
     if not esc24.empty:
         col_map = {
@@ -350,7 +425,10 @@ def build_painel_data() -> dict:
         "msGeral2024": med_ms[-1] if med_ms else None,
         "indexAreas": index_areas,
         "cre": cre,
-        "creMuns": {k: v["cre"] for k, v in mun.items()},
+        "creMuns": {
+            c: sorted(m for m, v in mun.items() if v.get("cre") == c)
+            for c in {v.get("cre") for v in mun.values() if v.get("cre")}
+        },
         "mun": mun,
         "esc": esc,
         "msArea": ms_area_series,
@@ -361,10 +439,10 @@ def build_painel_data() -> dict:
         "integ": integ,
         "escRank": esc_rank,
         "boxplot": boxplot,
-        "histograma": boxplot.copy(),
+        "histograma": histograma,
         "dispersao": dispersao,
-        "desvio_padrao": {k: {} for k in AREA_KEYS},
-        "cv": {k: {} for k in AREA_KEYS},
+        "desvio_padrao": desvio_padrao,
+        "cv": cv,
         "txElim": tx_elim,
     }
 
