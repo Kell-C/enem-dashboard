@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pipeline completo: ETL -> agregados -> painel_data.js (usa .venv local).
+# Regenera agregados + painel_data.js usando o venv local (evita ModuleNotFoundError).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 VENV_PY="$ROOT/.venv/bin/python"
@@ -14,15 +14,11 @@ fi
 export PYTHONUNBUFFERED=1
 cd "$SCRIPTS"
 
-echo "=== 1/3 ETL microdados ==="
-"$VENV_PY" processar_enem.py
-
-echo ""
-echo "=== 2/3 Agregados ==="
+echo "=== Agregados ==="
 "$VENV_PY" gerar_agregados.py
 
 echo ""
-echo "=== 3/3 Export web ==="
+echo "=== Export web (painel_data.js) ==="
 "$VENV_PY" gerar_web_data.py
 
 echo ""

@@ -12,10 +12,15 @@ from __future__ import annotations
 import glob
 import os
 import time
+import json
+import logging
+import datetime
 
 import pandas as pd
 
-from enem_config import PASTA_BRUTOS, PASTA_DADOS, PARQUET
+from enem_config import PASTA_BRUTOS, PASTA_DADOS, PARQUET, WEB_DATA, configure_logging
+
+logger = configure_logging(__name__)
 
 CHUNK_SIZE = 500_000
 
@@ -102,22 +107,22 @@ def _padronizar_2024(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def processar_2019_2023() -> pd.DataFrame | None:
-    print("\n" + "=" * 70)
-    print("2019-2023 - PARTICIPANTES (todos os estados)")
-    print("=" * 70)
+    logger.info("%s", "=" * 70)
+    logger.info("2019-2023 - PARTICIPANTES (todos os estados)")
+    logger.info("%s", "=" * 70)
 
     arquivos: list[tuple[int, str]] = []
     for ano in range(2019, 2024):
         pasta = PASTA_BRUTOS / str(ano)
         if not pasta.is_dir():
-            print(f"  [aviso] Pasta ausente: {pasta}")
+            logger.warning("Pasta ausente: %s", pasta)
             continue
         matches = glob.glob(str(pasta / f"*{ano}*.csv"))
         if matches:
             arquivos.append((ano, matches[0]))
-            print(f"  [ok] {ano}: {os.path.basename(matches[0])}")
+            logger.info("[ok] %s: %s", ano, os.path.basename(matches[0]))
         else:
-            print(f"  [aviso] {ano}: CSV nao encontrado")
+            logger.warning("%s: CSV nao encontrado", ano)
 
     if not arquivos:
         return None
@@ -126,11 +131,11 @@ def processar_2019_2023() -> pd.DataFrame | None:
     for ano, caminho in arquivos:
         sep = detectar_separador(caminho)
         if sep is None:
-            print(f"  [erro] Separador nao detectado: {caminho}")
+            logger.error("Separador nao detectado: %s", caminho)
             continue
         cols_reais = pd.read_csv(caminho, sep=sep, encoding="latin-1", nrows=0).columns.tolist()
         cols_ler = [c for c in COLS_2019_2023 if c in cols_reais]
-        print(f"  {ano}: {len(cols_ler)}/{len(COLS_2019_2023)} colunas")
+        logger.info("%s: %s/%s colunas", ano, len(cols_ler), len(COLS_2019_2023))
 
         chunks: list[pd.DataFrame] = []
         for i, chunk in enumerate(
@@ -139,11 +144,11 @@ def processar_2019_2023() -> pd.DataFrame | None:
             chunk = tratar_notas(chunk)
             chunk = _padronizar_historico(chunk, ano)
             chunks.append(chunk)
-            print(f"     chunk {i + 1}: {len(chunk):,} linhas", end="\r")
-        print()
+            logger.info("chunk %s: %s linhas", i + 1, len(chunk))
+        logger.info("")
         if chunks:
             df_ano = pd.concat(chunks, ignore_index=True)
-            print(f"  [ok] {ano}: {len(df_ano):,} registros")
+            logger.info("[ok] %s: %s registros", ano, len(df_ano))
             partes.append(df_ano)
 
     if not partes:
@@ -153,18 +158,18 @@ def processar_2019_2023() -> pd.DataFrame | None:
     out = PASTA_DADOS / "2019_2023" / "enem_completo_2019_2023_.parquet"
     out.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(out, index=False)
-    print(f"\n[salvo] {out} ({len(df):,} linhas)")
+    logger.info("[salvo] %s (%s linhas)", out, len(df))
     return df
 
 
 def processar_2024_resultados() -> pd.DataFrame | None:
-    print("\n" + "=" * 70)
-    print("2024 - RESULTADOS (sem merge com PARTICIPANTES)")
-    print("=" * 70)
+    logger.info("%s", "=" * 70)
+    logger.info("2024 - RESULTADOS (sem merge com PARTICIPANTES)")
+    logger.info("%s", "=" * 70)
 
     pasta = PASTA_BRUTOS / "2024"
     if not pasta.is_dir():
-        print(f"  [erro] Pasta ausente: {pasta}")
+        logger.error("Pasta ausente: %s", pasta)
         return None
 
     caminho = None
@@ -174,17 +179,17 @@ def processar_2024_resultados() -> pd.DataFrame | None:
             caminho = p
             break
     if caminho is None:
-        print("  [erro] RESULTADOS_2024.csv nao encontrado")
+        logger.error("RESULTADOS_2024.csv nao encontrado")
         return None
 
     sep = detectar_separador(str(caminho))
     if sep is None:
-        print("  [erro] Separador nao detectado")
+        logger.error("Separador nao detectado")
         return None
 
     cols_reais = pd.read_csv(caminho, sep=sep, encoding="latin-1", nrows=0).columns.tolist()
     cols_ler = [c for c in COLS_2024 if c in cols_reais]
-    print(f"  {caminho.name}: {len(cols_ler)}/{len(COLS_2024)} colunas")
+    logger.info("%s: %s/%s colunas", caminho.name, len(cols_ler), len(COLS_2024))
 
     chunks: list[pd.DataFrame] = []
     for i, chunk in enumerate(
@@ -193,56 +198,70 @@ def processar_2024_resultados() -> pd.DataFrame | None:
         chunk = tratar_notas(chunk)
         chunk = _padronizar_2024(chunk)
         chunks.append(chunk)
-        print(f"     chunk {i + 1}: {len(chunk):,} linhas", end="\r")
-    print()
+        logger.info("chunk %s: %s linhas", i + 1, len(chunk))
+    logger.info("")
 
     if not chunks:
         return None
 
     df = pd.concat(chunks, ignore_index=True)
     com_escola = df["CO_ESCOLA"].notna().sum() if "CO_ESCOLA" in df.columns else 0
-    print(f"  [ok] 2024: {len(df):,} registros ({com_escola:,} com CO_ESCOLA)")
+    logger.info("[ok] 2024: %s registros (%s com CO_ESCOLA)", len(df), com_escola)
 
     out = PASTA_DADOS / "2024" / "enem_resultados_2024_.parquet"
     out.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(out, index=False)
-    print(f"[salvo] {out}")
+    logger.info("[salvo] %s", out)
     return df
 
 
 def consolidar(df_hist: pd.DataFrame | None, df_2024: pd.DataFrame | None) -> None:
     bases = [b for b in (df_hist, df_2024) if b is not None]
     if not bases:
-        print("\n[erro] Nenhuma base para consolidar")
+        logger.error("Nenhuma base para consolidar")
         return
 
-    print("\n" + "=" * 70)
-    print("CONSOLIDACAO 2019-2024")
-    print("=" * 70)
+    logger.info("%s", "=" * 70)
+    logger.info("CONSOLIDACAO 2019-2024")
+    logger.info("%s", "=" * 70)
     for b in bases:
         anos = sorted(b["NU_ANO"].dropna().unique())
-        print(f"  bloco anos {list(anos)}: {len(b):,} linhas")
+        logger.info("bloco anos %s: %s linhas", list(anos), len(b))
 
     df_final = pd.concat(bases, ignore_index=True, sort=False)
     PASTA_DADOS.mkdir(parents=True, exist_ok=True)
     df_final.to_parquet(PARQUET, index=False)
-    print(f"\n[salvo] Consolidado: {PARQUET}")
-    print(f"   Total: {len(df_final):,} registros")
-    print(f"   Colunas: {list(df_final.columns)}")
+    logger.info("[salvo] Consolidado: %s", PARQUET)
+    logger.info("Total: %s registros", len(df_final))
+    logger.info("Colunas: %s", list(df_final.columns))
+    # Escrever metadados básicos para o frontend / auditoria
+    try:
+        WEB_DATA.mkdir(parents=True, exist_ok=True)
+        meta = {
+            "script": "processar_enem.py",
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "parquet": str(PARQUET),
+            "total_rows": int(len(df_final)),
+        }
+        meta_path = WEB_DATA / "meta_processar_enem.json"
+        meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2))
+        logger.info("[meta] gravado: %s", meta_path)
+    except Exception as e:
+        logger.warning("[aviso] nao foi possivel gravar meta: %s", e)
 
 
 def main():
     t0 = time.time()
-    print("=" * 70)
-    print("ETL ENEM -> pipeline_dashboard/dados/")
-    print("=" * 70)
+    logger.info("%s", "=" * 70)
+    logger.info("ETL ENEM -> pipeline_dashboard/dados/")
+    logger.info("%s", "=" * 70)
 
     df_hist = processar_2019_2023()
     df_2024 = processar_2024_resultados()
     consolidar(df_hist, df_2024)
 
-    print(f"\nTempo: {(time.time() - t0) / 60:.1f} min")
-    print("=" * 70)
+    logger.info("Tempo: %.1f min", (time.time() - t0) / 60)
+    logger.info("%s", "=" * 70)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,6 @@
+{
+  "script": "gerar_agregados.py",
+  "timestamp": "2026-06-14T10:17:58.308901Z",
+  "duration_seconds": 21.8,
+  "agregados_folder": "/home/kelly/enem_analise/pipeline_dashboard/enem-dashboard/dados/agregados"
+}
