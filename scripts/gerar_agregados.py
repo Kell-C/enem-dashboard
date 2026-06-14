@@ -3,12 +3,18 @@ from __future__ import annotations
 
 import os
 import sys
+import time
+import json
+import datetime
+import logging
 
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from enem_config import ANOS, AREA_KEYS, COLS_NOTAS, DEPENDENCIAS, NOTA_MAP, PARQUET, PASTA_AGREGADOS, PRES_COLS
+from enem_config import ANOS, AREA_KEYS, COLS_NOTAS, DEPENDENCIAS, NOTA_MAP, PARQUET, PASTA_AGREGADOS, PRES_COLS, WEB_DATA, configure_logging
+
+logger = configure_logging(__name__)
 from enem_helpers import (
     aplicar_flags,
     carregar_concluintes_sed,
@@ -22,6 +28,13 @@ from enem_helpers import (
 )
 
 HIST_EDGES = [0, 200, 400, 500, 600, 800, 1000.0001]
+HIST_POS_EDGES = [1, 200, 400, 500, 600, 800, 1000.0001]
+PRES_AREA = {
+    "CN": "TP_PRESENCA_CN",
+    "CH": "TP_PRESENCA_CH",
+    "LC": "TP_PRESENCA_LC",
+    "MT": "TP_PRESENCA_MT",
+}
 
 
 def _hist_pct(s: pd.Series) -> list[float]:
@@ -36,6 +49,78 @@ def _hist_pct(s: pd.Series) -> list[float]:
             counts.append(int(((s >= lo) & (s < hi)).sum()))
     total = len(s)
     return [round(100 * c / total, 1) for c in counts]
+
+
+def _area_detail_stats(val: pd.DataFrame, area: str, col: str) -> dict:
+    n = len(val)
+    empty = {
+        "n": 0,
+        "pct_sem_nota": 0.0,
+        "pct_zero": 0.0,
+        "moda": None,
+        "min_pos": None,
+        "h_sem": 0.0,
+        "h_zero": 0.0,
+        "h_1_200": 0.0,
+        "h_200_400": 0.0,
+        "h_400_500": 0.0,
+        "h_500_600": 0.0,
+        "h_600_800": 0.0,
+        "h_800_1000": 0.0,
+    }
+    if n == 0:
+        return empty
+
+    s = pd.to_numeric(val[col], errors="coerce")
+    if area == "RED":
+        sem_mask = val["RED_BRANCO"] | s.isna()
+    else:
+        pres_col = PRES_AREA[area]
+        sem_mask = (val[pres_col] != 1) | s.isna()
+
+    zero_mask = (s == 0) & ~sem_mask
+    pos = s[(s > 0) & ~sem_mask]
+
+    scorable = s[~sem_mask].dropna()
+    moda = round(float(scorable.round().mode().iloc[0]), 1) if not scorable.empty else None
+    min_pos = round(float(pos.min()), 1) if not pos.empty else None
+
+    score_counts = []
+    for lo, hi in zip(HIST_POS_EDGES[:-1], HIST_POS_EDGES[1:]):
+        if hi > 1000:
+            score_counts.append(int(((pos >= lo) & (pos <= 1000)).sum()))
+        else:
+            score_counts.append(int(((pos >= lo) & (pos < hi)).sum()))
+
+    counts = [int(sem_mask.sum()), int(zero_mask.sum()), *score_counts]
+    pct = [round(100 * c / n, 1) for c in counts]
+    pos_labels = ['1\u2013200', '200\u2013400', '400\u2013500', '500\u2013600', '600\u2013800', '800\u20131000']
+    peak_i = max(range(len(score_counts)), key=lambda j: score_counts[j]) if score_counts else 0
+    moda_faixa = pos_labels[peak_i] if score_counts and score_counts[peak_i] > 0 else None
+    return {
+        "n": n,
+        "pct_sem_nota": pct[0],
+        "pct_zero": pct[1],
+        "moda": moda,
+        "moda_faixa": moda_faixa,
+        "min_pos": min_pos,
+        "h_sem": pct[0],
+        "h_zero": pct[1],
+        "h_1_200": pct[2],
+        "h_200_400": pct[3],
+        "h_400_500": pct[4],
+        "h_500_600": pct[5],
+        "h_600_800": pct[6],
+        "h_800_1000": pct[7],
+        "c_sem": counts[0],
+        "c_zero": counts[1],
+        "c_1_200": counts[2],
+        "c_200_400": counts[3],
+        "c_400_500": counts[4],
+        "c_500_600": counts[5],
+        "c_600_800": counts[6],
+        "c_800_1000": counts[7],
+    }
 
 
 def _integridade_row(base: pd.DataFrame, val: pd.DataFrame, extra: dict) -> dict:
@@ -114,6 +199,7 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         "integridade_muni": [],
         "histograma": [],
         "desvio_cv": [],
+        "area_detail": [],
     }
 
     ms = df[df["SG_UF_ESC"] == "MS"]
@@ -193,17 +279,21 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
             cre_g["ano"] = ano
             cre_g["dependencia"] = dep
             cre_g["cre_curto"] = cre_g["CRE"].map(cre_curto)
-            if dep == "Estadual" and ano == 2024 and "CO_ESCOLA" in sub.columns:
-                conc_cre = conc_esc[conc_esc["NU_ANO"] == ano].copy()
-                if not conc_cre.empty:
-                    esc_conc = conc_cre.groupby("CO_ESCOLA")["Concluintes"].sum().reset_index()
-                    sub_c = sub.merge(esc_conc, on="CO_ESCOLA", how="left")
-                    sub_c["Concluintes"] = sub_c["Concluintes"].fillna(0)
-                    cc = sub_c.groupby("CRE", observed=True)["Concluintes"].sum().reset_index()
-                    cre_g = cre_g.merge(cc, on="CRE", how="left")
-                    cre_g["Concluintes"] = cre_g["Concluintes"].fillna(0).astype(int)
-                    tx = cre_g["estudantes"] / cre_g["Concluintes"].replace(0, pd.NA) * 100
-                    cre_g["tx_part_efetiva"] = pd.to_numeric(tx, errors="coerce").round(1)
+            if dep == "Estadual":
+                conc_esc_ano = conc_esc[conc_esc["NU_ANO"] == ano].copy()
+                if not conc_esc_ano.empty:
+                    if not cres.empty and "CO_ESCOLA" in conc_esc_ano.columns:
+                        conc_esc_ano = conc_esc_ano.merge(
+                            cres[["CO_ESCOLA", "CRE"]].drop_duplicates(),
+                            on="CO_ESCOLA",
+                            how="left",
+                        )
+                    if "CRE" in conc_esc_ano.columns:
+                        cc = conc_esc_ano.groupby("CRE", observed=True)["Concluintes"].sum().reset_index()
+                        cre_g = cre_g.merge(cc, on="CRE", how="left")
+                        cre_g["Concluintes"] = cre_g["Concluintes"].fillna(0).astype(int)
+                        tx = cre_g["estudantes"] / cre_g["Concluintes"].replace(0, pd.NA) * 100
+                        cre_g["tx_part_efetiva"] = pd.to_numeric(tx, errors="coerce").round(1)
             out["participacao_cre"].append(cre_g)
             out["evolucao_cre"].append(cre_g)
 
@@ -313,6 +403,9 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
             "desvio": round(float(std), 1) if pd.notna(std) else None,
             "cv": round(100 * float(std) / float(mean), 1) if pd.notna(std) and mean else None,
         })
+        detail = _area_detail_stats(ms_est_val, area, col)
+        detail.update({"ano": ano, "area": area})
+        out["area_detail"].append(detail)
 
     del df, ms, valido, ms_valido
     limpar()
@@ -320,19 +413,20 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
 
 
 def main():
+    t0 = time.time()
     if not PARQUET.exists():
         raise SystemExit(f"Parquet nao encontrado. Rode: python processar_enem.py\n  {PARQUET}")
 
-    print("=" * 60)
-    print("GERADOR DE AGREGADOS - pipeline_dashboard")
+    logger.info("%s", "=" * 60)
+    logger.info("GERADOR DE AGREGADOS - pipeline_dashboard")
     PASTA_AGREGADOS.mkdir(parents=True, exist_ok=True)
 
     cres = carregar_cres()
     mapa_muni = carregar_mapa_municipio_cre()
     conc_totais, conc_esc = carregar_concluintes_sed()
-    print("Concluintes SED por ano:")
-    print(conc_totais.to_string(index=False))
-    print(f"CREs carregados: {len(cres)} escolas")
+    logger.info("Concluintes SED por ano:")
+    logger.info("%s", conc_totais.to_string(index=False))
+    logger.info("CREs carregados: %s escolas", len(cres))
 
     acumulado: dict[str, list] = {
         k: [] for k in [
@@ -340,12 +434,13 @@ def main():
             "desempenho", "desempenho_uf", "escolas_2024", "sumario",
             "referencias", "evolucao_cre", "evolucao_muni", "integridade",
             "integridade_cre", "integridade_muni", "histograma", "desvio_cv", "quantis",
+            "area_detail",
         ]
     }
 
     cols = _cols_parquet()
     for ano in ANOS:
-        print(f"\nProcessando {ano}...")
+        logger.info("Processando %s...", ano)
         df_ano = _ler_ano(ano, cols)
         res = processar_ano(df_ano, cres, mapa_muni, conc_totais, conc_esc)
         for k, v in res.items():
@@ -363,16 +458,32 @@ def main():
             df_out = pd.DataFrame(rows)
         path = PASTA_AGREGADOS / f"{nome}.parquet"
         df_out.to_parquet(path, index=False)
-        print(f"  {path.name}: {len(df_out)} linhas")
+        logger.info("%s: %s linhas", path.name, len(df_out))
 
     pa = pd.read_parquet(PASTA_AGREGADOS / "participacao_ano.parquet")
     ms = pa[(pa["dependencia"] == "Estadual") & (pa["ano"] == 2024)].iloc[0]
-    print("\nMS Estadual 2024:")
-    print(f"  concluintes SED: {int(ms['concluintes'])}")
-    print(f"  potenciais concluintes (CO_ESCOLA): {int(ms['inscritos'])}")
-    print(f"  validos (filtro): {int(ms['presentes_filt'])}")
+    logger.info("MS Estadual 2024:")
+    logger.info("  concluintes SED: %s", int(ms['concluintes']))
+    logger.info("  potenciais concluintes (CO_ESCOLA): %s", int(ms['inscritos']))
+    logger.info("  validos (filtro): %s", int(ms['presentes_filt']))
     if ms["concluintes"]:
-        print(f"  taxa efetiva: {100 * ms['presentes_filt'] / ms['concluintes']:.1f}%")
+        logger.info("  taxa efetiva: %.1f%%", 100 * ms['presentes_filt'] / ms['concluintes'])
+
+    # Escrever metadados do gerador
+    try:
+        WEB_DATA.mkdir(parents=True, exist_ok=True)
+        dur = time.time() - t0
+        meta = {
+            "script": "gerar_agregados.py",
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "duration_seconds": round(dur, 1),
+            "agregados_folder": str(PASTA_AGREGADOS),
+        }
+        mpath = WEB_DATA / "meta_gerar_agregados.json"
+        mpath.write_text(json.dumps(meta, ensure_ascii=False, indent=2))
+        logger.info("[meta] gravado: %s", mpath)
+    except Exception as e:
+        logger.warning("[aviso] nao foi possivel gravar meta: %s", e)
 
 
 if __name__ == "__main__":

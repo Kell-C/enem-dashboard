@@ -1,14 +1,41 @@
 """Caminhos e constantes - pipeline ENEM MS (pasta pipeline_dashboard)."""
 from pathlib import Path
+import logging
+import os
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s %(message)s"
+
+
+def configure_logging(name: str = __name__, level: str | int | None = None) -> logging.Logger:
+    log_level = level or os.getenv("LOG_LEVEL", "INFO")
+    if isinstance(log_level, str):
+        log_level = log_level.upper()
+    logging.basicConfig(
+        level=log_level,
+        format=LOG_FORMAT,
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[logging.StreamHandler()],
+        force=True,
+    )
+    return logging.getLogger(name)
 
 PIPELINE_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = PIPELINE_ROOT.parent
+PIPELINE_DASHBOARD = PIPELINE_ROOT.parent
+REPO_ROOT = PIPELINE_DASHBOARD.parent
 
-PASTA_BRUTOS = REPO_ROOT / "dados_brutos"
-PASTA_DADOS = PIPELINE_ROOT / "dados"
+# Paths com valores default, podem ser sobrescritos por variáveis de ambiente
+PASTA_BRUTOS = Path(os.getenv('PASTA_BRUTOS', REPO_ROOT / "dados_brutos"))
+PASTA_DADOS = Path(os.getenv('PASTA_DADOS', PIPELINE_ROOT / "dados"))
 PARQUET = PASTA_DADOS / "enem_completo_2019_2024_.parquet"
-PASTA_AGREGADOS = PASTA_DADOS / "agregados"
-WEB_DATA = PIPELINE_ROOT / "web" / "data"
+PASTA_AGREGADOS = Path(os.getenv('PASTA_AGREGADOS', PASTA_DADOS / "agregados"))
+# WEB_DATA: onde os assets do frontend são escritos (docs/data)
+WEB_DATA = Path(os.getenv('WEB_DATA', PIPELINE_ROOT / "docs" / "data"))
 
 AUX = PIPELINE_ROOT / "auxiliar"
 CRES_XLSX = AUX / "cres.xlsx"

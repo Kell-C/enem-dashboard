@@ -21,6 +21,8 @@ from enem_config import (
 
 COL_MUNICIPIO = "Munic\u00edpio"
 
+_CRE_POLO_MAP: dict[str, str] | None = None
+
 
 def normalizar_texto(texto) -> str:
     if pd.isna(texto):
@@ -32,14 +34,73 @@ def normalizar_texto(texto) -> str:
     return re.sub(r"\s+", " ", texto).strip()
 
 
+def _cre_codigo(cre) -> str:
+    s = str(cre).strip().upper()
+    if not s or s in ("SED", "CAMPO GRANDE CAPITAL", "NAN"):
+        return "SED"
+    return s.split(" - ", 1)[0].strip()
+
+
+def _formatar_polo(nome: str) -> str:
+    key = nome.strip().upper()
+    return CRE_CURTO_FIX.get(key, nome.strip().title())
+
+
+def _nome_cre_polo(polo: str) -> str:
+    """Ex.: Aquidauana -> CRE Aquidauana."""
+    return f"CRE {polo}"
+
+
+def carregar_mapa_cre_polo() -> dict[str, str]:
+    """CRE (ex. CRE 01) -> nome de exibicao (ex. CRE Aquidauana)."""
+    if not CRES_XLSX.exists():
+        return {"SED": _nome_cre_polo("Campo Grande")}
+
+    polo: dict[str, str] = {}
+    xl = pd.ExcelFile(CRES_XLSX)
+    for sheet in xl.sheet_names:
+        df = pd.read_excel(CRES_XLSX, sheet_name=sheet)
+        if "CRE" not in df.columns:
+            continue
+        for raw in df["CRE"].dropna().unique():
+            s = str(raw).strip()
+            su = s.upper()
+            if su in ("SED", "CAMPO GRANDE CAPITAL"):
+                polo["SED"] = _nome_cre_polo("Campo Grande")
+                continue
+            if " - " not in s:
+                continue
+            code, name = s.split(" - ", 1)
+            polo[code.strip().upper()] = _nome_cre_polo(_formatar_polo(name))
+
+    polo.setdefault("SED", _nome_cre_polo("Campo Grande"))
+    return polo
+
+
+def _get_cre_polo_map() -> dict[str, str]:
+    global _CRE_POLO_MAP
+    if _CRE_POLO_MAP is None:
+        _CRE_POLO_MAP = carregar_mapa_cre_polo()
+    return _CRE_POLO_MAP
+
+
 def cre_curto(cre) -> str:
+    sed = _get_cre_polo_map().get("SED", _nome_cre_polo("Campo Grande"))
     if cre is None or (isinstance(cre, float) and np.isnan(cre)):
-        return "SED"
+        return sed
     s = str(cre).strip()
-    if not s or s.upper() == "SED":
-        return "SED"
-    city = s.split(" - ", 1)[1].strip().upper() if " - " in s else s.upper()
-    return CRE_CURTO_FIX.get(city, city.title())
+    if not s:
+        return sed
+
+    code = _cre_codigo(cre)
+    polo = _get_cre_polo_map()
+    if code in polo:
+        return polo[code]
+
+    if " - " in s:
+        return _nome_cre_polo(_formatar_polo(s.split(" - ", 1)[1]))
+
+    return _nome_cre_polo(_formatar_polo(s))
 
 
 def _col_por_prefixo(columns, prefixo: str) -> str | None:
@@ -231,10 +292,13 @@ def carregar_concluintes_sed() -> tuple[pd.DataFrame, pd.DataFrame]:
 def quantis_serie(s: pd.Series) -> dict:
     s = pd.to_numeric(s, errors="coerce").dropna()
     if s.empty:
-        return {"min": 0, "q1": 0, "med": 0, "q3": 0, "max": 0, "outliers": []}
+        return {"min": 0, "min_pos": None, "q1": 0, "med": 0, "q3": 0, "max": 0, "outliers": []}
     q = s.quantile([0, 0.25, 0.5, 0.75, 1.0])
+    pos = s[s > 0]
+    min_pos = round(float(pos.min()), 1) if not pos.empty else None
     return {
         "min": round(float(q.iloc[0]), 1),
+        "min_pos": min_pos,
         "q1": round(float(q.iloc[1]), 1),
         "med": round(float(q.iloc[2]), 1),
         "q3": round(float(q.iloc[3]), 1),

@@ -3,16 +3,21 @@ Exporta data.json e painel_data.js para pipeline_dashboard/web/data/.
 """
 from __future__ import annotations
 
+import datetime
 import json
 import os
 import sys
+import time
+import logging
 
 import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from enem_config import ANOS, AREA_KEYS, NOTA_MAP, PASTA_AGREGADOS, WEB_DATA
+from enem_config import ANOS, AREA_KEYS, NOTA_MAP, PASTA_AGREGADOS, WEB_DATA, configure_logging
+
+logger = configure_logging(__name__)
 from enem_helpers import COL_MUNICIPIO, carregar_concluintes_sed, cre_curto, normalizar_texto, quantis_serie
 
 REF_AREAS = {
@@ -126,6 +131,43 @@ def _histograma_faixas(df_hist, area: str) -> dict:
     return out
 
 
+def _area_detail_web(df_detail, area: str, br_n_by_ano: dict[int, int], hist_df) -> dict:
+    out = {}
+    hist_cols = [
+        "h_sem", "h_zero", "h_1_200", "h_200_400",
+        "h_400_500", "h_500_600", "h_600_800", "h_800_1000",
+    ]
+    count_cols = [
+        "c_sem", "c_zero", "c_1_200", "c_200_400",
+        "c_400_500", "c_500_600", "c_600_800", "c_800_1000",
+    ]
+    for a in ANOS:
+        row = df_detail[(df_detail["ano"] == a) & (df_detail["area"] == area)]
+        if row.empty:
+            continue
+        r = row.iloc[0]
+        br_n = int(br_n_by_ano.get(a, 0))
+        br_row = hist_df[(hist_df["ano"] == a) & (hist_df["area"] == area)]
+        br6 = list(br_row.iloc[0]["br"]) if not br_row.empty else [0.0] * 6
+        br_counts6 = [int(round(br_n * p / 100.0)) for p in br6]
+        out[str(a)] = {
+            "n": int(r["n"]),
+            "brN": br_n,
+            "pctSemNota": float(r["pct_sem_nota"]),
+            "pctZero": float(r["pct_zero"]),
+            "moda": float(r["moda"]) if pd.notna(r.get("moda")) else None,
+            "modaFaixa": str(r["moda_faixa"]) if pd.notna(r.get("moda_faixa")) else None,
+            "modaTipo": "nota",
+            "minPos": float(r["min_pos"]) if pd.notna(r.get("min_pos")) else None,
+            "minPosExact": True,
+            "histPct": [float(r[c]) for c in hist_cols],
+            "histCounts": [int(r[c]) for c in count_cols],
+            "brHistPct6": [float(p) for p in br6],
+            "brHistCounts6": br_counts6,
+        }
+    return out
+
+
 def _serie_desvio_cv(df: pd.DataFrame, area: str, col: str) -> tuple[list, list]:
     desvio, cv = [], []
     for a in ANOS:
@@ -191,11 +233,15 @@ def build_painel_data() -> dict:
     integ_cre_df = _ler("integridade_cre")
     integ_muni_df = _ler("integridade_muni")
     hist_df = _ler("histograma")
+    detail_df = _ler("area_detail")
     desvio_df = _ler("desvio_cv")
     _, conc_esc = carregar_concluintes_sed()
 
     ms_part = part[part["dependencia"] == "Estadual"].sort_values("ano")
+    br_part = part[part["dependencia"] == "Brasil-Estadual"].sort_values("ano")
     estadual_n = [int(r["presentes_filt"]) for _, r in ms_part.iterrows()]
+    br_estadual_n = [int(r["presentes_filt"]) for _, r in br_part.iterrows()]
+    br_n_by_ano = {int(r["ano"]): int(r["presentes_filt"]) for _, r in br_part.iterrows()}
     estadual_concl = [int(r["concluintes"]) for _, r in ms_part.iterrows()]
     tx_ms = [round(100 * n / c, 1) if c else None for n, c in zip(estadual_n, estadual_concl)]
 
@@ -358,6 +404,7 @@ def build_painel_data() -> dict:
 
     boxplot = {k: _histograma_bins(quantis, k) for k in AREA_KEYS}
     histograma = {k: _histograma_faixas(hist_df, k) for k in AREA_KEYS}
+    areaDetail = {k: _area_detail_web(detail_df, k, br_n_by_ano, hist_df) for k in AREA_KEYS}
     desvio_padrao = {}
     cv = {}
     for k in AREA_KEYS:
@@ -435,11 +482,13 @@ def build_painel_data() -> dict:
         "redes": redes,
         "funil2024": funil2024,
         "estadualN": estadual_n,
+        "brEstadualN": br_estadual_n,
         "estadualConcl": estadual_concl,
         "integ": integ,
         "escRank": esc_rank,
         "boxplot": boxplot,
         "histograma": histograma,
+        "areaDetail": areaDetail,
         "dispersao": dispersao,
         "desvio_padrao": desvio_padrao,
         "cv": cv,
@@ -464,6 +513,7 @@ def _sanitize(obj):
 
 
 def main():
+    t0 = time.time()
     if not PASTA_AGREGADOS.exists():
         raise SystemExit("Rode primeiro: python gerar_agregados.py")
 
@@ -480,13 +530,29 @@ def main():
         json.dump(painel, f, ensure_ascii=False, separators=(",", ":"))
         f.write(";")
 
-    print(f"Gerado: {json_path} ({json_path.stat().st_size // 1024} KB)")
-    print(f"Gerado: {js_path}")
+    logger.info("Gerado: %s (%s KB)", json_path, json_path.stat().st_size // 1024)
+    logger.info("Gerado: %s", js_path)
     f24 = painel["funil2024"]["Estadual"]
-    print(
-        f"MS 2024: {f24['presfilt']} validos / {f24['concluintes']} concluintes SED "
-        f"= {100 * f24['presfilt'] / f24['concluintes']:.1f}%"
+    logger.info(
+        "MS 2024: %s validos / %s concluintes SED = %.1f%%",
+        f24["presfilt"],
+        f24["concluintes"],
+        100 * f24["presfilt"] / f24["concluintes"],
     )
+
+    try:
+        meta = {
+            "script": "gerar_web_data.py",
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "duration_seconds": round(time.time() - t0, 1),
+            "json_bytes": json_path.stat().st_size,
+            "js_bytes": js_path.stat().st_size,
+        }
+        meta_path = WEB_DATA / "meta_gerar_web_data.json"
+        meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+        logger.info("[meta] gravado: %s", meta_path)
+    except Exception as e:
+        logger.warning("[aviso] nao foi possivel gravar meta: %s", e)
 
 
 if __name__ == "__main__":
