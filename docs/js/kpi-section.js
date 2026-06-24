@@ -28,7 +28,7 @@
     document.getElementById('kpiRankVal').innerHTML =
       rk != null ? `${rk}\u00ba<span style="font-size:14px;color:var(--muted)">/27</span>` : '\u2014';
     const rkDelta = rkPrev != null && rk != null ? rkPrev - rk : null;
-    const tRk = trendTag(rkDelta, true);
+    const tRk = trendTag(rkDelta, false);
     document.getElementById('kpiRankSub').innerHTML =
       `2024 \u00b7 <span class="${tRk.cls}">${tRk.txt}</span> desde 2023 (${rkPrev != null ? `${rkPrev}\u00ba` : '\u2014'})`;
     const gapCard = document.getElementById('kpiGapCard');
