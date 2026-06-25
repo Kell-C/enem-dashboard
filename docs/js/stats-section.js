@@ -1,14 +1,22 @@
 (function (ED) {
   ED.initStats = function (ctx) {
-    const { DATA, ANOS, AREAKEYS, AREANOME, ACOR, C, BL, CFG } = ctx;
+    const { DATA, ANOS, LAST_YEAR, AREAKEYS, AREANOME, ACOR, C, BL, CFG } = ctx;
+    const CFGI = ED.Config.CFG_INTERACTIVE || CFG;
     const BP = DATA.boxplot || {};
+    const BP_SEM_ZERO = DATA.boxplotSemZero || {};
     const AD = DATA.areaDetail || {};
+    const AD_SEM_ZERO = DATA.areaDetailSemZero || {};
     const HIST = DATA.histograma || {};
+    const HIST_SEM_ZERO = DATA.histogramaSemZero || {};
     const DISP = DATA.dispersao || [];
     const DU = ED.DataUtils;
 
-    function boxMinPos(d, areaKey, ano) {
-      const mp = d.min_pos ?? d.minPos ?? AD[areaKey]?.[String(ano)]?.minPos;
+    function currentZeroMode() {
+      return ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
+    }
+
+    function boxMinPos(d, areaKey, ano, detailData) {
+      const mp = d.min_pos ?? d.minPos ?? detailData?.[areaKey]?.[String(ano)]?.minPos;
       if (mp != null && mp > 0) return mp;
       if (d.min != null && d.min > 0) return d.min;
       return null;
@@ -21,84 +29,90 @@
       margin: { l: 38, r: 10, t: 2, b: 26 },
     };
 
-    AREAKEYS.forEach((k) => {
-      const cor = ACOR[k];
-      const xVals = [];
-      const q1Vals = [];
-      const medVals = [];
-      const q3Vals = [];
-      const minPosVals = [];
-      const lowerVals = [];
-      const maxVals = [];
-      const minMarkerX = [];
-      const minMarkerY = [];
-      ANOS.forEach((a) => {
-        const d = (BP[k] || {})[String(a)];
-        if (!d) return;
-        const mp = boxMinPos(d, k, a);
-        xVals.push(String(a));
-        q1Vals.push(d.q1);
-        medVals.push(d.med);
-        q3Vals.push(d.q3);
-        minPosVals.push(mp);
-        lowerVals.push(mp != null ? mp : (d.min > 0 ? d.min : d.q1));
-        maxVals.push(d.max);
-        if (mp != null) {
-          minMarkerX.push(mp);
-          minMarkerY.push(String(a));
-        }
-      });
-      if (xVals.length === 0) return;
-      const h = Math.max(118, xVals.length * 22 + 36);
-      const traces = [{
-        y: xVals,
-        q1: q1Vals,
-        median: medVals,
-        q3: q3Vals,
-        lowerfence: lowerVals,
-        upperfence: maxVals,
-        customdata: minPosVals.map((v) => (v != null ? v.toFixed(1) : '\u2014')),
-        type: 'box',
-        orientation: 'h',
-        boxpoints: false,
-        marker: { color: cor },
-        line: { color: cor, width: 2 },
-        fillcolor: `rgba(${DU.hexToRgb(cor)},0.18)`,
-        hovertemplate: `${AREANOME[k]} · %{y}<br>Mediana: %{median:.1f}<br>Q1–Q3: %{q1:.1f} – %{q3:.1f}<br>M\u00edn. &gt; 0: %{customdata}<br>M\u00e1x: %{upperfence:.1f}<extra></extra>`,
-      }];
-      if (minMarkerX.length) {
-        traces.push({
-          x: minMarkerX,
-          y: minMarkerY,
-          mode: 'markers',
-          type: 'scatter',
-          marker: {
-            symbol: 'diamond',
-            size: 7,
-            color: '#fff',
-            line: { color: cor, width: 2 },
-          },
-          hovertemplate: `M\u00edn. &gt; 0: %{x:.1f}<extra></extra>`,
-          showlegend: false,
+    function renderBoxplots() {
+      const zeroMode = currentZeroMode();
+      const boxData = zeroMode === 'no_zero' ? BP_SEM_ZERO : BP;
+      const detailData = zeroMode === 'no_zero' ? AD_SEM_ZERO : AD;
+      AREAKEYS.forEach((k) => {
+        const cor = ACOR[k];
+        const xVals = [];
+        const q1Vals = [];
+        const medVals = [];
+        const q3Vals = [];
+        const minPosVals = [];
+        const lowerVals = [];
+        const maxVals = [];
+        const minMarkerX = [];
+        const minMarkerY = [];
+        ANOS.forEach((a) => {
+          const d = (boxData[k] || {})[String(a)];
+          if (!d) return;
+          const mp = boxMinPos(d, k, a, detailData);
+          xVals.push(String(a));
+          q1Vals.push(d.q1);
+          medVals.push(d.med);
+          q3Vals.push(d.q3);
+          minPosVals.push(mp);
+          lowerVals.push(mp != null ? mp : (d.min > 0 ? d.min : d.q1));
+          maxVals.push(d.max);
+          if (mp != null) {
+            minMarkerX.push(mp);
+            minMarkerY.push(String(a));
+          }
         });
-      }
-      Plotly.newPlot(`g_box_${k}`, traces, {
-        ...boxLayoutBase,
-        height: h,
-        xaxis: {
-          title: { text: 'nota', font: { size: 10 } },
-          gridcolor: C.subtle,
-          range: [0, 1000],
-          dtick: 250,
-          tickfont: { size: 10 },
-        },
-        yaxis: {
-          gridcolor: 'rgba(0,0,0,0)',
-          dtick: 1,
-          tickfont: { size: 10, color: C.muted },
-        },
-      }, CFG);
-    });
+        if (xVals.length === 0) return;
+        const h = Math.max(118, xVals.length * 22 + 36);
+        const traces = [{
+          y: xVals,
+          q1: q1Vals,
+          median: medVals,
+          q3: q3Vals,
+          lowerfence: lowerVals,
+          upperfence: maxVals,
+          customdata: minPosVals.map((v) => (v != null ? v.toFixed(1) : '\u2014')),
+          type: 'box',
+          orientation: 'h',
+          boxpoints: false,
+          marker: { color: cor },
+          line: { color: cor, width: 2 },
+          fillcolor: `rgba(${DU.hexToRgb(cor)},0.18)`,
+          hovertemplate: `${AREANOME[k]} · %{y}<br>Mediana: %{median:.1f}<br>Q1–Q3: %{q1:.1f} – %{q3:.1f}<br>M\u00edn. &gt; 0: %{customdata}<br>M\u00e1x: %{upperfence:.1f}<extra></extra>`,
+        }];
+        if (minMarkerX.length) {
+          traces.push({
+            x: minMarkerX,
+            y: minMarkerY,
+            mode: 'markers',
+            type: 'scatter',
+            marker: {
+              symbol: 'diamond',
+              size: 7,
+              color: '#fff',
+              line: { color: cor, width: 2 },
+            },
+            hovertemplate: `M\u00edn. &gt; 0: %{x:.1f}<extra></extra>`,
+            showlegend: false,
+          });
+        }
+        Plotly.react(`g_box_${k}`, traces, {
+          ...boxLayoutBase,
+          height: h,
+          xaxis: {
+            title: { text: 'nota', font: { size: 10 } },
+            gridcolor: 'rgba(0,0,0,0)',
+            range: [0, 1000],
+            dtick: 250,
+            tickfont: { size: 10 },
+          },
+          yaxis: {
+            gridcolor: 'rgba(0,0,0,0)',
+            dtick: 1,
+            tickfont: { size: 10, color: C.muted },
+          },
+        }, CFG);
+      });
+    }
+    renderBoxplots();
 
     const hArea = document.getElementById('histArea');
     const hAno = document.getElementById('histAno');
@@ -116,17 +130,19 @@
       hAno.appendChild(o);
     });
     hArea.value = 'CN';
-    hAno.value = '2024';
+    hAno.value = String(LAST_YEAR);
 
     function renderHist() {
       const k = hArea.value;
       const a = String(hAno.value);
-      const d = (HIST[k] || {})[a];
+      const zeroMode = currentZeroMode();
+      const histData = zeroMode === 'no_zero' ? HIST_SEM_ZERO : HIST;
+      const d = (histData[k] || {})[a];
       if (!d) return;
       const cor = ACOR[k];
       const faixas = ['0\u2013200', '200\u2013400', '400\u2013500', '500\u2013600', '600\u2013800', '800\u20131000'];
       if (histCaption) {
-        histCaption.textContent = `${AREANOME[k]} · ${a} · participantes efetivos`;
+        histCaption.textContent = `${AREANOME[k]} · ${a} · participantes efetivos${zeroMode === 'no_zero' ? ' · excluindo notas zero' : ''}`;
       }
       document.querySelectorAll('.hist-dot-ms').forEach((el) => { el.style.background = cor; });
       Plotly.react('g_histograma', [
@@ -162,7 +178,7 @@
         },
         yaxis: {
           title: { text: '% dos alunos', font: { size: 10 } },
-          gridcolor: C.subtle,
+          gridcolor: 'rgba(0,0,0,0)',
           ticksuffix: '%',
           rangemode: 'tozero',
         },
@@ -185,9 +201,17 @@
     creList.forEach((c, i) => { creColors[c] = crePalette[i % crePalette.length]; });
 
     const dispCre = document.getElementById('dispCre');
+    const dispZeroMode = document.getElementById('dispZeroMode');
     const dispCaption = document.getElementById('dispCaption');
     const dispLegend = document.getElementById('dispLegend');
     const creHidden = new Set();
+    document.querySelectorAll('[data-school-zero-mode]').forEach((el) => {
+      if (el.dataset.zeroModeBound === '1') return;
+      el.dataset.zeroModeBound = '1';
+      el.onchange = () => {
+        if (ED.setSchoolZeroMode) ED.setSchoolZeroMode(el.value);
+      };
+    });
     if (dispCre) {
       const allOpt = document.createElement('option');
       allOpt.value = '';
@@ -226,10 +250,22 @@
 
     function renderDisp() {
       const creFilter = dispCre?.value || '';
-      const msMed = ctx.DATA.medMs?.[ANOS.length - 1];
-      const pts = DISP.filter((e) => {
+      const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
+      const msMed = zeroMode === 'no_zero' && ctx.MS_GERAL_2024_SEM_ZERO != null
+        ? ctx.MS_GERAL_2024_SEM_ZERO
+        : ctx.DATA.medMs?.[ANOS.length - 1];
+      const pts = DISP.map((e) => {
+        if (zeroMode !== 'no_zero') return e;
+        return {
+          ...e,
+          nota: e.notaSemZero ?? null,
+          n: e.nSemZero ?? 0,
+          tx: e.txSemZero ?? null,
+        };
+      }).filter((e) => {
         if (creFilter && e.cre !== creFilter) return false;
         if (creHidden.has(e.cre)) return false;
+        if (e.nota == null || !e.n) return false;
         return true;
       });
       const txs = pts.map((e) => e.tx ?? 0);
@@ -292,7 +328,7 @@
         margin: { l: 50, r: 16, t: 12, b: 48 },
         xaxis: {
           title: { text: 'participa\u00e7\u00e3o efetiva (%)', font: { size: 10 } },
-          gridcolor: C.subtle,
+          gridcolor: 'rgba(0,0,0,0)',
           zeroline: false,
           range: [0, xMax],
           ticksuffix: '%',
@@ -300,18 +336,19 @@
         },
         yaxis: {
           title: { text: 'm\u00e9dia geral', font: { size: 10 } },
-          gridcolor: C.subtle,
+          gridcolor: 'rgba(0,0,0,0)',
           zeroline: false,
           range: [Math.max(300, yMin), Math.min(650, yMax)],
         },
         shapes,
         annotations,
-      }, CFG);
+      }, CFGI);
 
       if (dispCaption) {
         const nOver = pts.filter((e) => (e.tx ?? 0) > 100).length;
         const creLbl = creFilter || 'todas as CREs';
-        dispCaption.textContent = `${pts.length} escolas · ${creLbl} · eixo X at\u00e9 ${xMax}%`
+        const zeroLbl = zeroMode === 'no_zero' ? 'excluindo notas zero' : 'incluindo notas zero';
+        dispCaption.textContent = `${pts.length} escolas · ${creLbl} · ${zeroLbl} · eixo X at\u00e9 ${xMax}%`
           + (nOver ? ` \u00b7 ${nOver} com participa\u00e7\u00e3o > 100%` : '');
       }
     }
@@ -325,6 +362,12 @@
 
     buildDispLegend(toggleCreChip);
     if (dispCre) dispCre.onchange = renderDisp;
+    if (dispZeroMode && ED.setSchoolZeroMode) dispZeroMode.value = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
+    document.addEventListener('enemdash:schoolZeroMode', () => {
+      renderBoxplots();
+      renderHist();
+      renderDisp();
+    });
     renderDisp();
   };
 })(window.EnemDash);

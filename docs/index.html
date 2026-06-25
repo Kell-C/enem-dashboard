@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Painel ENEM MS — 2019-2024</title>
+<title>Painel ENEM MS — 2019-2025</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A4D8C'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='14' font-family='Segoe UI,sans-serif' fill='white'%3EMS%3C/text%3E%3C/svg%3E" />
 <link rel="stylesheet" href="style.css?v=4">
 <style>
@@ -78,6 +78,23 @@
   .card .coh .dot{width:7px;height:7px;border-radius:50%;background:var(--azul)}
   .card .nota{font-size:11px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--borda);padding-top:7px}
   .plot{width:100%;min-height:220px}
+  .chart-ux-tip{margin-top:12px;padding:10px 12px;border:1px solid var(--borda);border-radius:10px;
+    background:rgba(255,255,255,.16);color:#EAF1FB;font-size:12px;line-height:1.45;display:flex;gap:8px;align-items:flex-start}
+  .chart-ux-tip b{color:#fff}
+  .chart-ux-tip .dot{width:8px;height:8px;border-radius:50%;background:#F2C230;flex:0 0 auto;margin-top:5px}
+  .plot-controls-outside{position:relative;overflow:visible}
+  .plot-controls-outside .plotly .modebar{
+    top:-14px!important;right:4px!important;background:#FFFFFF!important;border:1px solid #9FB0C7;border-radius:8px;
+    padding:1px 2px;box-shadow:0 2px 8px rgba(8,30,60,.12);transform:scale(.72);transform-origin:top right
+  }
+  .plot-controls-outside .plotly .modebar-btn{color:#053B71!important}
+  .plot-controls-outside .plotly .modebar-btn:hover{background:#E8EDF3!important;color:#0A4D8C!important}
+  .plot-controls-outside .plotly .modebar-group{margin-right:1px}
+  .js-plotly-plot .plotly .gridlayer path,
+  .js-plotly-plot .plotly .gridlayer line{stroke:transparent!important}
+  @media (max-width:700px){
+    .plot-controls-outside .plotly .modebar{transform:scale(.66);transform-origin:top right}
+  }
 
   /* tooltip "como ler" */
   .help{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;
@@ -192,10 +209,10 @@
     <div class="cab-top">
       <div>
         <h1>Painel ENEM · Mato Grosso do Sul</h1>
-        <p class="sub">Evolução de desempenho e participação · Coordenadoria do Ensino Médio — SED/MS · 2019–2024</p>
+        <p class="sub">Evolução de desempenho e participação · Coordenadoria do Ensino Médio — SED/MS · <span data-dyn="range">2019–2025</span></p>
       </div>
       <div class="cohort">
-        <span class="pill">Período <select name="periodo" aria-label="Período"><option>2019–2024</option><option>2022–2024</option></select></span>
+        <span class="pill">Período <select id="periodoSelect" name="periodo" aria-label="Período"><option data-dyn="range">2019–2025</option><option data-dyn="recentRange">2022–2025</option></select></span>
         <span class="pill">Comparar com <select name="comparar" aria-label="Comparar com"><option>Brasil — rede estadual</option><option>Brasil — todas as redes</option></select></span>
         <span class="pill">Rede <select name="rede" aria-label="Rede"><option>Estadual</option><option>Todas as redes</option><option>Federal</option><option>Privada</option></select></span>
       </div>
@@ -203,17 +220,21 @@
     <div class="refbar">
       <span class="tag">População de referência</span>
       <span class="it">Prováveis concluintes do EM (3º ano) · presentes nos 2 dias · não eliminados
-        <span class="help">i<span class="tip"><b>Concluinte</b> = estudante cursando o 3º ano e concluindo o EM no ano da edição. <b>2019–2023:</b> identificado pela autodeclaração do participante (<code>TP_ST_CONCLUSAO = 2</code>), <b>sem egressos</b>. <b>2024:</b> o INEP não divulga a autodeclaração por escola, mas vincula cada participante à sua escola cruzando o <b>CPF com a matrícula no Censo Escolar</b>, filtrando as etapas de <b>prováveis concluintes do EM</b> (3º ano / séries finais). Assim, <b>todo participante com escola identificada em 2024 é um provável concluinte</b> — e os recortes por escola/município/CRE, bem como as comparações por rede entre MS, demais UFs e Brasil, já consideram <b>apenas essa população de referência</b> (presentes nos 2 dias, não eliminados). O denominador da participação continua sendo a matrícula de concluintes (Censo SED/MS).</span></span></span>
-      <span class="sep">·</span><span class="it"><b>Mesma população de referência</b> em MS, demais UFs e Brasil (2024 via vínculo Censo)</span>
+        <span class="help">i<span class="tip"><b>Concluinte</b> = estudante cursando o 3º ano e concluindo o EM no ano da edição. <b>2019–2023:</b> identificado pela autodeclaração do participante (<code>TP_ST_CONCLUSAO = 2</code>), <b>sem egressos</b>. <b><span data-dyn="schoolRange">2024–2025</span>:</b> o INEP não divulga a autodeclaração por escola, mas vincula cada participante à sua escola, permitindo o recorte de <b>prováveis concluintes do EM</b> com escola identificada. Assim, os recortes por escola/município/CRE, bem como as comparações por rede entre MS, demais UFs e Brasil, passam a considerar <b>essa população de referência</b> (presentes nos 2 dias, não eliminados). O denominador da participação continua sendo a matrícula de concluintes (Censo SED/MS).</span></span></span>
+      <span class="sep">·</span><span class="it"><b>Mesma população de referência</b> em MS, demais UFs e Brasil (<span data-dyn="schoolRange">2024–2025</span> via vínculo com escola)</span>
       <span class="sep">·</span><span class="it">Participação efetiva = presentes ÷ concluintes</span>
-      <span class="sep">·</span><span class="it" style="color:#F4A460">Os dados de concluintes que compareceram nos dois dias de prova na edição de 2024 refletem todos os possíveis concluintes da rede estadual, incluindo estudantes de modalidades como a EJA que não pertencem à etapa ensino médio</span>
+      <span class="sep">·</span><span class="it" style="color:#F4A460">Nos recortes de <span data-dyn="schoolRange">2024–2025</span>, os concluintes presentes podem incluir estudantes de outras modalidades vinculadas à escola, como EJA, e a leitura deve ser feita com cautela</span>
+    </div>
+    <div class="chart-ux-tip">
+      <span class="dot"></span>
+      <span><b>Navegação:</b> os controles de zoom e retorno ficam apenas na seção Trajetória e no gráfico de dispersão por escolas. <b>Duplo clique</b> também redefine a visão.</span>
     </div>
   </div>
 
   <!-- KPIs -->
   <div class="kpis">
     <div class="kpi">
-      <p class="lbl">Média geral · estadual <span class="help">i<span class="tip"><b>O que é:</b> média das 5 notas (CN, CH, LC, MT, Redação) dos concluintes presentes. <b>Como ler:</b> o número é 2024; a mini-linha mostra a trajetória 2019–2024. Subir é melhor.</span></span></p>
+      <p class="lbl">Média geral · estadual <span class="help">i<span class="tip"><b>O que é:</b> média das 5 notas (CN, CH, LC, MT, Redação) dos concluintes presentes. <b>Como ler:</b> o número mostra <span data-dyn="lastYear">2025</span>; a mini-linha acompanha a trajetória <span data-dyn="range">2019–2025</span>. Subir é melhor.</span></span></p>
       <div class="rowv"><div class="val" id="kpiMedVal">—</div><div id="s_media" class="spark"></div></div>
       <div class="vsub" id="kpiMedSub">—</div>
     </div>
@@ -235,37 +256,46 @@
     <div class="kpi">
       <p class="lbl">Taxa de eliminação <span class="help">i<span class="tip"><b>O que é:</b> % de participantes efetivos que foram eliminados em alguma prova (presença = 2) ou na redação (status = 4). <b>Como ler:</b> quanto menor, melhor. A redação é o principal vetor.</span></span></p>
       <div class="rowv"><div class="val" id="kpiElimVal">1,2%</div><div id="s_elim" class="spark"></div></div>
-      <div class="vsub" id="kpiElimSub">2024 · <span class="trend up">▲ estável</span> vs 2019</div>
+      <div class="vsub" id="kpiElimSub"><span data-dyn="lastYear">2025</span> · <span class="trend up">▲ estável</span> vs <span data-dyn="startYear">2019</span></div>
     </div>
   </div>
 
-  <!-- FUNIL 2024 -->
+  <!-- FUNIL DINÂMICO -->
   <div class="funil">
     <div class="fl">
-      <span class="fh">Funil de 2024 · rede estadual</span>
-      <span class="help">i<span class="tip"><b>O que é:</b> do universo de <b>concluintes do EM</b> (matrícula da rede) até os participantes efetivos. A <b>participação efetiva</b> = participantes efetivos (presentes nos 2 dias, não eliminados) ÷ concluintes. Fonte: microdados de participantes ENEM 2024 + matrícula SED/MS.</span></span>
-      <span class="fsub">extraído dos microdados de participantes de 2024</span>
+      <span class="fh">Funil de <span data-dyn="lastYear">2025</span> · rede estadual</span>
+      <span class="help">i<span class="tip"><b>O que é:</b> do universo de <b>concluintes do EM</b> (matrícula da rede) até os participantes efetivos. A <b>participação efetiva</b> = participantes efetivos (presentes nos 2 dias, não eliminados) ÷ concluintes. Fonte: microdados ENEM <span data-dyn="lastYear">2025</span> + matrícula SED/MS.</span></span>
+      <span class="fsub">extraído dos microdados ENEM <span data-dyn="lastYear">2025</span></span>
     </div>
     <div class="fstages" id="fstages"></div>
   </div>
 
   <!-- ÂNCORAS TEMPORAIS -->
   <details class="secacc" open>
-    <summary>Trajetória 2019–2024 <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Como desempenho e participação evoluíram juntos · rede estadual</span><span class="chev">▶</span></summary>
+    <summary>Trajetória <span data-dyn="range">2019–2025</span> <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Como desempenho e participação evoluíram juntos · rede estadual</span><span class="chev">▶</span></summary>
     <div class="secbody">
+  <div class="chart-toolbar" role="group" aria-label="Filtros da trajetória">
+    <div class="chart-field">
+      <label for="trajZeroMode">Notas zero</label>
+      <select id="trajZeroMode" class="dash-select" data-school-zero-mode aria-label="Filtrar trajetória por notas zero">
+        <option value="all">Incluir zeros</option>
+        <option value="no_zero">Excluir zeros</option>
+      </select>
+    </div>
+  </div>
   <div class="grid2u">
     <div class="card">
       <h3>Trajetória conjunta · participação × desempenho
-        <span class="help">i<span class="tip"><b>Como ler:</b> cada bolinha é um ano; a posição horizontal é a participação, a vertical é a média. A seta aponta de 2019 a 2024. <b>Ideal:</b> caminhar para cima e para a direita (mais alunos e melhores notas).</span></span></h3>
-      <div class="coh"><span class="dot"></span> Cada ponto = um ano · seta = sentido 2019 → 2024</div>
-      <div id="g_traj" class="plot"></div>
-      <div class="nota">O vale 2020–2021 derrubou a participação pela metade; 2024 recupera a adesão mantendo o desempenho.</div>
+        <span class="help">i<span class="tip"><b>Como ler:</b> cada bolinha é um ano; a posição horizontal é a participação, a vertical é a média. A seta aponta de <span data-dyn="startYear">2019</span> a <span data-dyn="lastYear">2025</span>. <b>Ideal:</b> caminhar para cima e para a direita (mais alunos e melhores notas).</span></span></h3>
+      <div class="coh"><span class="dot"></span> Cada ponto = um ano · seta = sentido <span data-dyn="startYear">2019</span> → <span data-dyn="lastYear">2025</span></div>
+      <div id="g_traj" class="plot plot-controls-outside"></div>
+      <div class="nota">O vale 2020–2021 derrubou a participação pela metade; <span data-dyn="lastYear">2025</span> mantém a recuperação da adesão com desempenho mais estável.</div>
     </div>
     <div class="card">
       <h3>Evolução por área · índice 2019 = 100
         <span class="help">i<span class="tip"><b>Por que indexar:</b> as áreas têm médias muito diferentes (Redação ~600, CN ~470). Pondo todas em 100 no ano-base, comparamos o <b>ritmo</b> de crescimento, não o nível. <b>Acima de 100</b> = cresceu desde 2019.</span></span></h3>
       <div class="coh"><span class="dot"></span> Ritmo de cada componente em base comparável · <b>passe o mouse no ponto e clique</b> para detalhes</div>
-      <div id="g_index" class="plot" style="cursor:pointer"></div>
+      <div id="g_index" class="plot plot-controls-outside" style="cursor:pointer"></div>
       <div class="index-drill">
         <span style="font-size:12px;color:var(--muted)">Detalhes da área:</span>
         <select id="selIndexArea" name="indexArea" aria-label="Área"></select>
@@ -282,74 +312,110 @@
       <h3>Posição de MS entre as UFs ao longo do tempo
         <span class="help">i<span class="tip"><b>Bump chart:</b> mostra a posição relativa, não a nota. <b>Como ler:</b> a linha sobe quando MS ultrapassa estados; cai quando é ultrapassado. A média absoluta pode subir e a posição cair ao mesmo tempo.</span></span></h3>
       <div class="coh"><span class="dot"></span> Rede estadual · 1º = melhor · entre 27 UFs</div>
-      <div id="g_bump" class="plot"></div>
+      <div id="g_bump" class="plot plot-controls-outside"></div>
       <div class="nota" id="notaBump">—</div>
     </div>
     <div class="card">
       <h3>Média geral · MS × Brasil estadual
         <span class="help">i<span class="tip"><b>Como ler:</b> linha cheia = MS, pontilhada = Brasil (mesma população). A distância vertical entre elas é a defasagem. A faixa cinza marca a pandemia — variações ali devem ser lidas com cautela.</span></span></h3>
       <div class="coh"><span class="dot"></span> Faixa cinza = anos de pandemia (leitura cautelosa)</div>
-      <div id="g_evol" class="plot"></div>
+      <div id="g_evol" class="plot plot-controls-outside"></div>
       <div class="nota" id="notaEvol">—</div>
     </div>
   </div>
     </div>
   </details>
 
-  <!-- COMPARAÇÃO ENTRE REDES (MS) -->
-  <details class="secacc">
-    <summary>Comparação entre redes de MS <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Mesma população (concluintes presentes, não eliminados) · redes do estado de MS</span><span class="chev">▶</span></summary>
+  <!-- DRILL-DOWN TERRITORIAL -->
+  <details class="secacc" open>
+    <summary>Detalhamento territorial — clique para explorar <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Coordenadoria → Município → Escola (escola só <span data-dyn="lastYear">2025</span>)</span><span class="chev">▶</span></summary>
     <div class="secbody">
-  <div class="grid2" style="margin-top:4px">
-    <div class="card">
-      <h3>Média geral por rede de MS · 2019–2024
-        <span class="help">i<span class="tip"><b>Como ler:</b> cada linha é uma rede dentro de MS (Estadual, Municipal, Federal, Privada), na mesma população de referência. A <b>linha azul grossa</b> é a rede estadual (foco do painel). Quanto mais alto, melhor. <b>Atenção:</b> a rede municipal de MS tem pouquíssimos alunos por ano (≈9–26) → leitura cautelosa.</span></span></h3>
-      <div class="coh"><span class="dot"></span> Azul grosso = estadual (foco) · demais = outras redes de MS</div>
-      <div id="g_redes" class="plot"></div>
-      <div class="nota">Privada e Federal de MS partem de patamar mais alto; a municipal tem N muito pequeno (linha tracejada) e oscila bastante.</div>
-    </div>
-    <div class="card">
-      <h3 id="redeGapTitle">Distância por área · estadual − outras redes de MS (2024)
-        <span class="help">i<span class="tip"><b>Como ler:</b> barras agrupadas por área mostram a diferença entre a rede estadual de MS e cada outra rede de MS no ano selecionado. <b>Negativo (abaixo de zero)</b> = estadual abaixo da rede; positivo = acima. Cor = rede.</span></span></h3>
-      <div class="coh"><span class="dot"></span> Estadual menos a outra rede de MS · abaixo de zero = estadual atrás</div>
-      <div style="display:flex;gap:10px;margin:8px 0;align-items:center;flex-wrap:wrap">
-        <span style="font-size:12px;color:var(--muted)">Ano:</span>
-        <select id="redeGapAno" name="redeGapAno" aria-label="Ano da distância por rede" style="padding:4px 8px;border:1px solid var(--borda);border-radius:6px;font-size:12px"></select>
-      </div>
-      <div id="g_redegap" class="plot"></div>
-      <div class="nota">A maior distância está ante a rede privada de MS; ante a municipal a comparação é frágil pelo N pequeno.</div>
+
+  <div class="bread" id="bread"></div>
+
+  <!-- Passo 1: CREs -->
+  <div class="card">
+    <h3>Coordenadorias (CRE) · evolução participação × desempenho
+      <span class="help">i<span class="tip"><b>Como ler:</b> cada quadro é uma CRE. A linha liga <span data-dyn="startYear">2019</span>→<span data-dyn="lastYear">2025</span> (participação no eixo X, média no Y). O ponto cheio é <span data-dyn="lastYear">2025</span>: <b>verde</b> se a média subiu vs <span data-dyn="startYear">2019</span>, <b>vermelho</b> se caiu. <b>Clique</b> numa CRE para ver os municípios.</span></span></h3>
+    <div class="coh"><span class="dot"></span> Clique numa CRE para abrir os municípios · ● = <span data-dyn="lastYear">2025</span></div>
+    <div id="creRow" class="crow"></div>
+    <div class="legend" style="margin-top:10px">
+      <span><span class="sw" style="background:var(--azul)"></span> trajetória</span>
+      <span><span class="sw box" style="background:var(--verde)"></span> <span data-dyn="lastYear">2025</span> ≥ <span data-dyn="startYear">2019</span> (avanço)</span>
+      <span><span class="sw box" style="background:var(--critico)"></span> <span data-dyn="lastYear">2025</span> &lt; <span data-dyn="startYear">2019</span> (recuo)</span>
     </div>
   </div>
+
+  <!-- Passo 1b: evolução por área da CRE selecionada -->
+  <div class="card" id="creAreaCard" style="margin-top:16px;display:none">
+    <h3 id="creAreaTitle">Evolução por área · <span></span>
+      <span class="help">i<span class="tip"><b>Como ler:</b> uma mini-série por área (CN, CH, LC, MT, Redação). A linha colorida (cor da área) = a CRE; a pontilhada cinza = MS estadual (referência). Painel com <b>borda vermelha</b> = a CRE está abaixo de MS naquela área em <span data-dyn="lastYear">2025</span> → ponto de atenção.</span></span></h3>
+    <div class="coh"><span class="dot"></span> Linha colorida = CRE (cor da área) · pontilhado cinza = MS estadual · borda vermelha = abaixo de MS (<span data-dyn="lastYear">2025</span>)</div>
+    <div id="creAreas" class="areagrid"></div>
+  </div>
+
+  <!-- Passo 2: municípios -->
+  <div class="grid2" id="munRow" style="margin-top:16px;display:none">
+    <div class="card">
+      <h3 id="munTitle">Municípios · participação × desempenho (2025)
+        <span class="help">i<span class="tip"><b>Como ler:</b> cada bolha é um município da CRE. X = participação efetiva, Y = média geral, <b>tamanho</b> = nº de concluintes (peso do município). Bolhas no canto inferior-esquerdo (vermelhas) são prioridade. <b>Clique</b> numa bolha para ver as escolas.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Bolha = município · tamanho = concluintes · clique para abrir escolas</div>
+      <div id="g_mun" class="plot"></div>
+      <div class="nota" id="munNota"></div>
+    </div>
+    <div class="card">
+      <h3 id="munAttTitle">Atenção por área · municípios da CRE (2025)
+        <span class="help">i<span class="tip"><b>Como ler:</b> mapa de calor município × 5 áreas (CN, CH, LC, MT, Redação). Cor = desvio vs a média de MS na área. <b>Vermelho</b> = abaixo de MS (atenção). Ordena os municípios do mais frágil ao mais forte.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Desvio vs média MS · vermelho = abaixo · 5 áreas (inclui Redação)</div>
+      <div id="g_munheat" class="plot"></div>
+    </div>
+  </div>
+
+  <!-- Passo 3: escolas 2025 -->
+  <div class="card" id="escCard" style="margin-top:16px;display:none">
+    <h3 id="escTitle">Escolas · 2025
+      <span class="help">i<span class="tip"><b>Como ler:</b> uma linha por escola. Células em <b>vermelho</b> = abaixo da média de MS naquela área (atenção); verde = acima. <b>Part.</b> = nº de participantes presentes; <b>Tx</b> = participantes ÷ concluintes da escola. Disponível só para <span data-dyn="lastYear">2025</span>. <b>População:</b> presentes nos 2 dias da rede estadual — em <span data-dyn="lastYear">2025</span> ainda pode incluir não-concluintes vinculados à escola.</span></span></h3>
+    <div class="coh"><span class="dot"></span> Rede estadual · presentes 2 dias (<span data-dyn="lastYear">2025</span> pode incluir não-concluintes) · ordenado por menor média · célula vermelha = abaixo de MS na área</div>
+    <div class="chart-toolbar" role="group" aria-label="Filtros das escolas">
+      <div class="chart-field">
+        <label for="escZeroMode">Notas zero</label>
+        <select id="escZeroMode" class="dash-select" data-school-zero-mode aria-label="Filtrar escolas por notas zero">
+          <option value="all">Incluir zeros</option>
+          <option value="no_zero">Excluir zeros</option>
+        </select>
+      </div>
+    </div>
+    <div class="scroll">
+      <table class="attbl">
+        <thead><tr><th>Escola</th><th>Concl.</th><th>Part.</th><th>Tx</th><th>CN</th><th>CH</th><th>LC</th><th>Mat.</th><th>Red.</th><th>Geral</th></tr></thead>
+        <tbody id="escBody"></tbody>
+      </table>
+    </div>
+    <div class="nota"><b><span data-dyn="lastYear">2025</span> com concluintes por escola:</b> taxa calculada cruzando participantes com <code>Concluintes EM <span data-dyn="fileRange">2019 a 2025</span>.xlsx</code>. Escolas sem correspondência exibem "—" na taxa.</div>
+  </div>
+
+  <!-- SNAPSHOT recolhível -->
+  <details class="more">
+    <summary><span class="chev">▶</span> Recorte de um ano (snapshot) — comparações estáticas MS × Brasil × UFs</summary>
+    <div class="snap-toolbar" style="margin:12px 0 0;display:flex;align-items:center;gap:8px">
+      <span style="font-size:12px;color:var(--muted)">Ano:</span>
+      <select id="snapAno" name="snapAno" aria-label="Ano do snapshot" style="padding:3px 8px;border:1px solid var(--borda);border-radius:6px;font-size:12px;background:#fff;color:var(--azul)">
+        <option value="2025">2025</option><option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option>
+        <option value="2021">2021</option><option value="2020">2020</option><option value="2019">2019</option>
+      </select>
+      <span style="font-size:12px;color:var(--muted)">Notas zero:</span>
+      <select id="snapZeroMode" class="dash-select" data-school-zero-mode aria-label="Filtrar snapshot por notas zero">
+        <option value="all">Incluir zeros</option>
+        <option value="no_zero">Excluir zeros</option>
+      </select>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="card"><h3 id="snapDumbTitle">MS × Brasil por área · 2025 (dumbbell)</h3>
+        <div class="coh"><span class="dot"></span> Distância = diferença MS − Brasil</div><div id="g_areas" class="plot"></div></div>
+      <div class="card"><h3 id="snapRankTitle">Ranking das UFs · 2025</h3>
+        <div class="coh"><span class="dot"></span> MS destacado · linha = média nacional</div><div id="g_ufrank" class="plot"></div></div>
     </div>
   </details>
-
-  <!-- INTEGRIDADE / QUALIDADE DA PARTICIPACAO -->
-  <details class="secacc">
-    <summary>Integridade &amp; qualidade da participação <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Eliminados, notas zeradas e sem nota · por edição, área, rede e território</span><span class="chev">▶</span></summary>
-    <div class="secbody">
-  <div class="grid2" style="margin-top:4px">
-    <div class="card">
-      <h3>Eliminados por edição
-        <span class="help">i<span class="tip"><b>O que é:</b> candidatos eliminados em alguma área (presença = 2) ou na redação (status = 4). <b>Como ler:</b> barras empilhadas por motivo (CN/CH/LC/MT + redação). A linha vermelha = taxa de eliminação sobre o compareceu (%). Quanto menor, melhor. <b>Atenção:</b> eliminação na redação costuma ser o vetor dominante.</span></span></h3>
-      <div class="coh"><span class="dot"></span> Barras = eliminados absolutos · linha = % do compareceu · seletor de rede abaixo</div>
-      <div id="g_integ_elim" class="plot"></div>
-      <div class="nota"> No recorte de 2019 a 2024, Linguagens e Ciências Humanas têm sido os principais vetores de eliminação.</div>
-    </div>
-    <div class="card">
-      <h3>Comparação entre redes · eliminação e sem nota (2024)
-        <span class="help">i<span class="tip"><b>Como ler:</b> barras agrupadas. <b>Vermelho</b> = taxa de eliminação (% do compareceu); <b>azul</b> = taxa de sem nota na redação (% dos presentes efetivos). A municipal de MS tem N muito pequeno — leitura cautelosa.</span></span></h3>
-      <div class="coh"><span class="dot"></span> Vermelho = eliminados · azul = sem nota na redação · 2024</div>
-      <div id="g_integ_comp" class="plot"></div>
-      <div class="nota">Brasil estadual serve de referência. MS estadual está próximo ou levemente abaixo da média nacional em eliminação.</div>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top:16px">
-    <h3>Pontos de atencao · CREs e municipios (2019-2024)
-      <span class="help">i<span class="tip"><b>Como ler:</b> tabela ordenada pelo maior risco (taxa de eliminacao). <b>Vermelho</b> = taxa acima da media estadual; <b>laranja</b> = taxa de sem nota acima da media. <b>Elim. multipla</b> = eliminados em 2+ areas objetivas; <b>Zeros multiplo</b> = zeros em 2+ areas; <b>Sem nota multipla</b> = sem nota em 2+ areas. <b>Clique</b> numa CRE para ver os municipios; clique num municipio para ver as escolas (2024).</span></span></h3>
-    <div class="coh"><span class="dot"></span> Ordenado por taxa de eliminação · clique CRE → municípios · clique município → escolas</div>
-    <div id="g_integ_table" class="plot"></div>
-  </div>
     </div>
   </details>
 
@@ -357,9 +423,18 @@
   <details class="secacc">
     <summary>Distribuição do desempenho <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Boxplot, histograma e dispersão por área ao longo dos anos</span><span class="chev">▶</span></summary>
     <div class="secbody">
+      <div class="chart-toolbar" role="group" aria-label="Filtros da distribuição">
+        <div class="chart-field">
+          <label for="distZeroMode">Notas zero</label>
+          <select id="distZeroMode" class="dash-select" data-school-zero-mode aria-label="Filtrar distribuição por notas zero">
+            <option value="all">Incluir zeros</option>
+            <option value="no_zero">Excluir zeros</option>
+          </select>
+        </div>
+      </div>
       <div class="dist-grid" style="margin-top:4px">
         <div class="card card-box">
-          <h3>Boxplot por área · evolução 2019–2024
+          <h3>Boxplot por área · evolução <span data-dyn="range">2019–2025</span>
             <span class="help">i<span class="tip"><b>Como ler:</b> cada mini-painel mostra a distribuição das notas de uma área, ano a ano. A linha dentro da caixa é a mediana; a caixa vai de Q1 a Q3; os bigodes até mínimo e máximo.</span></span></h3>
           <div class="coh"><span class="dot"></span> Um painel por área · bigode inferior = mínima &gt; 0 (◆) · zeros ficam fora do whisker</div>
           <div class="box-grid">
@@ -392,7 +467,7 @@
         </div>
       </div>
       <div class="card card-disp" style="margin-top:16px">
-        <h3>Dispersão: nota vs participação por escola (2024)
+        <h3>Dispersão: nota vs participação por escola (<span data-dyn="lastYear">2025</span>)
           <span class="help">i<span class="tip"><b>Como ler:</b> cada bolha é uma escola estadual de MS. <b>Eixo X</b> = taxa de participação efetiva; <b>Eixo Y</b> = média geral da escola. <b>Tamanho</b> = número de alunos. <b>Cor</b> = CRE. Linha vertical tracejada = 100% de participação; horizontal = média de MS. <b style="color:#B45309">Escolas com taxa &gt; 100% indicam que os dados de concluintes da SED incluem todas as modalidades (EJA, etc.).</b></span></span></h3>
         <div class="coh"><span class="dot"></span> Bolha = escola · tamanho = alunos presentes · cor = CRE · clique na legenda para filtrar</div>
         <div class="chart-toolbar disp-toolbar" role="group" aria-label="Filtros da dispersão">
@@ -400,12 +475,46 @@
             <label for="dispCre">CRE</label>
             <select id="dispCre" class="dash-select" aria-label="Filtrar dispersão por CRE"></select>
           </div>
+          <div class="chart-field">
+            <label for="dispZeroMode">Notas zero</label>
+            <select id="dispZeroMode" class="dash-select" data-school-zero-mode aria-label="Filtrar dispersão por notas zero">
+              <option value="all">Incluir zeros</option>
+              <option value="no_zero">Excluir zeros</option>
+            </select>
+          </div>
         </div>
         <p class="disp-caption" id="dispCaption">—</p>
-        <div id="g_dispersao" class="plot plot-disp"></div>
+        <div id="g_dispersao" class="plot plot-disp plot-controls-outside"></div>
         <div class="disp-legend" id="dispLegend" aria-label="Legenda por CRE"></div>
         <p class="disp-note">Participação &gt; 100%: o denominador SED pode incluir EJA e outras modalidades além do EM regular.</p>
       </div>
+    </div>
+  </details>
+
+  <!-- COMPARAÇÃO ENTRE REDES (MS) -->
+  <details class="secacc">
+    <summary>Comparação entre redes de MS <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Mesma população (concluintes presentes, não eliminados) · redes do estado de MS</span><span class="chev">▶</span></summary>
+    <div class="secbody">
+  <div class="grid2" style="margin-top:4px">
+    <div class="card">
+      <h3>Média geral por rede de MS · <span data-dyn="range">2019–2025</span>
+        <span class="help">i<span class="tip"><b>Como ler:</b> cada linha é uma rede dentro de MS (Estadual, Municipal, Federal, Privada), na mesma população de referência. A <b>linha azul grossa</b> é a rede estadual (foco do painel). Quanto mais alto, melhor. <b>Atenção:</b> a rede municipal de MS tem pouquíssimos alunos por ano (≈9–26) → leitura cautelosa.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Azul grosso = estadual (foco) · demais = outras redes de MS</div>
+      <div id="g_redes" class="plot"></div>
+      <div class="nota">Privada e Federal de MS partem de patamar mais alto; a municipal tem N muito pequeno (linha tracejada) e oscila bastante.</div>
+    </div>
+    <div class="card">
+      <h3 id="redeGapTitle">Distância por área · estadual − outras redes de MS (2025)
+        <span class="help">i<span class="tip"><b>Como ler:</b> barras agrupadas por área mostram a diferença entre a rede estadual de MS e cada outra rede de MS no ano selecionado. <b>Negativo (abaixo de zero)</b> = estadual abaixo da rede; positivo = acima. Cor = rede.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Estadual menos a outra rede de MS · abaixo de zero = estadual atrás</div>
+      <div style="display:flex;gap:10px;margin:8px 0;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--muted)">Ano:</span>
+        <select id="redeGapAno" name="redeGapAno" aria-label="Ano da distância por rede" style="padding:4px 8px;border:1px solid var(--borda);border-radius:6px;font-size:12px"></select>
+      </div>
+      <div id="g_redegap" class="plot"></div>
+      <div class="nota">A maior distância está ante a rede privada de MS; ante a municipal a comparação é frágil pelo N pequeno.</div>
+    </div>
+  </div>
     </div>
   </details>
 
@@ -430,80 +539,33 @@
     </div>
   </details>
 
-  <!-- DRILL-DOWN TERRITORIAL -->
+  <!-- INTEGRIDADE / QUALIDADE DA PARTICIPACAO -->
   <details class="secacc">
-    <summary>Detalhamento territorial — clique para explorar <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Coordenadoria → Município → Escola (escola só 2024)</span><span class="chev">▶</span></summary>
+    <summary>Integridade &amp; qualidade da participação <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Eliminados, notas zeradas e sem nota · por edição, área, rede e território</span><span class="chev">▶</span></summary>
     <div class="secbody">
-
-  <div class="bread" id="bread"></div>
-
-  <!-- Passo 1: CREs -->
-  <div class="card">
-    <h3>Coordenadorias (CRE) · evolução participação × desempenho
-      <span class="help">i<span class="tip"><b>Como ler:</b> cada quadro é uma CRE. A linha liga 2019→2024 (participação no eixo X, média no Y). O ponto cheio é 2024: <b>verde</b> se a média subiu vs 2019, <b>vermelho</b> se caiu. <b>Clique</b> numa CRE para ver os municípios.</span></span></h3>
-    <div class="coh"><span class="dot"></span> Clique numa CRE para abrir os municípios · ● = 2024</div>
-    <div id="creRow" class="crow"></div>
-    <div class="legend" style="margin-top:10px">
-      <span><span class="sw" style="background:var(--azul)"></span> trajetória</span>
-      <span><span class="sw box" style="background:var(--verde)"></span> 2024 ≥ 2019 (avanço)</span>
-      <span><span class="sw box" style="background:var(--critico)"></span> 2024 &lt; 2019 (recuo)</span>
-    </div>
-  </div>
-
-  <!-- Passo 1b: evolução por área da CRE selecionada -->
-  <div class="card" id="creAreaCard" style="margin-top:16px;display:none">
-    <h3 id="creAreaTitle">Evolução por área · <span></span>
-      <span class="help">i<span class="tip"><b>Como ler:</b> uma mini-série por área (CN, CH, LC, MT, Redação). A linha colorida (cor da área) = a CRE; a pontilhada cinza = MS estadual (referência). Painel com <b>borda vermelha</b> = a CRE está abaixo de MS naquela área em 2024 → ponto de atenção.</span></span></h3>
-    <div class="coh"><span class="dot"></span> Linha colorida = CRE (cor da área) · pontilhado cinza = MS estadual · borda vermelha = abaixo de MS (2024)</div>
-    <div id="creAreas" class="areagrid"></div>
-  </div>
-
-  <!-- Passo 2: municípios -->
-  <div class="grid2" id="munRow" style="margin-top:16px;display:none">
+  <div class="grid2" style="margin-top:4px">
     <div class="card">
-      <h3 id="munTitle">Municípios · participação × desempenho (2024)
-        <span class="help">i<span class="tip"><b>Como ler:</b> cada bolha é um município da CRE. X = participação efetiva, Y = média geral, <b>tamanho</b> = nº de concluintes (peso do município). Bolhas no canto inferior-esquerdo (vermelhas) são prioridade. <b>Clique</b> numa bolha para ver as escolas.</span></span></h3>
-      <div class="coh"><span class="dot"></span> Bolha = município · tamanho = concluintes · clique para abrir escolas</div>
-      <div id="g_mun" class="plot"></div>
-      <div class="nota" id="munNota"></div>
+      <h3>Eliminados por edição
+        <span class="help">i<span class="tip"><b>O que é:</b> candidatos eliminados em alguma área (presença = 2) ou na redação (status = 4). <b>Como ler:</b> barras empilhadas por motivo (CN/CH/LC/MT + redação). A linha vermelha = taxa de eliminação sobre o compareceu (%). Quanto menor, melhor. <b>Atenção:</b> eliminação na redação costuma ser o vetor dominante.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Barras = eliminados absolutos · linha = % do compareceu · seletor de rede abaixo</div>
+      <div id="g_integ_elim" class="plot"></div>
+      <div class="nota">No recorte de <span data-dyn="rangeText">2019 a 2025</span>, Linguagens e Ciências Humanas concentram boa parte das eliminações, sem predominância consistente da redação.</div>
     </div>
     <div class="card">
-      <h3 id="munAttTitle">Atenção por área · municípios da CRE (2024)
-        <span class="help">i<span class="tip"><b>Como ler:</b> mapa de calor município × 5 áreas (CN, CH, LC, MT, Redação). Cor = desvio vs a média de MS na área. <b>Vermelho</b> = abaixo de MS (atenção). Ordena os municípios do mais frágil ao mais forte.</span></span></h3>
-      <div class="coh"><span class="dot"></span> Desvio vs média MS · vermelho = abaixo · 5 áreas (inclui Redação)</div>
-      <div id="g_munheat" class="plot"></div>
+      <h3>Comparação entre redes · eliminação e sem nota (<span data-dyn="lastYear">2025</span>)
+        <span class="help">i<span class="tip"><b>Como ler:</b> barras agrupadas. <b>Vermelho</b> = taxa de eliminação (% do compareceu); <b>azul</b> = taxa de sem nota na redação (% dos presentes efetivos). A municipal de MS tem N muito pequeno — leitura cautelosa.</span></span></h3>
+      <div class="coh"><span class="dot"></span> Vermelho = eliminados · azul = sem nota na redação · <span data-dyn="lastYear">2025</span></div>
+      <div id="g_integ_comp" class="plot"></div>
+      <div class="nota">Brasil estadual serve de referência. MS estadual está próximo ou levemente abaixo da média nacional em eliminação.</div>
     </div>
   </div>
 
-  <!-- Passo 3: escolas 2024 -->
-  <div class="card" id="escCard" style="margin-top:16px;display:none">
-    <h3 id="escTitle">Escolas · 2024
-      <span class="help">i<span class="tip"><b>Como ler:</b> uma linha por escola. Células em <b>vermelho</b> = abaixo da média de MS naquela área (atenção); verde = acima. <b>Part.</b> = nº de participantes presentes; <b>Tx</b> = participantes ÷ concluintes da escola. Disponível só para 2024. <b>População:</b> presentes nos 2 dias da rede estadual — em 2024 ainda inclui não-concluintes (a conclusão não é identificável por aluno).</span></span></h3>
-    <div class="coh"><span class="dot"></span> Rede estadual · presentes 2 dias (2024 inclui não-concluintes) · ordenado por menor média · célula vermelha = abaixo de MS na área</div>
-    <div class="scroll">
-      <table class="attbl">
-        <thead><tr><th>Escola</th><th>Concl.</th><th>Part.</th><th>Tx</th><th>CN</th><th>CH</th><th>LC</th><th>Mat.</th><th>Red.</th><th>Geral</th></tr></thead>
-        <tbody id="escBody"></tbody>
-      </table>
-    </div>
-    <div class="nota"><b>2024 com concluintes por escola:</b> taxa calculada cruzando participantes com <code>Concluintes EM 2019 a 2024.xlsx</code> (município + nome, ~83% de match). Escolas sem correspondência exibem "—" na taxa.</div>
+  <div class="card" style="margin-top:16px">
+    <h3>Pontos de atencao · CREs e municipios (<span data-dyn="rangeAscii">2019-2025</span>)
+      <span class="help">i<span class="tip"><b>Como ler:</b> tabela ordenada pelo maior risco (taxa de eliminacao). <b>Vermelho</b> = taxa acima da media estadual; <b>laranja</b> = taxa de sem nota acima da media. <b>Elim. multipla</b> = eliminados em 2+ areas objetivas; <b>Zeros multiplo</b> = zeros em 2+ areas; <b>Sem nota multipla</b> = sem nota em 2+ areas. <b>Clique</b> numa CRE para ver os municipios; clique num municipio para ver as escolas (<span data-dyn="lastYear">2025</span>).</span></span></h3>
+    <div class="coh"><span class="dot"></span> Ordenado por taxa de eliminação · clique CRE → municípios · clique município → escolas</div>
+    <div id="g_integ_table" class="plot"></div>
   </div>
-
-  <!-- SNAPSHOT recolhível -->
-  <details class="more">
-    <summary><span class="chev">▶</span> Recorte de um ano (snapshot) — comparações estáticas MS × Brasil × UFs</summary>
-    <div class="snap-toolbar" style="margin:12px 0 0;display:flex;align-items:center;gap:8px">
-      <span style="font-size:12px;color:var(--muted)">Ano:</span>
-      <select id="snapAno" name="snapAno" aria-label="Ano do snapshot" style="padding:3px 8px;border:1px solid var(--borda);border-radius:6px;font-size:12px;background:#fff;color:var(--azul)">
-        <option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option>
-        <option value="2021">2021</option><option value="2020">2020</option><option value="2019">2019</option>
-      </select>
-    </div>
-    <div class="grid2" style="margin-top:14px">
-      <div class="card"><h3 id="snapDumbTitle">MS × Brasil por área · 2024 (dumbbell)</h3>
-        <div class="coh"><span class="dot"></span> Distância = diferença MS − Brasil</div><div id="g_areas" class="plot"></div></div>
-      <div class="card"><h3 id="snapRankTitle">Ranking das UFs · 2024</h3>
-        <div class="coh"><span class="dot"></span> MS destacado · linha = média nacional</div><div id="g_ufrank" class="plot"></div></div>
     </div>
   </details>
 
@@ -518,7 +580,7 @@
     </div>
   </div>
 
-  <div class="footer">Dados: microdado INEP + concluintes SED (<code>Concluintes EM 2019 a 2024.xlsx</code>) · eliminados: TP_PRESENCA/TP_STATUS_REDACAO = 2 · redação em branco incluída · paleta SED/MS</div>
+  <div class="footer">Dados: microdado INEP + concluintes SED (<code>Concluintes EM <span data-dyn="fileRange">2019 a 2025</span>.xlsx</code>) · eliminados: TP_PRESENCA/TP_STATUS_REDACAO = 2 · redação em branco incluída · paleta SED/MS</div>
 </div>
 <script defer src="js/config.js?v=3" charset="utf-8"></script>
 <script defer src="js/data-utils.js?v=3" charset="utf-8"></script>
@@ -531,7 +593,7 @@
 <script defer src="js/integridade-section.js?v=3" charset="utf-8"></script>
 <script defer src="js/stats-section.js?v=8" charset="utf-8"></script>
 <script defer src="js/cv-section.js?v=3" charset="utf-8"></script>
-<script defer src="js/drill-section.js?v=5" charset="utf-8"></script>
+<script defer src="js/drill-section.js?v=6" charset="utf-8"></script>
 <script defer src="js/snapshot-section.js?v=3" charset="utf-8"></script>
 <script defer src="data-loader.js?v=3" charset="utf-8"></script>
 <script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>

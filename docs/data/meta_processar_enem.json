@@ -1,0 +1,6 @@
+{
+  "script": "processar_enem.py",
+  "timestamp": "2026-06-24T20:04:12.217426Z",
+  "parquet": "C:\\painel-em-sedms\\enem-dashboard\\dados\\enem_completo_2019_2025_.parquet",
+  "total_rows": 30821888
+}

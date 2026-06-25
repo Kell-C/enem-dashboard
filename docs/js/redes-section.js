@@ -1,6 +1,6 @@
 (function (ED) {
   ED.initRedes = function (ctx) {
-    const { DATA, ANOS, AREAKEYS, C, BL, CFG, NF } = ctx;
+    const { DATA, ANOS, LAST_YEAR, AREAKEYS, C, BL, CFG, NF } = ctx;
     const RC = { Estadual: C.azul, Municipal: C.dourado, Federal: C.verde, Privada: C.roxo };
     const RN = {
       Estadual: 'Estadual (MS)', Municipal: 'Municipal (MS)',
@@ -25,7 +25,7 @@
       ...BL, height: 300,
       legend: { orientation: 'h', y: -0.22, font: { size: 9 } },
       xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
-      yaxis: { title: { text: 'm\u00e9dia geral', font: { size: 10 } }, gridcolor: C.subtle },
+      yaxis: { title: { text: 'm\u00e9dia geral', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)' },
     }, CFG);
 
     const others = deps.filter((d) => d !== 'Estadual');
@@ -37,7 +37,7 @@
       o.textContent = a;
       gapAno.appendChild(o);
     });
-    gapAno.value = '2024';
+    gapAno.value = String(LAST_YEAR);
 
     function renderRedeGap(ano) {
       const i = ANOS.indexOf(Number(ano));
@@ -54,7 +54,7 @@
         xaxis: { tickfont: { size: 11 } },
         yaxis: {
           title: { text: 'estadual \u2212 rede (pontos)', font: { size: 10 } },
-          gridcolor: C.subtle, zeroline: true, zerolinecolor: C.borda, zerolinewidth: 1.4,
+          gridcolor: 'rgba(0,0,0,0)', zeroline: true, zerolinecolor: C.borda, zerolinewidth: 1.4,
         },
       }, CFG);
       const titleEl = document.getElementById('redeGapTitle');
@@ -63,6 +63,6 @@
       }
     }
     gapAno.onchange = (e) => renderRedeGap(parseInt(e.target.value, 10));
-    renderRedeGap(2024);
+    renderRedeGap(LAST_YEAR);
   };
 })(window.EnemDash);

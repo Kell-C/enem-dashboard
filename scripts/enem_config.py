@@ -29,20 +29,35 @@ PIPELINE_ROOT = Path(__file__).resolve().parents[1]
 PIPELINE_DASHBOARD = PIPELINE_ROOT.parent
 REPO_ROOT = PIPELINE_DASHBOARD.parent
 
+ANOS = list(range(2019, 2026))
+ANO_INICIAL = ANOS[0]
+ANO_FINAL = ANOS[-1]
+
 # Paths com valores default, podem ser sobrescritos por variáveis de ambiente
-PASTA_BRUTOS = Path(os.getenv('PASTA_BRUTOS', REPO_ROOT / "dados_brutos"))
-PASTA_DADOS = Path(os.getenv('PASTA_DADOS', PIPELINE_ROOT / "dados"))
-PARQUET = PASTA_DADOS / "enem_completo_2019_2024_.parquet"
+# Prioriza a pasta `dados/` do próprio repositório, onde estão os microdados 2025.
+_dados_default = PIPELINE_ROOT / "dados"
+_brutos_legacy = REPO_ROOT / "dados_brutos"
+PASTA_DADOS = Path(os.getenv('PASTA_DADOS', _dados_default))
+PASTA_BRUTOS = Path(os.getenv('PASTA_BRUTOS', _dados_default if _dados_default.exists() else _brutos_legacy))
+PARQUET = PASTA_DADOS / f"enem_completo_{ANO_INICIAL}_{ANO_FINAL}_.parquet"
 PASTA_AGREGADOS = Path(os.getenv('PASTA_AGREGADOS', PASTA_DADOS / "agregados"))
 # WEB_DATA: onde os assets do frontend são escritos (docs/data)
 WEB_DATA = Path(os.getenv('WEB_DATA', PIPELINE_ROOT / "docs" / "data"))
 
 AUX = PIPELINE_ROOT / "auxiliar"
 CRES_XLSX = AUX / "cres.xlsx"
-CONCLUINTES_XLSX = AUX / "Concluintes EM 2019 a 2024.xlsx"
-CONCLUINTES_CSV = REPO_ROOT / "dados_processados" / "concluintes_3ano_ms_2019_2024.csv"
-
-ANOS = list(range(2019, 2025))
+CONCLUINTES_XLSX = Path(
+    os.getenv(
+        'CONCLUINTES_XLSX',
+        PASTA_DADOS / f"Concluintes EM {ANO_INICIAL} a {ANO_FINAL}.xlsx",
+    )
+)
+CONCLUINTES_CSV = Path(
+    os.getenv(
+        'CONCLUINTES_CSV',
+        REPO_ROOT / "dados_processados" / f"concluintes_3ano_ms_{ANO_INICIAL}_{ANO_FINAL}.csv",
+    )
+)
 COLS_NOTAS = ["NU_NOTA_CN", "NU_NOTA_CH", "NU_NOTA_LC", "NU_NOTA_MT", "NU_NOTA_REDACAO"]
 PRES_COLS = ["TP_PRESENCA_CN", "TP_PRESENCA_CH", "TP_PRESENCA_LC", "TP_PRESENCA_MT"]
 DEP_MAP = {1: "Federal", 2: "Estadual", 3: "Municipal", 4: "Privada"}

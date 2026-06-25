@@ -12,17 +12,21 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from enem_config import ANOS, AREA_KEYS, COLS_NOTAS, DEPENDENCIAS, NOTA_MAP, PARQUET, PASTA_AGREGADOS, PRES_COLS, WEB_DATA, configure_logging
+from enem_config import ANOS, ANO_FINAL, AREA_KEYS, COLS_NOTAS, DEPENDENCIAS, NOTA_MAP, PARQUET, PASTA_AGREGADOS, PRES_COLS, WEB_DATA, configure_logging
 
 logger = configure_logging(__name__)
 from enem_helpers import (
     aplicar_flags,
+    observacao_oferta_escola,
+    COL_MUNICIPIO,
     carregar_concluintes_sed,
     carregar_cres,
     carregar_mapa_municipio_cre,
     cre_curto,
     enriquecer_ms,
     limpar,
+    nome_exibicao_escola,
+    normalizar_texto,
     preparar_ano,
     quantis_serie,
 )
@@ -198,8 +202,11 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         "integridade_cre": [],
         "integridade_muni": [],
         "histograma": [],
+        "histograma_sem_zero": [],
         "desvio_cv": [],
         "area_detail": [],
+        "area_detail_sem_zero": [],
+        "quantis_sem_zero": [],
     }
 
     ms = df[df["SG_UF_ESC"] == "MS"]
@@ -209,6 +216,7 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
     for dep in DEPENDENCIAS:
         base = ms[(ms["DEP_ADM"] == dep) & ms["CONCLUINTE"]]
         val = ms_valido[ms_valido["DEP_ADM"] == dep]
+        val_sem_zero = val[(val[COLS_NOTAS] > 0).all(axis=1)] if len(val) else val
         presentes = int(base["PRESENTE_2_DIAS"].sum())
         elim_red = int((base["PRESENTE_2_DIAS"] & base["ELIM_RED"]).sum())
         branco = int((base["PRESENTE_2_DIAS"] & base["RED_BRANCO"]).sum())
@@ -224,17 +232,21 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
             "redacao_branco": branco,
             "concluintes": conc,
             "presentes_filt": len(val),
+            "presentes_filt_sem_zero": len(val_sem_zero),
         })
 
         if len(val):
             row = {"ano": ano, "dependencia": dep, "estudantes": len(val)}
             for c in COLS_NOTAS + ["MEDIA_GERAL"]:
                 row[f"media_{c.lower()}"] = val[c].mean()
+                row[f"media_{c.lower()}_sem_zero"] = val_sem_zero[c].mean() if len(val_sem_zero) else None
+            row["estudantes_sem_zero"] = len(val_sem_zero)
             out["desempenho"].append(row)
 
         out["integridade"].append(_integridade_row(base, val, {"ano": ano, "escopo": dep}))
 
     br_val = valido[valido["DEP_ADM"] == "Estadual"]
+    br_val_sem_zero = br_val[(br_val[COLS_NOTAS] > 0).all(axis=1)] if len(br_val) else br_val
     br_base = df[(df["DEP_ADM"] == "Estadual") & df["CONCLUINTE"]]
     if len(br_base) or len(br_val):
         comp_br = int(br_base["PRESENTE_2_DIAS"].sum())
@@ -250,6 +262,7 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
             "redacao_branco": branco_br,
             "concluintes": None,
             "presentes_filt": len(br_val),
+            "presentes_filt_sem_zero": len(br_val_sem_zero),
         })
         out["integridade"].append(
             _integridade_row(br_base, br_val, {"ano": ano, "escopo": "Brasil-Estadual"})
@@ -261,11 +274,24 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
             media_geral=("MEDIA_GERAL", "mean"),
             **{f"media_{c.lower()}": (c, "mean") for c in COLS_NOTAS},
         ).reset_index()
+        uf_sem_zero = br_val_sem_zero.groupby("SG_UF_ESC").agg(
+            estudantes_sem_zero=("NU_INSCRICAO", "count"),
+            media_geral_sem_zero=("MEDIA_GERAL", "mean"),
+            **{f"media_{c.lower()}_sem_zero": (c, "mean") for c in COLS_NOTAS},
+        ).reset_index() if not br_val_sem_zero.empty else pd.DataFrame(columns=["SG_UF_ESC", "estudantes_sem_zero", "media_geral_sem_zero", *[f"media_{c.lower()}_sem_zero" for c in COLS_NOTAS]])
+        if not uf_sem_zero.empty:
+            uf = uf.merge(uf_sem_zero, on="SG_UF_ESC", how="left")
+        else:
+            uf["estudantes_sem_zero"] = 0
+            uf["media_geral_sem_zero"] = pd.NA
+            for c in COLS_NOTAS:
+                uf[f"media_{c.lower()}_sem_zero"] = pd.NA
         uf["ano"] = ano
         uf["dependencia"] = "Estadual"
         out["desempenho_uf"].extend(uf.rename(columns={"SG_UF_ESC": "UF"}).to_dict("records"))
 
     ms_val = enriquecer_ms(ms_valido, cres, mapa_muni)
+    ms_val_est = enriquecer_ms(ms_valido[ms_valido["DEP_ADM"] == "Estadual"], cres, mapa_muni)
     if not ms_val.empty and "CRE" in ms_val.columns:
         for dep in DEPENDENCIAS:
             sub = ms_val[ms_val["DEP_ADM"] == dep]
@@ -288,6 +314,12 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
                             on="CO_ESCOLA",
                             how="left",
                         )
+                    if mapa_muni and "CRE" in conc_esc_ano.columns and COL_MUNICIPIO in conc_esc_ano.columns:
+                        m = conc_esc_ano["CRE"].isna()
+                        if m.any():
+                            conc_esc_ano.loc[m, "CRE"] = conc_esc_ano.loc[m, COL_MUNICIPIO].map(
+                                lambda x: mapa_muni.get(normalizar_texto(x), pd.NA)
+                            )
                     if "CRE" in conc_esc_ano.columns:
                         cc = conc_esc_ano.groupby("CRE", observed=True)["Concluintes"].sum().reset_index()
                         cre_g = cre_g.merge(cc, on="CRE", how="left")
@@ -297,19 +329,20 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
             out["participacao_cre"].append(cre_g)
             out["evolucao_cre"].append(cre_g)
 
-        muni_g = ms_val.groupby("NO_MUNICIPIO_ESC", observed=True).agg(
-            estudantes=("NU_INSCRICAO", "count"),
-            media_geral=("MEDIA_GERAL", "mean"),
-            **{f"media_{c.lower()}": (c, "mean") for c in COLS_NOTAS},
-        ).reset_index()
-        muni_g["ano"] = ano
-        muni_g["dependencia"] = "Estadual"
-        muni_g["CRE"] = ms_val.groupby("NO_MUNICIPIO_ESC")["CRE"].agg(
-            lambda s: s.mode().iloc[0] if len(s.mode()) else pd.NA
-        ).values
-        muni_g["cre_curto"] = muni_g["CRE"].map(cre_curto)
-        out["participacao_municipios"].append(muni_g)
-        out["evolucao_muni"].append(muni_g)
+        if not ms_val_est.empty and "CRE" in ms_val_est.columns:
+            muni_g = ms_val_est.groupby("NO_MUNICIPIO_ESC", observed=True).agg(
+                estudantes=("NU_INSCRICAO", "count"),
+                media_geral=("MEDIA_GERAL", "mean"),
+                **{f"media_{c.lower()}": (c, "mean") for c in COLS_NOTAS},
+            ).reset_index()
+            muni_g["ano"] = ano
+            muni_g["dependencia"] = "Estadual"
+            muni_g["CRE"] = ms_val_est.groupby("NO_MUNICIPIO_ESC")["CRE"].agg(
+                lambda s: s.mode().iloc[0] if len(s.mode()) else pd.NA
+            ).values
+            muni_g["cre_curto"] = muni_g["CRE"].map(cre_curto)
+            out["participacao_municipios"].append(muni_g)
+            out["evolucao_muni"].append(muni_g)
 
     ms_base_est = ms[(ms["DEP_ADM"] == "Estadual") & ms["CONCLUINTE"]]
     ms_val_est = ms_valido[ms_valido["DEP_ADM"] == "Estadual"]
@@ -337,7 +370,7 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
                     )
                 )
 
-    if ano == 2024:
+    if ano == ANO_FINAL:
         sub24 = enriquecer_ms(ms_valido[ms_valido["DEP_ADM"] == "Estadual"], cres, mapa_muni)
         if not sub24.empty and sub24["CO_ESCOLA"].notna().any():
             esc = sub24.groupby("CO_ESCOLA", observed=True).agg(
@@ -348,17 +381,39 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
                 NO_MUNICIPIO_ESC=("NO_MUNICIPIO_ESC", "first"),
                 CRE=("CRE", "first"),
             ).reset_index()
-            esc["ano"] = 2024
+            sem_zero = sub24[(sub24[COLS_NOTAS] > 0).all(axis=1)]
+            if not sem_zero.empty:
+                esc_sem_zero = sem_zero.groupby("CO_ESCOLA", observed=True).agg(
+                    estudantes_sem_zero=("NU_INSCRICAO", "count"),
+                    media_geral_sem_zero=("MEDIA_GERAL", "mean"),
+                    **{f"media_{c.lower()}_sem_zero": (c, "mean") for c in COLS_NOTAS},
+                ).reset_index()
+                esc = esc.merge(esc_sem_zero, on="CO_ESCOLA", how="left")
+            else:
+                esc["estudantes_sem_zero"] = 0
+                esc["media_geral_sem_zero"] = pd.NA
+                for c in COLS_NOTAS:
+                    esc[f"media_{c.lower()}_sem_zero"] = pd.NA
+            esc["ano"] = ANO_FINAL
             esc["dependencia"] = "Estadual"
             esc["cre_curto"] = esc["CRE"].map(cre_curto)
-            ce = conc_esc[conc_esc["NU_ANO"] == 2024][["CO_ESCOLA", "Concluintes"]]
+            ce = conc_esc[conc_esc["NU_ANO"] == ANO_FINAL][["CO_ESCOLA", "Concluintes"]]
             esc = esc.merge(ce, on="CO_ESCOLA", how="left")
             esc["Concluintes"] = esc["Concluintes"].fillna(0).astype(int)
+            esc["estudantes_sem_zero"] = esc["estudantes_sem_zero"].fillna(0).astype(int)
             tx_esc = esc["estudantes"] / esc["Concluintes"].replace(0, pd.NA) * 100
             esc["tx_part"] = pd.to_numeric(tx_esc, errors="coerce").round(1)
+            tx_esc_sem_zero = esc["estudantes_sem_zero"] / esc["Concluintes"].replace(0, pd.NA) * 100
+            esc["tx_part_sem_zero"] = pd.to_numeric(tx_esc_sem_zero, errors="coerce").round(1)
+            esc["observacao"] = esc["CO_ESCOLA"].map(observacao_oferta_escola)
+            esc["nome_exibicao"] = esc.apply(
+                lambda r: nome_exibicao_escola(r["CO_ESCOLA"], r["NOME_ESCOLA"]),
+                axis=1,
+            )
             out["escolas_2024"].append(esc)
 
     ms_est_val = ms_valido[ms_valido["DEP_ADM"] == "Estadual"]
+    ms_est_val_sem_zero = ms_est_val[(ms_est_val[COLS_NOTAS] > 0).all(axis=1)] if len(ms_est_val) else ms_est_val
     ms_est_base = ms[(ms["DEP_ADM"] == "Estadual") & ms["CONCLUINTE"]]
     if len(ms_est_val):
         srow = {
@@ -369,10 +424,13 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
             "total_redacao_branco": int((ms_est_base["PRESENTE_2_DIAS"] & ms_est_base["RED_BRANCO"]).sum()),
             "total_concluintes_sed": conc_ano,
             "total_validos": len(ms_est_val),
+            "total_validos_sem_zero": len(ms_est_val_sem_zero),
         }
         for c in COLS_NOTAS + ["MEDIA_GERAL"]:
             srow[f"media_{c.lower()}"] = ms_est_val[c].mean()
             srow[f"media_br_{c.lower()}"] = br_val[c].mean() if len(br_val) else None
+            srow[f"media_{c.lower()}_sem_zero"] = ms_est_val_sem_zero[c].mean() if len(ms_est_val_sem_zero) else None
+            srow[f"media_br_{c.lower()}_sem_zero"] = br_val_sem_zero[c].mean() if len(br_val_sem_zero) else None
         out["sumario"].append(srow)
 
     for c in COLS_NOTAS + ["MEDIA_GERAL"]:
@@ -381,19 +439,32 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
             "area": c,
             "media_ms": ms_est_val[c].mean() if len(ms_est_val) else None,
             "media_br": br_val[c].mean() if len(br_val) else None,
+            "media_ms_sem_zero": ms_est_val_sem_zero[c].mean() if len(ms_est_val_sem_zero) else None,
+            "media_br_sem_zero": br_val_sem_zero[c].mean() if len(br_val_sem_zero) else None,
         })
 
     for area, col in zip(AREA_KEYS, COLS_NOTAS):
         q = quantis_serie(ms_est_val[col]) if len(ms_est_val) else quantis_serie(pd.Series(dtype=float))
         q.update({"ano": ano, "area": area, "escopo": "MS-Estadual"})
         out.setdefault("quantis", []).append(q)
+        q_sem_zero = quantis_serie(ms_est_val_sem_zero[col]) if len(ms_est_val_sem_zero) else quantis_serie(pd.Series(dtype=float))
+        q_sem_zero.update({"ano": ano, "area": area, "escopo": "MS-Estadual-sem-zero"})
+        out["quantis_sem_zero"].append(q_sem_zero)
         ms_s = ms_est_val[col] if len(ms_est_val) else pd.Series(dtype=float)
         br_s = br_val[col] if len(br_val) else pd.Series(dtype=float)
+        ms_s_sem_zero = ms_est_val_sem_zero[col] if len(ms_est_val_sem_zero) else pd.Series(dtype=float)
+        br_s_sem_zero = br_val_sem_zero[col] if len(br_val_sem_zero) else pd.Series(dtype=float)
         out["histograma"].append({
             "ano": ano,
             "area": area,
             "ms": _hist_pct(ms_s),
             "br": _hist_pct(br_s),
+        })
+        out["histograma_sem_zero"].append({
+            "ano": ano,
+            "area": area,
+            "ms": _hist_pct(ms_s_sem_zero),
+            "br": _hist_pct(br_s_sem_zero),
         })
         std = ms_s.std()
         mean = ms_s.mean()
@@ -406,6 +477,9 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         detail = _area_detail_stats(ms_est_val, area, col)
         detail.update({"ano": ano, "area": area})
         out["area_detail"].append(detail)
+        detail_sem_zero = _area_detail_stats(ms_est_val_sem_zero, area, col)
+        detail_sem_zero.update({"ano": ano, "area": area})
+        out["area_detail_sem_zero"].append(detail_sem_zero)
 
     del df, ms, valido, ms_valido
     limpar()
@@ -433,8 +507,8 @@ def main():
             "participacao_ano", "participacao_cre", "participacao_municipios",
             "desempenho", "desempenho_uf", "escolas_2024", "sumario",
             "referencias", "evolucao_cre", "evolucao_muni", "integridade",
-            "integridade_cre", "integridade_muni", "histograma", "desvio_cv", "quantis",
-            "area_detail",
+            "integridade_cre", "integridade_muni", "histograma", "histograma_sem_zero",
+            "desvio_cv", "quantis", "quantis_sem_zero", "area_detail", "area_detail_sem_zero",
         ]
     }
 
@@ -461,8 +535,8 @@ def main():
         logger.info("%s: %s linhas", path.name, len(df_out))
 
     pa = pd.read_parquet(PASTA_AGREGADOS / "participacao_ano.parquet")
-    ms = pa[(pa["dependencia"] == "Estadual") & (pa["ano"] == 2024)].iloc[0]
-    logger.info("MS Estadual 2024:")
+    ms = pa[(pa["dependencia"] == "Estadual") & (pa["ano"] == ANO_FINAL)].iloc[0]
+    logger.info("MS Estadual %s:", ANO_FINAL)
     logger.info("  concluintes SED: %s", int(ms['concluintes']))
     logger.info("  potenciais concluintes (CO_ESCOLA): %s", int(ms['inscritos']))
     logger.info("  validos (filtro): %s", int(ms['presentes_filt']))

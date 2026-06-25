@@ -42,9 +42,9 @@
 
   function renderMun(creName, muns) {
     const ctx = _ctx;
-    const { C, BL, CFG, NF, MS_GERAL_2024, MS_AREA_2024 } = ctx;
-    document.getElementById('munTitle').childNodes[0].nodeValue = `Munic\u00edpios de ${creName} \u00b7 participa\u00e7\u00e3o \u00d7 desempenho (2024) `;
-    document.getElementById('munAttTitle').childNodes[0].nodeValue = `Aten\u00e7\u00e3o por \u00e1rea \u00b7 munic\u00edpios de ${creName} (2024) `;
+    const { C, BL, CFG, NF, LAST_YEAR, LAST_INDEX, MS_GERAL_2024, MS_AREA_2024 } = ctx;
+    document.getElementById('munTitle').childNodes[0].nodeValue = `Munic\u00edpios de ${creName} \u00b7 participa\u00e7\u00e3o \u00d7 desempenho (${LAST_YEAR}) `;
+    document.getElementById('munAttTitle').childNodes[0].nodeValue = `Aten\u00e7\u00e3o por \u00e1rea \u00b7 munic\u00edpios de ${creName} (${LAST_YEAR}) `;
     const xs = [];
     const ys = [];
     const sz = [];
@@ -53,8 +53,8 @@
     const cd = [];
     const semtx = [];
     muns.forEach((m) => {
-      const g = m.med[5];
-      const t = m.tx[5];
+      const g = m.med[LAST_INDEX];
+      const t = m.tx[LAST_INDEX];
       const c = m.concl || 30;
       if (t == null) { semtx.push(m.nome); return; }
       xs.push(t);
@@ -62,32 +62,54 @@
       sz.push(Math.max(8, Math.sqrt(c) * 1.6));
       col.push(g < MS_GERAL_2024 && t < 27 ? C.critico : C.azul);
       tt.push(m.nome);
-      cd.push([m.nome, NF(m.n && m.n[5]), NF(m.concl)]);
+      cd.push([m.nome, NF(m.n && m.n[LAST_INDEX]), NF(m.concl)]);
     });
     const xmin = xs.length ? Math.min(...xs) : 0;
     const xmax = xs.length ? Math.max(...xs) : 60;
     const ymin = ys.length ? Math.min(...ys) : 470;
     const ymax = ys.length ? Math.max(...ys) : 520;
-    Plotly.react('g_mun', [{
-      x: xs, y: ys, text: tt, customdata: cd,
-      mode: 'markers+text', type: 'scatter', textposition: 'top center', textfont: { size: 9, color: C.muted },
-      marker: { size: sz, color: col, opacity: 0.7, line: { color: '#fff', width: 1 } },
-      hovertemplate: '<b>%{text}</b><br>Part.: %{x:.1f}% \u00b7 %{customdata[1]} part. efetivos<br>M\u00e9dia: %{y:.1f}<br>Concluintes: %{customdata[2]}<extra></extra>',
-    }], {
-      ...BL, height: 300, showlegend: false,
-      xaxis: { title: { text: 'participa\u00e7\u00e3o efetiva (%)', font: { size: 10 } }, gridcolor: C.subtle },
-      yaxis: { title: { text: 'm\u00e9dia geral', font: { size: 10 } }, gridcolor: C.subtle },
-      shapes: [
-        { type: 'line', x0: 27, x1: 27, y0: ymin - 5, y1: ymax + 5, line: { color: C.borda, width: 1, dash: 'dot' } },
-        { type: 'line', x0: xmin - 3, x1: xmax + 3, y0: MS_GERAL_2024, y1: MS_GERAL_2024, line: { color: C.brasil, width: 1, dash: 'dash' } },
-      ],
-    }, CFG).then((gd) => {
+    const singleWithoutTx = xs.length === 0 && muns.length === 1 && semtx.length === 1;
+    const munPlot = singleWithoutTx
+      ? {
+        traces: [{
+          x: [muns[0].nome], y: [muns[0].med[LAST_INDEX]], text: [muns[0].nome], customdata: [[muns[0].nome, NF(muns[0].n && muns[0].n[LAST_INDEX]), NF(muns[0].concl)]],
+          mode: 'markers+text', type: 'scatter', textposition: 'top center', textfont: { size: 9, color: C.muted },
+          marker: { size: 18, color: C.azul, opacity: 0.78, line: { color: '#fff', width: 1 } },
+          hovertemplate: '<b>%{text}</b><br>Taxa de participa\u00e7\u00e3o: indispon\u00edvel<br>%{customdata[1]} part. efetivos<br>M\u00e9dia: %{y:.1f}<extra></extra>',
+        }],
+        layout: {
+          ...BL, height: 300, showlegend: false,
+          xaxis: { title: { text: 'munic\u00edpio (taxa indispon\u00edvel)', font: { size: 10 } }, type: 'category', gridcolor: 'rgba(0,0,0,0)' },
+          yaxis: { title: { text: 'm\u00e9dia geral', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)' },
+          shapes: [
+            { type: 'line', xref: 'paper', x0: 0, x1: 1, y0: MS_GERAL_2024, y1: MS_GERAL_2024, line: { color: C.brasil, width: 1, dash: 'dash' } },
+          ],
+        },
+      }
+      : {
+        traces: [{
+          x: xs, y: ys, text: tt, customdata: cd,
+          mode: 'markers+text', type: 'scatter', textposition: 'top center', textfont: { size: 9, color: C.muted },
+          marker: { size: sz, color: col, opacity: 0.7, line: { color: '#fff', width: 1 } },
+          hovertemplate: '<b>%{text}</b><br>Part.: %{x:.1f}% \u00b7 %{customdata[1]} part. efetivos<br>M\u00e9dia: %{y:.1f}<br>Concluintes: %{customdata[2]}<extra></extra>',
+        }],
+        layout: {
+          ...BL, height: 300, showlegend: false,
+          xaxis: { title: { text: 'participa\u00e7\u00e3o efetiva (%)', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)' },
+          yaxis: { title: { text: 'm\u00e9dia geral', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)' },
+          shapes: [
+            { type: 'line', x0: 27, x1: 27, y0: ymin - 5, y1: ymax + 5, line: { color: C.borda, width: 1, dash: 'dot' } },
+            { type: 'line', x0: xmin - 3, x1: xmax + 3, y0: MS_GERAL_2024, y1: MS_GERAL_2024, line: { color: C.brasil, width: 1, dash: 'dash' } },
+          ],
+        },
+      };
+    Plotly.react('g_mun', munPlot.traces, munPlot.layout, CFG).then((gd) => {
       if (gd.removeAllListeners) gd.removeAllListeners('plotly_click');
       gd.on('plotly_click', (e) => { selectMun(e.points[0].customdata[0]); });
     });
     const nn = document.getElementById('munNota');
     nn.innerHTML = semtx.length
-      ? `<b>Sem taxa de participa\u00e7\u00e3o (${semtx.length}):</b> ${semtx.join(', ')} \u2014 sem registro de concluintes na base municipal, ent\u00e3o n\u00e3o h\u00e1 eixo de participa\u00e7\u00e3o para posicion\u00e1-los aqui. Eles continuam no mapa de aten\u00e7\u00e3o por \u00e1rea abaixo (que usa apenas o desempenho).`
+      ? `<b>Sem taxa de participa\u00e7\u00e3o (${semtx.length}):</b> ${semtx.join(', ')} \u2014 sem registro de concluintes na base municipal.${singleWithoutTx ? ' Como esta CRE possui apenas um munic\u00edpio, ele \u00e9 exibido acima apenas pelo desempenho.' : ' Eles continuam no mapa de aten\u00e7\u00e3o por \u00e1rea abaixo (que usa apenas o desempenho).'}`
       : '';
     const A4 = ['CN', 'CH', 'LC', 'MT', 'RED'];
     const rows = muns.map((m) => ({
@@ -112,9 +134,10 @@
     }, CFG);
   }
 
-  function selectCre(name) {
+  function selectCre(name, opts = {}) {
     const ctx = _ctx;
-    const { DATA, MS_AREA_2024 } = ctx;
+    const { DATA, LAST_YEAR, MS_AREA_2024 } = ctx;
+    const shouldScroll = opts.scroll !== false;
     SEL_CRE = name;
     SEL_MUN = null;
     document.querySelectorAll('.ctile').forEach((t) =>
@@ -122,7 +145,7 @@
     );
     document.getElementById('escCard').style.display = 'none';
     document.getElementById('creAreaCard').style.display = 'block';
-    document.querySelector('#creAreaTitle span').textContent = `${name} \u00b7 2019\u20132024`;
+    document.querySelector('#creAreaTitle span').textContent = `${name} \u00b7 ${ctx.ANOS[0]}\u2013${LAST_YEAR}`;
     renderAreas('creAreas', DATA.cre[name].areas, MS_AREA_2024);
     const muns = (DATA.creMuns[name] || [])
       .map((m) => (DATA.mun[m] ? { nome: m, ...DATA.mun[m] } : null))
@@ -130,30 +153,57 @@
     document.getElementById('munRow').style.display = muns.length ? 'grid' : 'none';
     renderMun(name, muns);
     bread();
-    document.getElementById('munRow').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (shouldScroll) {
+      document.getElementById('munRow').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   }
 
   function selectMun(name) {
     const ctx = _ctx;
-    const { DATA, MS_AREA_2024, MS_GERAL_2024 } = ctx;
+    const { DATA, LAST_YEAR, MS_AREA_2024, MS_GERAL_2024, MS_AREA_2024_SEM_ZERO, MS_GERAL_2024_SEM_ZERO } = ctx;
     SEL_MUN = name;
     bread();
-    document.querySelector('#creAreaTitle span').textContent = `${name} \u00b7 2019\u20132024`;
+    document.querySelector('#creAreaTitle span').textContent = `${name} \u00b7 ${ctx.ANOS[0]}\u2013${LAST_YEAR}`;
     if (DATA.mun[name]) renderAreas('creAreas', DATA.mun[name].areas, MS_AREA_2024);
-    const list = (DATA.esc[name] || []).slice().sort((a, b) => a.geral - b.geral);
+    const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
+    const refArea = zeroMode === 'no_zero' && Object.keys(MS_AREA_2024_SEM_ZERO || {}).length
+      ? MS_AREA_2024_SEM_ZERO
+      : MS_AREA_2024;
+    const refGeral = zeroMode === 'no_zero' && MS_GERAL_2024_SEM_ZERO != null
+      ? MS_GERAL_2024_SEM_ZERO
+      : MS_GERAL_2024;
+    const list = (DATA.esc[name] || [])
+      .map((s) => {
+        if (zeroMode !== 'no_zero') return s;
+        const nz = s.semZero || {};
+        return {
+          ...s,
+          part: nz.part ?? 0,
+          tx: nz.tx ?? null,
+          cn: nz.cn ?? null,
+          ch: nz.ch ?? null,
+          lc: nz.lc ?? null,
+          mt: nz.mt ?? null,
+          red: nz.red ?? null,
+          geral: nz.geral ?? null,
+        };
+      })
+      .filter((s) => s.geral != null && (zeroMode !== 'no_zero' || (s.part || 0) > 0))
+      .sort((a, b) => a.geral - b.geral);
     document.getElementById('escCard').style.display = list.length ? 'block' : 'none';
-    document.getElementById('escTitle').childNodes[0].nodeValue = `Escolas de ${name} \u00b7 2024 `;
+    document.getElementById('escTitle').childNodes[0].nodeValue = `Escolas de ${name} \u00b7 ${LAST_YEAR} `;
     const body = document.getElementById('escBody');
     body.innerHTML = '';
     const cell = (v, k) => {
-      const cls = v < MS_AREA_2024[k] ? 'bad' : (v >= MS_AREA_2024[k] + 8 ? 'ok' : '');
+      const ref = refArea[k];
+      const cls = ref != null && v < ref ? 'bad' : (ref != null && v >= ref + 8 ? 'ok' : '');
       return `<td class="${cls}">${v.toFixed(0)}</td>`;
     };
     list.forEach((s) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${s.nome}</td><td>${s.concl != null ? s.concl : '<span class="muted">\u2014</span>'}</td><td>${s.part}</td><td>${s.tx != null ? `${s.tx.toFixed(0)}%` : '<span class="muted">\u2014</span>'}</td>`
         + cell(s.cn, 'CN') + cell(s.ch, 'CH') + cell(s.lc, 'LC') + cell(s.mt, 'MT') + cell(s.red, 'RED')
-        + `<td class="b${s.geral < MS_GERAL_2024 ? ' bad' : ''}">${s.geral.toFixed(0)}</td>`;
+        + `<td class="b${refGeral != null && s.geral < refGeral ? ' bad' : ''}">${s.geral.toFixed(0)}</td>`;
       body.appendChild(tr);
     });
     document.getElementById('escCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -171,7 +221,17 @@
 
   ED.initDrill = function (ctx) {
     _ctx = ctx;
-    const { DATA, ANOS, C, BL, CFG, NF, norm } = ctx;
+    const { DATA, ANOS, LAST_INDEX, LAST_YEAR, C, BL, CFG, NF, norm } = ctx;
+    document.querySelectorAll('[data-school-zero-mode]').forEach((el) => {
+      if (el.dataset.zeroModeBound === '1') return;
+      el.dataset.zeroModeBound = '1';
+      el.onchange = () => {
+        if (ED.setSchoolZeroMode) ED.setSchoolZeroMode(el.value);
+      };
+    });
+    document.addEventListener('enemdash:schoolZeroMode', () => {
+      if (SEL_MUN) selectMun(SEL_MUN);
+    });
     const row = document.getElementById('creRow');
     function creTrajData(o) {
       const xs = [];
@@ -204,7 +264,7 @@
 
     Object.keys(DATA.cre || {}).forEach((name) => {
       const o = DATA.cre[name];
-      const adv = o.med[5] >= o.med[0];
+      const adv = o.med[LAST_INDEX] >= o.med[0];
       const sid = `ct_${norm(name).replace(/ /g, '_')}`;
       const t = document.createElement('div');
       t.className = 'ctile';
@@ -248,9 +308,9 @@
           hovertemplate: '<b>2019</b><br>M\u00e9dia: %{y:.0f}<extra></extra>',
         });
         traces.push({
-          x: [String(ANOS[5])], y: [o.med[5]], mode: 'markers',
+          x: [String(ANOS[LAST_INDEX])], y: [o.med[LAST_INDEX]], mode: 'markers',
           marker: { color: adv ? C.verde : C.critico, size: 8, line: { color: '#fff', width: 1 } },
-          hovertemplate: '<b>2024</b><br>M\u00e9dia: %{y:.0f}<extra></extra>',
+          hovertemplate: `<b>${LAST_YEAR}</b><br>M\u00e9dia: %{y:.0f}<extra></extra>`,
         });
       }
       const xaxis = rng.x
@@ -264,6 +324,10 @@
       }, CFG);
     });
     bread();
+    if (DATA.cre && DATA.cre['CRE SED']) {
+      selectCre('CRE SED', { scroll: false });
+    }
+    if (ED.setSchoolZeroMode) ED.setSchoolZeroMode(ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all');
     window.selectCre = selectCre;
     window.selectMun = selectMun;
     window.resetDrill = resetDrill;

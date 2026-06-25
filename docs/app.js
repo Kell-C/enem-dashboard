@@ -8,21 +8,74 @@ function showFileWarning() {
     + '</div></div>';
 }
 
+function applyDynamicStaticText(ctx) {
+  const anos = Array.isArray(ctx.ANOS) && ctx.ANOS.length ? ctx.ANOS : [2019, 2020, 2021, 2022, 2023, 2024];
+  const startYear = anos[0];
+  const lastYear = anos[anos.length - 1];
+  const prevYear = anos[Math.max(0, anos.length - 2)];
+  const recentStart = anos[Math.max(0, anos.length - 4)];
+  const schoolStart = anos.find((ano) => ano >= 2024) ?? lastYear;
+  const values = {
+    startYear: String(startYear),
+    lastYear: String(lastYear),
+    prevYear: String(prevYear),
+    range: `${startYear}–${lastYear}`,
+    rangeAscii: `${startYear}-${lastYear}`,
+    rangeText: `${startYear} a ${lastYear}`,
+    recentRange: `${recentStart}–${lastYear}`,
+    schoolRange: schoolStart === lastYear ? String(lastYear) : `${schoolStart}–${lastYear}`,
+    fileRange: `${startYear} a ${lastYear}`,
+  };
+
+  document.title = `Painel ENEM MS — ${values.rangeAscii}`;
+
+  document.querySelectorAll('[data-dyn]').forEach((el) => {
+    const key = el.getAttribute('data-dyn');
+    if (key && Object.prototype.hasOwnProperty.call(values, key)) {
+      el.textContent = values[key];
+    }
+  });
+
+  const periodoSelect = document.getElementById('periodoSelect');
+  if (periodoSelect) {
+    periodoSelect.innerHTML = '';
+    [values.range, values.recentRange].forEach((label) => {
+      const option = document.createElement('option');
+      option.textContent = label;
+      periodoSelect.appendChild(option);
+    });
+  }
+
+  const snapAno = document.getElementById('snapAno');
+  if (snapAno) {
+    snapAno.innerHTML = '';
+    [...anos].reverse().forEach((ano) => {
+      const option = document.createElement('option');
+      option.value = String(ano);
+      option.textContent = String(ano);
+      snapAno.appendChild(option);
+    });
+    snapAno.value = String(lastYear);
+  }
+}
+
 function bootDashboard() {
   if (bootDashboard._done) return;
   bootDashboard._done = true;
   const ED = window.EnemDash;
   const ctx = ED.createContext(window.PAINEL_DATA || {});
 
+  applyDynamicStaticText(ctx);
+
   ED.initAreaDetail(ctx);
   ED.initKpi(ctx);
   ED.initTrajectory(ctx);
 
-  ED.lazySection(1, () => ED.initRedes(ctx));
-  ED.lazySection(2, () => ED.initInteg(ctx));
-  ED.lazySection(3, () => ED.initStats(ctx));
+  ED.lazySection(1, () => ED.initDrill(ctx));
+  ED.lazySection(2, () => ED.initStats(ctx));
+  ED.lazySection(3, () => ED.initRedes(ctx));
   ED.lazySection(4, () => ED.initCv(ctx));
-  ED.lazySection(5, () => ED.initDrill(ctx));
+  ED.lazySection(5, () => ED.initInteg(ctx));
   ED.lazyDetails('details.more', () => ED.initSnapshot(ctx));
 }
 

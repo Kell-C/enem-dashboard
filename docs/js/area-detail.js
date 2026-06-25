@@ -17,18 +17,42 @@
     return s.length > n ? `${s.slice(0, n - 1)}\u2026` : s;
   }
 
+  function scopeData(ctx) {
+    const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
+    return zeroMode === 'no_zero'
+      ? {
+        areaDetail: ctx.DATA.areaDetailSemZero || ctx.DATA.areaDetail || {},
+        boxplot: ctx.DATA.boxplotSemZero || ctx.DATA.boxplot || {},
+        histograma: ctx.DATA.histogramaSemZero || ctx.DATA.histograma || {},
+        msArea: ctx.DATA.msAreaSemZero || ctx.DATA.msArea || {},
+        escRank: ctx.DATA.escRankSemZero || ctx.DATA.escRank || {},
+        estadualN: ctx.DATA.estadualNSemZero || ctx.DATA.estadualN || [],
+        brEstadualN: ctx.DATA.brEstadualNSemZero || ctx.DATA.brEstadualN || [],
+      }
+      : {
+        areaDetail: ctx.DATA.areaDetail || {},
+        boxplot: ctx.DATA.boxplot || {},
+        histograma: ctx.DATA.histograma || {},
+        msArea: ctx.DATA.msArea || {},
+        escRank: ctx.DATA.escRank || {},
+        estadualN: ctx.DATA.estadualN || [],
+        brEstadualN: ctx.DATA.brEstadualN || [],
+      };
+  }
+
   function getDetailData(ctx, areaKey, ano) {
-    const ad = ctx.DATA.areaDetail?.[areaKey]?.[String(ano)];
+    const scoped = scopeData(ctx);
+    const ad = scoped.areaDetail?.[areaKey]?.[String(ano)];
     const i = ctx.ANOS.indexOf(Number(ano));
     if (ad) return ad;
-    const bp = ctx.DATA.boxplot?.[areaKey]?.[String(ano)] || {};
-    const hist = ctx.DATA.histograma?.[areaKey]?.[String(ano)]?.ms || [0, 0, 0, 0, 0, 0];
-    const n = ctx.DATA.estadualN?.[i] ?? null;
+    const bp = scoped.boxplot?.[areaKey]?.[String(ano)] || {};
+    const hist = scoped.histograma?.[areaKey]?.[String(ano)]?.ms || [0, 0, 0, 0, 0, 0];
+    const n = scoped.estadualN?.[i] ?? null;
     const pctZero = bp.min === 0 ? (hist[0] || 0) : 0;
     const posBins = hist.map((v, j) => (j === 0 ? Math.max(0, v - pctZero) : v));
     return {
       n,
-      brN: ctx.DATA.brEstadualN?.[i] ?? null,
+      brN: scoped.brEstadualN?.[i] ?? null,
       pctSemNota: 0,
       pctZero,
       moda: bp.med ?? null,
@@ -61,15 +85,16 @@
 
   function buildAreaDetailShell(ctx, areaKey, ano) {
     const { AREANOME, ACOR, C, FMT, ANOS } = ctx;
+    const scoped = scopeData(ctx);
     const nome = AREANOME[areaKey] || areaKey;
     const areaCor = ACOR[areaKey] || C.azul;
-    const bp = ctx.DATA.boxplot?.[areaKey]?.[String(ano)] || {};
+    const bp = scoped.boxplot?.[areaKey]?.[String(ano)] || {};
     const i = ANOS.indexOf(Number(ano));
-    const msMed = ctx.DATA.msArea?.[areaKey]?.ms?.[i];
-    const brMed = ctx.DATA.msArea?.[areaKey]?.br?.[i];
+    const msMed = scoped.msArea?.[areaKey]?.ms?.[i];
+    const brMed = scoped.msArea?.[areaKey]?.br?.[i];
     const detail = getDetailData(ctx, areaKey, ano);
-    const n = detail.n ?? ctx.DATA.estadualN?.[i] ?? null;
-    const brN = detail.brN ?? ctx.DATA.brEstadualN?.[i] ?? null;
+    const n = detail.n ?? scoped.estadualN?.[i] ?? null;
+    const brN = detail.brN ?? scoped.brEstadualN?.[i] ?? null;
     const gap = msMed != null && brMed != null ? +(msMed - brMed).toFixed(1) : null;
     const gapCol = gap != null && gap < 0 ? C.critico : C.verde;
 
@@ -136,10 +161,11 @@
   }
 
   function mountAreaDetailCharts(ctx, areaKey, ano, shell) {
-    const { DATA, ANOS, C, BL, CFG } = ctx;
+    const { ANOS, LAST_YEAR, C, BL, CFG } = ctx;
+    const scoped = scopeData(ctx);
     const { uid, detail, areaCor, n, brN } = shell;
     const i = ANOS.indexOf(Number(ano));
-    const brNVal = brN ?? detail.brN ?? DATA.brEstadualN?.[i] ?? null;
+    const brNVal = brN ?? detail.brN ?? scoped.brEstadualN?.[i] ?? null;
     const key = `${uid}|${areaKey}|${ano}`;
     if (_lastDetailKey === key) return;
     _lastDetailKey = key;
@@ -165,7 +191,7 @@
       xaxis: { tickangle: -35, tickfont: { size: 9 } },
       yaxis: {
         title: { text: '% dos alunos (N=' + fmtN(n) + ')', font: { size: 10 } },
-        gridcolor: C.subtle,
+        gridcolor: 'rgba(0,0,0,0)',
         ticksuffix: '%',
       },
     }, CFG);
@@ -173,7 +199,7 @@
     const CMP_LABELS = ['0\u2013200', '200\u2013400', '400\u2013500', '500\u2013600', '600\u2013800', '800\u20131000'];
     const msScore = histPct.slice(2);
     const msScoreC = histCounts.slice(2);
-    const brPct6 = detail.brHistPct6 || DATA.histograma?.[areaKey]?.[String(ano)]?.br || [];
+    const brPct6 = detail.brHistPct6 || scoped.histograma?.[areaKey]?.[String(ano)]?.br || [];
     const brCounts6 = detail.brHistCounts6
       || brPct6.map((p) => Math.round((brNVal || 0) * p / 100));
 
@@ -199,11 +225,11 @@
       xaxis: { tickangle: -35, tickfont: { size: 8.5 } },
       yaxis: {
         title: { text: '% dos alunos (faixas positivas)', font: { size: 10 } },
-        gridcolor: C.subtle,
+        gridcolor: 'rgba(0,0,0,0)',
       },
     }, CFG);
 
-    const escRank = (DATA.escRank && DATA.escRank[areaKey]) || [];
+    const escRank = (scoped.escRank && scoped.escRank[areaKey]) || [];
     const top = escRank.slice(0, 10);
     const bottom = escRank.slice(-10).reverse();
 
@@ -231,12 +257,12 @@
         height: Math.max(240, rows.length * 24 + 36),
         margin: { l: 150, r: 16, t: 6, b: 28 },
         showlegend: false,
-        xaxis: { range: [0, 1000], gridcolor: C.subtle, dtick: 200 },
+        xaxis: { range: [0, 1000], gridcolor: 'rgba(0,0,0,0)', dtick: 200 },
         yaxis: { automargin: true, tickfont: { size: 9 } },
       }, CFG);
     };
 
-    if (Number(ano) === 2024) {
+    if (Number(ano) === LAST_YEAR) {
       schoolBar(`${uid}_top`, top, C.verde, 'Sem dados de escolas.');
       schoolBar(`${uid}_bot`, bottom, C.critico, 'Sem dados de escolas.');
     } else {
@@ -244,7 +270,7 @@
         const el = document.getElementById(id);
         if (el) {
           Plotly.purge(el);
-          el.innerHTML = '<p class="idx-empty">Ranking de escolas dispon\u00edvel apenas para 2024.</p>';
+          el.innerHTML = `<p class="idx-empty">Ranking de escolas dispon\u00edvel apenas para ${LAST_YEAR}.</p>`;
         }
       });
     }
@@ -254,6 +280,8 @@
     if (!areaKey) return;
     const panel = document.getElementById(targetId);
     if (!panel) return;
+    panel.dataset.areaKey = areaKey;
+    panel.dataset.ano = String(ano);
     const shell = buildAreaDetailShell(ctx, areaKey, ano);
     panel.innerHTML = shell.html;
     panel.classList.add('on');
@@ -291,6 +319,20 @@
         if (e.key === 'Escape') ED.closeAreaModal();
       });
     }
+    document.addEventListener('enemdash:schoolZeroMode', () => {
+      const panel = document.getElementById('indexDetail');
+      if (panel?.dataset?.areaKey && panel?.dataset?.ano) {
+        renderAreaDetail(ctx, panel.dataset.areaKey, parseInt(panel.dataset.ano, 10), 'indexDetail');
+      }
+      const modal = document.getElementById('areaModal');
+      if (modal?.classList.contains('on')) {
+        const title = document.getElementById('areaModalTitle')?.textContent || '';
+        const m = title.match(/·\s*(\d{4})$/);
+        const ano = m ? parseInt(m[1], 10) : ctx.LAST_YEAR;
+        const areaKey = ctx.AREAKEYS.find((k) => title.toUpperCase().includes((ctx.AREANOME[k] || '').toUpperCase()));
+        if (areaKey) ED.openAreaModal(ctx, areaKey, ano);
+      }
+    });
     window.openAreaModal = (areaKey, ano) => ED.openAreaModal(ctx, areaKey, ano);
     window.closeAreaModal = () => ED.closeAreaModal();
     window.showIndexDetail = (areaKey, ano) => ED.showIndexDetail(ctx, areaKey, ano);
