@@ -1,6 +1,6 @@
 (function (ED) {
   ED.initInteg = function (ctx) {
-    const { DATA, C, BL, CFG, NF } = ctx;
+    const { DATA, LAST_INDEX, C, BL, CFG, NF } = ctx;
     const INT = DATA.integ || {};
     const AN = DATA.anos;
     const ICOL = { CN: '#9B59B6', CH: '#3498DB', LC: '#1ABC9C', MT: '#F1C40F', RED: '#E74C3C' };
@@ -23,7 +23,7 @@
       Plotly.newPlot('g_integ_elim', bars.concat([line]), {
         ...BL, height: 300, barmode: 'stack',
         xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
-        yaxis: { title: { text: 'eliminados', font: { size: 10 } }, gridcolor: C.subtle },
+        yaxis: { title: { text: 'eliminados', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)' },
         yaxis2: {
           overlaying: 'y', side: 'right',
           title: { text: '% do compareceu', font: { size: 10 } },
@@ -49,15 +49,15 @@
     const comps = INT.rede || {};
     const depOrd = ['Estadual', 'Federal', 'Municipal', 'Privada', 'Brasil-Estadual'];
     const compX = depOrd.filter((k) => comps[k]);
-    const txE2024 = compX.map((k) => comps[k].txE[5]);
-    const txS2024 = compX.map((k) => comps[k].txS[5]);
+    const txE2024 = compX.map((k) => comps[k].txE[LAST_INDEX]);
+    const txS2024 = compX.map((k) => comps[k].txS[LAST_INDEX]);
     Plotly.newPlot('g_integ_comp', [
       { x: compX, y: txE2024, name: 'Taxa eliminacao (%)', type: 'bar', marker: { color: C.critico }, hovertemplate: '%{x}<br>Eliminacao: %{y:.2f}%<extra></extra>' },
       { x: compX, y: txS2024, name: 'Sem nota redacao (%)', type: 'bar', marker: { color: C.azul }, hovertemplate: '%{x}<br>Sem nota: %{y:.2f}%<extra></extra>' },
     ], {
       ...BL, height: 300, barmode: 'group',
       xaxis: { tickfont: { size: 11 } },
-      yaxis: { title: { text: '%', font: { size: 10 } }, gridcolor: C.subtle },
+      yaxis: { title: { text: '%', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)' },
       legend: { orientation: 'h', y: -0.22, font: { size: 9 } },
     }, CFG);
 
@@ -66,28 +66,26 @@
       let rows = [];
       if (mode === 'cre') {
         Object.entries(INT.cre || {}).forEach(([name, o]) => {
-          const i5 = 5;
           rows.push({
-            nome: name, cre: name, filt: o.filt[i5] || 0, et: o.et[i5] || 0,
-            em: o.em[i5] || 0, zm: o.zm[i5] || 0, sm: o.sm[i5] || 0,
-            txE: o.txE[i5], txS: o.txS[i5], tipo: 'cre',
+            nome: name, cre: name, filt: o.filt[LAST_INDEX] || 0, et: o.et[LAST_INDEX] || 0,
+            em: o.em[LAST_INDEX] || 0, zm: o.zm[LAST_INDEX] || 0, sm: o.sm[LAST_INDEX] || 0,
+            txE: o.txE[LAST_INDEX], txS: o.txS[LAST_INDEX], tipo: 'cre',
           });
         });
       } else {
         Object.entries(INT.mun || {}).forEach(([name, o]) => {
           if (filterCre && o.cre !== filterCre) return;
-          const i5 = 5;
           rows.push({
-            nome: name, cre: o.cre, filt: o.filt[i5] || 0, et: o.et[i5] || 0,
-            em: o.em[i5] || 0, zm: o.zm[i5] || 0, sm: o.sm[i5] || 0,
-            txE: o.txE[i5], txS: o.txS[i5], tipo: 'mun',
+            nome: name, cre: o.cre, filt: o.filt[LAST_INDEX] || 0, et: o.et[LAST_INDEX] || 0,
+            em: o.em[LAST_INDEX] || 0, zm: o.zm[LAST_INDEX] || 0, sm: o.sm[LAST_INDEX] || 0,
+            txE: o.txE[LAST_INDEX], txS: o.txS[LAST_INDEX], tipo: 'mun',
           });
         });
       }
       rows.sort((a, b) => (b.txE || 0) - (a.txE || 0));
       const est = INT.rede.Estadual || {};
-      const medE = est.txE ? est.txE[5] : null;
-      const medS = est.txS ? est.txS[5] : null;
+      const medE = est.txE ? est.txE[LAST_INDEX] : null;
+      const medS = est.txS ? est.txS[LAST_INDEX] : null;
       let html = `<div class="scroll"><table class="attbl"><thead><tr><th>${mode === 'cre' ? 'CRE' : 'Municipio'
       }</th><th>Part. efetivos</th><th>Eliminados</th><th>Taxa elim. (%)</th><th>Sem nota red.</th><th>Taxa sem nota (%)</th><th title="Eliminados em >=2 areas objetivas">Elim. multipla</th><th title="Zeros em >=2 areas">Zeros multiplo</th><th title="Sem nota em >=2 areas objetivas">Sem nota multipla</th></tr></thead><tbody>`;
       rows.forEach((r) => {

@@ -15,6 +15,7 @@
   ED.spark = function (ctx, id, vals, col, inv) {
     const { ANOS } = ctx;
     const lastIdx = ANOS.length - 1;
+    const sparkCfg = { ...CFG, displayModeBar: false, staticPlot: true, responsive: false };
     return Plotly.newPlot(id, [
       { x: ANOS, y: vals, mode: 'lines', line: { color: col, width: 2 }, hoverinfo: 'skip' },
       { x: [ANOS[lastIdx]], y: [vals[lastIdx]], mode: 'markers', marker: { color: col, size: 5 }, hoverinfo: 'skip' },
@@ -25,7 +26,7 @@
       showlegend: false,
       xaxis: { visible: false },
       yaxis: { visible: false, autorange: inv ? 'reversed' : true },
-    }, CFG);
+    }, sparkCfg);
   };
 
   ED.lazySection = function (idx, fn) {

@@ -1,7 +1,7 @@
 (function (ED) {
   ED.initKpi = function (ctx) {
     const {
-      ANOS, MED_MS, TX_MS, RANK_MS, GAP, DATA, FMT, NF, trendTag,
+      ANOS, LAST_YEAR, PREV_YEAR, MED_MS, TX_MS, RANK_MS, GAP, DATA, FMT, NF, trendTag,
     } = ctx;
     const i = ANOS.length - 1;
     const i0 = 0;
@@ -17,20 +17,20 @@
     const tMed = trendTag(medDelta, false);
     document.getElementById('kpiMedVal').textContent = FMT(med);
     document.getElementById('kpiMedSub').innerHTML =
-      `2024 \u00b7 <span class="${tMed.cls}">${tMed.txt}</span> vs 2019 \u00b7 pico ${FMT(peak)} em ${peakYear}`;
+      `${LAST_YEAR} \u00b7 <span class="${tMed.cls}">${tMed.txt}</span> vs ${ANOS[i0]} \u00b7 pico ${FMT(peak)} em ${peakYear}`;
     document.getElementById('kpiPartVal').textContent = tx != null ? `${FMT(tx)}%` : '\u2014';
     const N = DATA.estadualN[i];
     const Cc = DATA.estadualConcl[i];
     const vale = TX_MS.reduce((b, v) => (v != null && (b == null || v < b) ? v : b), null);
     const valeYear = vale != null ? ANOS[TX_MS.indexOf(vale)] : '\u2014';
     document.getElementById('kpiPartSub').innerHTML =
-      `2024 \u00b7 <b>${NF(N)}</b> participantes efetivos de <b>${NF(Cc)}</b> concluintes \u00b7 vale ${FMT(vale)}% em ${valeYear}`;
+      `${LAST_YEAR} \u00b7 <b>${NF(N)}</b> participantes efetivos de <b>${NF(Cc)}</b> concluintes \u00b7 vale ${FMT(vale)}% em ${valeYear}`;
     document.getElementById('kpiRankVal').innerHTML =
       rk != null ? `${rk}\u00ba<span style="font-size:14px;color:var(--muted)">/27</span>` : '\u2014';
     const rkDelta = rkPrev != null && rk != null ? rkPrev - rk : null;
     const tRk = trendTag(rkDelta, false);
     document.getElementById('kpiRankSub').innerHTML =
-      `2024 \u00b7 <span class="${tRk.cls}">${tRk.txt}</span> desde 2023 (${rkPrev != null ? `${rkPrev}\u00ba` : '\u2014'})`;
+      `${LAST_YEAR} \u00b7 <span class="${tRk.cls}">${tRk.txt}</span> desde ${PREV_YEAR} (${rkPrev != null ? `${rkPrev}\u00ba` : '\u2014'})`;
     const gapCard = document.getElementById('kpiGapCard');
     const gapVal = document.getElementById('kpiGapVal');
     gapCard.classList.toggle('neg', gap != null && gap < 0);
@@ -38,18 +38,19 @@
     gapVal.style.color = gap != null && gap < 0 ? 'var(--critico)' : 'var(--azul-esc)';
     const gap22 = GAP[ANOS.indexOf(2022)];
     document.getElementById('kpiGapSub').innerHTML =
-      `2024 \u00b7 <span class="trend up">\u25B2 est\u00e1vel</span>${gap22 != null ? ` (era ${FMT(gap22)} em 2022)` : ''}`;
+      `${LAST_YEAR} \u00b7 <span class="trend up">\u25B2 est\u00e1vel</span>${gap22 != null ? ` (era ${FMT(gap22)} em 2022)` : ''}`;
     const r0 = RANK_MS[i0];
     const rLast = RANK_MS[i];
     if (r0 != null && rLast != null) {
+      const prevRank = RANK_MS[ANOS.indexOf(PREV_YEAR)];
       document.getElementById('notaBump').textContent =
-        `MS passou de ${r0}\u00ba (2019) para ${RANK_MS[ANOS.indexOf(2023)]}\u00ba (2023) e reagiu para ${rLast}\u00ba (2024).`;
+        `MS passou de ${r0}\u00ba (${ANOS[i0]}) para ${prevRank}\u00ba (${PREV_YEAR}) e ficou em ${rLast}\u00ba (${LAST_YEAR}).`;
     }
     const g24 = GAP[i];
     const g22 = GAP[ANOS.indexOf(2022)];
     if (g24 != null && g22 != null) {
       document.getElementById('notaEvol').textContent =
-        `A defasagem foi ${FMT(g24)} em 2024 (era ${FMT(g22)} em 2022).`;
+        `A defasagem foi ${FMT(g24)} em ${LAST_YEAR} (era ${FMT(g22)} em 2022).`;
     }
 
     ED.spark(ctx, 's_media', MED_MS, '#0A4D8C');
@@ -68,7 +69,7 @@
     document.getElementById('kpiElimVal').textContent =
       last != null ? `${last.toFixed(1).replace('.', ',')}%` : '\u2014';
     document.getElementById('kpiElimSub').innerHTML =
-      `2024 \u00b7 <span class="${trendCls[trend]}">${trendTxt[trend]}</span> vs 2019`;
+      `${LAST_YEAR} \u00b7 <span class="${trendCls[trend]}">${trendTxt[trend]}</span> vs ${ANOS[i0]}`;
     ED.spark(ctx, 's_elim', txElim, '#9B59B6');
 
     const f = DATA.funil2024 && DATA.funil2024.Estadual;

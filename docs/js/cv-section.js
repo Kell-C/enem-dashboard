@@ -12,7 +12,7 @@
       ...BL, height: 300,
       legend: { orientation: 'h', y: -0.22, font: { size: 9 } },
       xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
-      yaxis: { title: { text: 'desvio padr\u00e3o (pts)', font: { size: 10 } }, gridcolor: C.subtle },
+      yaxis: { title: { text: 'desvio padr\u00e3o (pts)', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)' },
     }, CFG);
     const cvTr = AREAKEYS.map((k) => ({
       x: ANOS, y: CV[k] || [], mode: 'lines+markers', name: AREANOME[k],
@@ -23,7 +23,7 @@
       ...BL, height: 300,
       legend: { orientation: 'h', y: -0.22, font: { size: 9 } },
       xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
-      yaxis: { title: { text: 'coef. varia\u00e7\u00e3o (%)', font: { size: 10 } }, gridcolor: C.subtle },
+      yaxis: { title: { text: 'coef. varia\u00e7\u00e3o (%)', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)' },
     }, CFG);
   };
 })(window.EnemDash);
