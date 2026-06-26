@@ -34,6 +34,31 @@ def _ler(name: str) -> pd.DataFrame:
     return pd.read_parquet(p) if p.exists() else pd.DataFrame()
 
 
+def _rank_school_name(row: pd.Series, nome_col: str) -> str:
+    nome = row.get(nome_col)
+    if pd.notna(nome) and str(nome).strip():
+        return str(nome).strip()
+    nome_base = row.get("NOME_ESCOLA")
+    if pd.notna(nome_base) and str(nome_base).strip():
+        return str(nome_base).strip()
+    codigo = row.get("CO_ESCOLA")
+    if pd.notna(codigo):
+        try:
+            return str(int(float(codigo)))
+        except (TypeError, ValueError):
+            return str(codigo).strip()
+    return ""
+
+
+def _school_id(value) -> str:
+    if pd.isna(value):
+        return ""
+    try:
+        return str(int(float(value)))
+    except (TypeError, ValueError):
+        return str(value).strip()
+
+
 def _serie_por_ano(df: pd.DataFrame, dep: str, col: str, anos=ANOS) -> list:
     out = []
     for a in anos:
@@ -82,6 +107,89 @@ def _weighted_mean(df: pd.DataFrame, value_col: str, weight_col: str) -> float |
     if sub.empty:
         return None
     return float(np.average(sub[value_col], weights=sub[weight_col]))
+
+
+def _school_history_by_municipality(evol_esc: pd.DataFrame) -> dict:
+    out = {}
+    if evol_esc.empty:
+        return out
+
+    nome_col = "nome_exibicao" if "nome_exibicao" in evol_esc.columns else "NOME_ESCOLA"
+    col_map = {
+        "CN": "media_nu_nota_cn",
+        "CH": "media_nu_nota_ch",
+        "LC": "media_nu_nota_lc",
+        "MT": "media_nu_nota_mt",
+        "RED": "media_nu_nota_redacao",
+    }
+    col_map_sem_zero = {k: f"{col}_sem_zero" for k, col in col_map.items()}
+
+    for mname, grp_m in evol_esc.groupby("NO_MUNICIPIO_ESC"):
+        muni_hist = {}
+        for school_id, grp in grp_m.groupby("CO_ESCOLA"):
+            grp = grp.sort_values("ano")
+            sid = _school_id(school_id)
+            if not sid:
+                continue
+            sample = grp.iloc[0]
+            obs = None
+            if "observacao" in grp.columns:
+                for value in grp["observacao"]:
+                    if pd.notna(value) and str(value).strip():
+                        obs = str(value)
+                        break
+            item = {
+                "id": sid,
+                "nome": _rank_school_name(sample, nome_col),
+                "mun": str(mname),
+                "cre": str(cre_curto(sample.get("CRE"))) if pd.notna(sample.get("CRE")) else None,
+                "obs": obs,
+                "anos": ANOS,
+                "part": [],
+                "concl": [],
+                "tx": [],
+                "geral": [],
+                "areas": {k: [] for k in AREA_KEYS},
+                "semZero": {
+                    "part": [],
+                    "tx": [],
+                    "geral": [],
+                    "areas": {k: [] for k in AREA_KEYS},
+                },
+            }
+            for ano in ANOS:
+                row = grp[grp["ano"] == ano]
+                if row.empty:
+                    item["part"].append(0)
+                    item["concl"].append(0)
+                    item["tx"].append(None)
+                    item["geral"].append(None)
+                    item["semZero"]["part"].append(0)
+                    item["semZero"]["tx"].append(None)
+                    item["semZero"]["geral"].append(None)
+                    for k in AREA_KEYS:
+                        item["areas"][k].append(None)
+                        item["semZero"]["areas"][k].append(None)
+                    continue
+                r = row.iloc[0]
+                item["part"].append(int(r.get("estudantes", 0) or 0))
+                item["concl"].append(int(r.get("Concluintes", 0) or 0))
+                item["tx"].append(round(float(r["tx_part"]), 1) if pd.notna(r.get("tx_part")) else None)
+                item["geral"].append(round(float(r["media_geral"]), 1) if pd.notna(r.get("media_geral")) else None)
+                item["semZero"]["part"].append(int(r.get("estudantes_sem_zero", 0) or 0))
+                item["semZero"]["tx"].append(round(float(r["tx_part_sem_zero"]), 1) if pd.notna(r.get("tx_part_sem_zero")) else None)
+                item["semZero"]["geral"].append(
+                    round(float(r["media_geral_sem_zero"]), 1) if pd.notna(r.get("media_geral_sem_zero")) else None
+                )
+                for k, col in col_map.items():
+                    item["areas"][k].append(round(float(r[col]), 1) if pd.notna(r.get(col)) else None)
+                    col_zero = col_map_sem_zero[k]
+                    item["semZero"]["areas"][k].append(
+                        round(float(r[col_zero]), 1) if pd.notna(r.get(col_zero)) else None
+                    )
+            muni_hist[sid] = item
+        out[str(mname)] = muni_hist
+    return out
 
 
 def _uf_rank_por_ano(des_uf: pd.DataFrame, col: str = "media_geral") -> dict:
@@ -243,6 +351,7 @@ def build_painel_data() -> dict:
     des_uf = _ler("desempenho_uf")
     evol_cre = _ler("evolucao_cre")
     evol_muni = _ler("evolucao_muni")
+    evol_esc = _ler("evolucao_escolas")
     esc24 = _ler("escolas_2024")
     refs = _ler("referencias")
     quantis = _ler("quantis")
@@ -387,6 +496,7 @@ def build_painel_data() -> dict:
             }
 
     esc = {}
+    esc_hist = _school_history_by_municipality(evol_esc)
     dispersao = []
     if not esc24.empty:
         for mname, grp in esc24.groupby("NO_MUNICIPIO_ESC"):
@@ -397,13 +507,12 @@ def build_painel_data() -> dict:
                 part_n_sem_zero = int(r.get("estudantes_sem_zero", 0)) if pd.notna(r.get("estudantes_sem_zero")) else 0
                 tx = round(100 * part_n / conc, 1) if conc else None
                 tx_sem_zero = round(100 * part_n_sem_zero / conc, 1) if conc and part_n_sem_zero else None
-                nome_exib = r.get("nome_exibicao")
-                if pd.isna(nome_exib) or not str(nome_exib).strip():
-                    nome_exib = r.get("NOME_ESCOLA", r["CO_ESCOLA"])
+                nome_exib = _rank_school_name(r, "nome_exibicao" if "nome_exibicao" in esc24.columns else "NOME_ESCOLA")
                 obs = r.get("observacao")
                 if pd.isna(obs):
                     obs = None
                 item = {
+                    "id": _school_id(r.get("CO_ESCOLA")),
                     "nome": str(nome_exib),
                     "obs": obs,
                     "part": part_n,
@@ -486,19 +595,53 @@ def build_painel_data() -> dict:
         }
         for k, col in col_map.items():
             nome_col = "nome_exibicao" if "nome_exibicao" in esc24.columns else "NOME_ESCOLA"
-            tmp = esc24[[nome_col, col]].dropna().sort_values(col, ascending=False)
+            tmp = esc24[[c for c in [nome_col, "NOME_ESCOLA", "CO_ESCOLA", "estudantes", col] if c in esc24.columns]].dropna(subset=[col]).copy()
+            if "NO_MUNICIPIO_ESC" in esc24.columns:
+                tmp["mun"] = esc24.loc[tmp.index, "NO_MUNICIPIO_ESC"].astype(str)
+            if "CRE" in esc24.columns:
+                tmp["cre"] = esc24.loc[tmp.index, "CRE"].map(cre_curto)
+            if "estudantes" in tmp.columns:
+                tmp = tmp[tmp["estudantes"] >= 10]
+            tmp["nome_rank"] = tmp.apply(lambda r: _rank_school_name(r, nome_col), axis=1)
+            tmp = tmp[tmp["nome_rank"].str.strip() != ""].sort_values(col, ascending=False)
             for _, r in tmp.head(10).iterrows():
-                esc_rank[k].append({"nome": str(r[nome_col]), "nota": round(float(r[col]), 1)})
+                esc_rank[k].append({
+                    "nome": r["nome_rank"],
+                    "nota": round(float(r[col]), 1),
+                    "mun": str(r["mun"]) if pd.notna(r.get("mun")) else None,
+                    "cre": str(r["cre"]) if pd.notna(r.get("cre")) else None,
+                })
             for _, r in tmp.tail(10).sort_values(col).iterrows():
-                esc_rank[k].append({"nome": str(r[nome_col]), "nota": round(float(r[col]), 1)})
+                esc_rank[k].append({
+                    "nome": r["nome_rank"],
+                    "nota": round(float(r[col]), 1),
+                    "mun": str(r["mun"]) if pd.notna(r.get("mun")) else None,
+                    "cre": str(r["cre"]) if pd.notna(r.get("cre")) else None,
+                })
             col_sem_zero = f"{col}_sem_zero"
             if col_sem_zero in esc24.columns:
-                tmp_sem_zero = esc24[[nome_col, col_sem_zero, "estudantes_sem_zero"]].dropna().copy()
-                tmp_sem_zero = tmp_sem_zero[tmp_sem_zero["estudantes_sem_zero"] > 0].sort_values(col_sem_zero, ascending=False)
+                tmp_sem_zero = esc24[[c for c in [nome_col, "NOME_ESCOLA", "CO_ESCOLA", "estudantes_sem_zero", col_sem_zero] if c in esc24.columns]].dropna(subset=[col_sem_zero]).copy()
+                if "NO_MUNICIPIO_ESC" in esc24.columns:
+                    tmp_sem_zero["mun"] = esc24.loc[tmp_sem_zero.index, "NO_MUNICIPIO_ESC"].astype(str)
+                if "CRE" in esc24.columns:
+                    tmp_sem_zero["cre"] = esc24.loc[tmp_sem_zero.index, "CRE"].map(cre_curto)
+                tmp_sem_zero = tmp_sem_zero[tmp_sem_zero["estudantes_sem_zero"] >= 10]
+                tmp_sem_zero["nome_rank"] = tmp_sem_zero.apply(lambda r: _rank_school_name(r, nome_col), axis=1)
+                tmp_sem_zero = tmp_sem_zero[tmp_sem_zero["nome_rank"].str.strip() != ""].sort_values(col_sem_zero, ascending=False)
                 for _, r in tmp_sem_zero.head(10).iterrows():
-                    esc_rank_sem_zero[k].append({"nome": str(r[nome_col]), "nota": round(float(r[col_sem_zero]), 1)})
+                    esc_rank_sem_zero[k].append({
+                        "nome": r["nome_rank"],
+                        "nota": round(float(r[col_sem_zero]), 1),
+                        "mun": str(r["mun"]) if pd.notna(r.get("mun")) else None,
+                        "cre": str(r["cre"]) if pd.notna(r.get("cre")) else None,
+                    })
                 for _, r in tmp_sem_zero.tail(10).sort_values(col_sem_zero).iterrows():
-                    esc_rank_sem_zero[k].append({"nome": str(r[nome_col]), "nota": round(float(r[col_sem_zero]), 1)})
+                    esc_rank_sem_zero[k].append({
+                        "nome": r["nome_rank"],
+                        "nota": round(float(r[col_sem_zero]), 1),
+                        "mun": str(r["mun"]) if pd.notna(r.get("mun")) else None,
+                        "cre": str(r["cre"]) if pd.notna(r.get("cre")) else None,
+                    })
 
     ms_area_2024 = {}
     ms_area_2024_sem_zero = {}
@@ -587,6 +730,7 @@ def build_painel_data() -> dict:
         },
         "mun": mun,
         "esc": esc,
+        "escHist": esc_hist,
         "msArea": ms_area_series,
         "redes": redes,
         "funil2024": funil2024,

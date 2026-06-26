@@ -133,6 +133,7 @@
       const grad = ANOS.map((_, idx) => gradBase[Math.min(idx, gradBase.length - 1)]);
       const txVals = TX_MS.filter((v) => v != null);
       const medVals = MED_MS.filter((v) => v != null);
+      const interactiveMargin = { ...BL.margin, t: 28 };
       Plotly.react('g_traj', [{
         x: TX_MS, y: MED_MS, mode: 'lines+markers+text',
         line: { color: 'rgba(10,77,140,.45)', width: 2 },
@@ -141,7 +142,7 @@
         customdata: estadualN.map((n) => NF(n)),
         hovertemplate: '<b>%{text}</b><br>Part.: %{x:.1f}% \u00b7 %{customdata} participantes efetivos<br>M\u00e9dia: %{y:.1f}<extra></extra>',
       }], {
-        ...BL, height: 300, showlegend: false,
+        ...BL, height: 300, showlegend: false, margin: interactiveMargin,
         xaxis: {
           title: { text: 'participa\u00e7\u00e3o efetiva (% dos concluintes)', font: { size: 10 } },
           gridcolor: 'rgba(0,0,0,0)',
@@ -175,7 +176,7 @@
         textposition: 'middle center', textfont: { size: 8.5, color: '#fff' },
         hovertemplate: '%{x}: %{y}\u00ba de 27<extra></extra>',
       }], {
-        ...BL, height: 280, showlegend: false,
+        ...BL, height: 280, showlegend: false, margin: interactiveMargin,
         xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
         yaxis: {
           autorange: 'reversed', dtick: 2, gridcolor: 'rgba(0,0,0,0)',
@@ -193,7 +194,7 @@
           textposition: 'bottom center', textfont: { size: 9, color: C.azulEsc },
         },
       ], {
-        ...BL, height: 280,
+        ...BL, height: 280, margin: interactiveMargin,
         legend: { orientation: 'h', y: -0.2, font: { size: 10 } },
         xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
         yaxis: { range: [medLo, medHi], gridcolor: 'rgba(0,0,0,0)' },

@@ -166,7 +166,8 @@
     const { uid, detail, areaCor, n, brN } = shell;
     const i = ANOS.indexOf(Number(ano));
     const brNVal = brN ?? detail.brN ?? scoped.brEstadualN?.[i] ?? null;
-    const key = `${uid}|${areaKey}|${ano}`;
+    const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
+    const key = `${uid}|${areaKey}|${ano}|${zeroMode}`;
     if (_lastDetailKey === key) return;
     _lastDetailKey = key;
 
@@ -243,7 +244,7 @@
       }
       const names = rows.map((r) => truncName(r.nome)).reverse();
       const notas = rows.map((r) => r.nota).reverse();
-      const full = rows.map((r) => r.nome).reverse();
+      const full = rows.map((r) => [r.nome, r.mun || '—', r.cre || '—']).reverse();
       Plotly.react(elId, [{
         y: names,
         x: notas,
@@ -251,7 +252,7 @@
         orientation: 'h',
         marker: { color: cor, opacity: 0.88 },
         customdata: full,
-        hovertemplate: '%{customdata}<br>Nota: %{x:.1f}<extra></extra>',
+        hovertemplate: '<b>%{customdata[0]}</b><br>Município: %{customdata[1]}<br>CRE: %{customdata[2]}<br>Média da área: %{x:.1f}<extra></extra>',
       }], {
         ...BL,
         height: Math.max(240, rows.length * 24 + 36),
@@ -285,7 +286,7 @@
     const shell = buildAreaDetailShell(ctx, areaKey, ano);
     panel.innerHTML = shell.html;
     panel.classList.add('on');
-    requestAnimationFrame(() => mountAreaDetailCharts(ctx, areaKey, ano, shell));
+    mountAreaDetailCharts(ctx, areaKey, ano, shell);
   }
 
   ED.showIndexDetail = function (ctx, areaKey, ano) {
@@ -301,7 +302,7 @@
     const body = document.getElementById('areaModalBody');
     if (body) {
       body.innerHTML = shell.html;
-      requestAnimationFrame(() => mountAreaDetailCharts(ctx, areaKey, ano, shell));
+      mountAreaDetailCharts(ctx, areaKey, ano, shell);
     }
     document.getElementById('areaModal').classList.add('on');
     _modalBusy = false;
