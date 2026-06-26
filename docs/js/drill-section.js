@@ -1,6 +1,7 @@
 (function (ED) {
   let SEL_CRE = null;
   let SEL_MUN = null;
+  let SEL_ESC = null;
   let _ctx = null;
 
   function bread() {
@@ -38,6 +39,121 @@
         showlegend: false, xaxis: { visible: false }, yaxis: { visible: false },
       }, CFG);
     });
+  }
+
+  function setSelectedSchoolRow(schoolId) {
+    document.querySelectorAll('#escBody tr').forEach((tr) => {
+      tr.classList.toggle('is-sel', tr.dataset.schoolId === schoolId);
+    });
+  }
+
+  function renderSchoolHistory(munName, schoolId) {
+    const ctx = _ctx;
+    const { DATA, ANOS, LAST_YEAR, AREANOME, ACOR, BL, CFG, NF } = ctx;
+    const host = document.getElementById('g_esc_hist');
+    const title = document.getElementById('escHistTitle');
+    const note = document.getElementById('escHistNota');
+    if (!host || !title || !note) return;
+
+    const school = DATA.escHist?.[munName]?.[schoolId];
+    if (!school) {
+      title.textContent = 'Histórico da escola selecionada';
+      note.textContent = '';
+      host.innerHTML = '<p class="idx-empty">Histórico indisponível para a escola selecionada.</p>';
+      return;
+    }
+
+    const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
+    const series = zeroMode === 'no_zero' ? (school.semZero || {}) : school;
+    const histYears = ANOS.filter((ano) => ano >= 2024);
+    const histIdx = histYears.map((ano) => ANOS.indexOf(ano)).filter((idx) => idx >= 0);
+    const geral = histIdx.map((idx) => (series.geral || school.geral || [])[idx] ?? null);
+    const vals = [];
+    const areasByYear = {};
+    ctx.AREAKEYS.forEach((k) => {
+      areasByYear[k] = histIdx.map((idx) => (series.areas?.[k] || [])[idx] ?? null);
+      areasByYear[k].forEach((v) => { if (v != null) vals.push(v); });
+    });
+    geral.forEach((v) => { if (v != null) vals.push(v); });
+    if (!vals.length) {
+      title.textContent = `${school.nome} · histórico`;
+      note.textContent = 'Sem série histórica suficiente com o filtro atual.';
+      host.innerHTML = '<p class="idx-empty">Sem dados históricos para exibir com os parâmetros atuais.</p>';
+      return;
+    }
+
+    const custom = histYears.map((ano, pos) => {
+      const idx = histIdx[pos];
+      return [
+      ano,
+      NF(series.part?.[idx] || 0),
+      NF(school.concl?.[idx] || 0),
+      series.tx?.[idx] != null ? `${series.tx[idx].toFixed(1)}%` : '—',
+      geral[pos] != null ? geral[pos].toFixed(1) : '—',
+      school.mun || munName,
+      school.cre || '—',
+      ];
+    });
+    const traces = ctx.AREAKEYS.map((k) => ({
+      x: histYears,
+      y: areasByYear[k],
+      customdata: custom,
+      mode: 'lines+markers',
+      name: AREANOME[k],
+      line: { color: ACOR[k], width: 2 },
+      marker: { size: 6 },
+      hovertemplate: `<b>${school.nome}</b><br>%{customdata[0]} · ${AREANOME[k]}: %{y:.1f}<br>`
+        + 'Município: %{customdata[5]}<br>'
+        + 'CRE: %{customdata[6]}<br>'
+        + 'Part. efetivos: %{customdata[1]}<br>'
+        + 'Concluintes: %{customdata[2]}<br>'
+        + 'Tx: %{customdata[3]}<br>'
+        + 'Média geral: %{customdata[4]}<extra></extra>',
+    }));
+    traces.push({
+      x: histYears,
+      y: geral,
+      customdata: custom,
+      mode: 'lines+markers',
+      name: 'Média geral',
+      line: { color: '#E67E22', width: 3 },
+      marker: { size: 7, symbol: 'diamond', line: { color: '#fff', width: 1 } },
+      hovertemplate: `<b>${school.nome}</b><br>%{customdata[0]} · Média geral: %{y:.1f}<br>`
+        + 'Município: %{customdata[5]}<br>'
+        + 'CRE: %{customdata[6]}<br>'
+        + 'Part. efetivos: %{customdata[1]}<br>'
+        + 'Concluintes: %{customdata[2]}<br>'
+        + 'Tx: %{customdata[3]}<extra></extra>',
+    });
+
+    Plotly.react('g_esc_hist', traces, {
+      ...BL,
+      height: 300,
+      showlegend: true,
+      hovermode: 'closest',
+      legend: { orientation: 'h', y: -0.22, font: { size: 10 } },
+      margin: { l: 42, r: 12, t: 10, b: 44 },
+      xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)', range: [2023.9, 2025.1] },
+      yaxis: {
+        title: { text: 'nota', font: { size: 10 } },
+        gridcolor: 'rgba(0,0,0,0)',
+        range: [Math.min(...vals) - 6, Math.max(...vals) + 6],
+      },
+    }, CFG);
+
+    const zeroLbl = zeroMode === 'no_zero'
+      ? 'Filtro ativo: excluindo participantes com alguma nota zero.'
+      : 'Filtro ativo: incluindo todos os participantes efetivos.';
+    const lastPos = histYears.length - 1;
+    const lastIdx = histIdx[lastPos];
+    const partLast = series.part?.[lastIdx] || 0;
+    const conclLast = school.concl?.[lastIdx] || 0;
+    const txLast = series.tx?.[lastIdx];
+    title.textContent = `${school.nome} · histórico 2024–${LAST_YEAR}`;
+    note.innerHTML = `${zeroLbl} <b>${LAST_YEAR}:</b> ${NF(partLast)} part. efetivos`
+      + `${conclLast ? ` · ${NF(conclLast)} concluintes` : ''}`
+      + `${txLast != null ? ` · taxa ${txLast.toFixed(1)}%` : ''}`
+      + `${school.obs ? ` · ${school.obs}` : ''}`;
   }
 
   function renderMun(creName, muns) {
@@ -140,6 +256,7 @@
     const shouldScroll = opts.scroll !== false;
     SEL_CRE = name;
     SEL_MUN = null;
+    SEL_ESC = null;
     document.querySelectorAll('.ctile').forEach((t) =>
       t.classList.toggle('sel', t.querySelector('.ct span').textContent === name)
     );
@@ -188,7 +305,7 @@
           geral: nz.geral ?? null,
         };
       })
-      .filter((s) => s.geral != null && (zeroMode !== 'no_zero' || (s.part || 0) > 0))
+      .filter((s) => s.geral != null && (s.part || 0) >= 10)
       .sort((a, b) => a.geral - b.geral);
     document.getElementById('escCard').style.display = list.length ? 'block' : 'none';
     document.getElementById('escTitle').childNodes[0].nodeValue = `Escolas de ${name} \u00b7 ${LAST_YEAR} `;
@@ -201,17 +318,27 @@
     };
     list.forEach((s) => {
       const tr = document.createElement('tr');
+      tr.dataset.schoolId = s.id || '';
       tr.innerHTML = `<td>${s.nome}</td><td>${s.concl != null ? s.concl : '<span class="muted">\u2014</span>'}</td><td>${s.part}</td><td>${s.tx != null ? `${s.tx.toFixed(0)}%` : '<span class="muted">\u2014</span>'}</td>`
         + cell(s.cn, 'CN') + cell(s.ch, 'CH') + cell(s.lc, 'LC') + cell(s.mt, 'MT') + cell(s.red, 'RED')
         + `<td class="b${refGeral != null && s.geral < refGeral ? ' bad' : ''}">${s.geral.toFixed(0)}</td>`;
+      tr.onclick = () => {
+        SEL_ESC = s.id || null;
+        setSelectedSchoolRow(SEL_ESC);
+        renderSchoolHistory(name, SEL_ESC);
+      };
       body.appendChild(tr);
     });
+    SEL_ESC = list.some((s) => s.id === SEL_ESC) ? SEL_ESC : (list[0]?.id || null);
+    setSelectedSchoolRow(SEL_ESC);
+    renderSchoolHistory(name, SEL_ESC);
     document.getElementById('escCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   function resetDrill() {
     SEL_CRE = null;
     SEL_MUN = null;
+    SEL_ESC = null;
     document.querySelectorAll('.ctile').forEach((t) => t.classList.remove('sel'));
     ['creAreaCard', 'munRow', 'escCard'].forEach((id) => {
       document.getElementById(id).style.display = 'none';

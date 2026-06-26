@@ -26,7 +26,7 @@
       ...BL,
       showlegend: false,
       hoverlabel: { bgcolor: '#fff', bordercolor: C.borda, font: { size: 11, color: C.muted } },
-      margin: { l: 38, r: 10, t: 2, b: 26 },
+      margin: { l: 44, r: 16, t: 4, b: 28 },
     };
 
     function renderBoxplots() {
@@ -39,6 +39,7 @@
         const q1Vals = [];
         const medVals = [];
         const q3Vals = [];
+        const nVals = [];
         const minPosVals = [];
         const lowerVals = [];
         const maxVals = [];
@@ -48,10 +49,12 @@
           const d = (boxData[k] || {})[String(a)];
           if (!d) return;
           const mp = boxMinPos(d, k, a, detailData);
+          const detail = detailData?.[k]?.[String(a)] || {};
           xVals.push(String(a));
           q1Vals.push(d.q1);
           medVals.push(d.med);
           q3Vals.push(d.q3);
+          nVals.push(detail.n ?? null);
           minPosVals.push(mp);
           lowerVals.push(mp != null ? mp : (d.min > 0 ? d.min : d.q1));
           maxVals.push(d.max);
@@ -73,11 +76,36 @@
           type: 'box',
           orientation: 'h',
           boxpoints: false,
+          hoverinfo: 'skip',
           marker: { color: cor },
           line: { color: cor, width: 2 },
           fillcolor: `rgba(${DU.hexToRgb(cor)},0.18)`,
-          hovertemplate: `${AREANOME[k]} · %{y}<br>Mediana: %{median:.1f}<br>Q1–Q3: %{q1:.1f} – %{q3:.1f}<br>M\u00edn. &gt; 0: %{customdata}<br>M\u00e1x: %{upperfence:.1f}<extra></extra>`,
         }];
+        traces.push({
+          y: xVals,
+          x: maxVals.map((v, idx) => Math.max(0, v - lowerVals[idx])),
+          base: lowerVals,
+          type: 'bar',
+          orientation: 'h',
+          width: 0.72,
+          marker: { color: `rgba(${DU.hexToRgb(cor)},0.001)`, line: { width: 0 } },
+          customdata: xVals.map((_, idx) => [
+            nVals[idx] ?? '—',
+            lowerVals[idx],
+            q1Vals[idx],
+            medVals[idx],
+            q3Vals[idx],
+            maxVals[idx],
+            q3Vals[idx] - q1Vals[idx],
+          ]),
+          hovertemplate: `<b>${AREANOME[k]} · %{y}</b><br>`
+            + 'N: %{customdata[0]}<br>'
+            + 'Mediana: %{customdata[3]:.1f}<br>'
+            + 'IQR: %{customdata[6]:.1f} (%{customdata[2]:.1f}–%{customdata[4]:.1f})<br>'
+            + 'Mín. > 0: %{customdata[1]:.1f}<br>'
+            + 'Máx.: %{customdata[5]:.1f}<extra></extra>',
+          showlegend: false,
+        });
         if (minMarkerX.length) {
           traces.push({
             x: minMarkerX,
@@ -90,24 +118,28 @@
               color: '#fff',
               line: { color: cor, width: 2 },
             },
-            hovertemplate: `M\u00edn. &gt; 0: %{x:.1f}<extra></extra>`,
+            hoverinfo: 'skip',
             showlegend: false,
           });
         }
         Plotly.react(`g_box_${k}`, traces, {
           ...boxLayoutBase,
           height: h,
+          hovermode: 'closest',
+          hoverdistance: 30,
           xaxis: {
             title: { text: 'nota', font: { size: 10 } },
             gridcolor: 'rgba(0,0,0,0)',
-            range: [0, 1000],
+            range: [0, 1020],
             dtick: 250,
-            tickfont: { size: 10 },
+            tickfont: { size: 10.5 },
+            automargin: true,
           },
           yaxis: {
             gridcolor: 'rgba(0,0,0,0)',
             dtick: 1,
-            tickfont: { size: 10, color: C.muted },
+            automargin: true,
+            tickfont: { size: 10.5, color: '#334155' },
           },
         }, CFG);
       });
@@ -325,7 +357,7 @@
         height: 360,
         hoverlabel: { bgcolor: '#fff', bordercolor: C.borda, font: { size: 11 } },
         showlegend: false,
-        margin: { l: 50, r: 16, t: 12, b: 48 },
+        margin: { l: 50, r: 16, t: 28, b: 48 },
         xaxis: {
           title: { text: 'participa\u00e7\u00e3o efetiva (%)', font: { size: 10 } },
           gridcolor: 'rgba(0,0,0,0)',

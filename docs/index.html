@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Painel ENEM MS — 2019-2025</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A4D8C'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='14' font-family='Segoe UI,sans-serif' fill='white'%3EMS%3C/text%3E%3C/svg%3E" />
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 <style>
 :root{
     --bg-app:#DCE3EC; --bg-card:#FFFFFF; --bg-subtle:#E8EDF3; --insight:#F1F5F9;
@@ -84,16 +84,19 @@
   .chart-ux-tip .dot{width:8px;height:8px;border-radius:50%;background:#F2C230;flex:0 0 auto;margin-top:5px}
   .plot-controls-outside{position:relative;overflow:visible}
   .plot-controls-outside .plotly .modebar{
-    top:-14px!important;right:4px!important;background:#FFFFFF!important;border:1px solid #9FB0C7;border-radius:8px;
-    padding:1px 2px;box-shadow:0 2px 8px rgba(8,30,60,.12);transform:scale(.72);transform-origin:top right
+    top:2px!important;right:2px!important;background:rgba(255,255,255,.78)!important;border:1px solid rgba(159,176,199,.7);
+    border-radius:6px;padding:0 1px;box-shadow:0 1px 4px rgba(8,30,60,.06);opacity:.76;
+    transform:scale(.54);transform-origin:top right;transition:opacity .15s ease,box-shadow .15s ease
   }
+  .plot-controls-outside:hover .plotly .modebar,
+  .plot-controls-outside:focus-within .plotly .modebar{opacity:1;box-shadow:0 2px 7px rgba(8,30,60,.12)}
   .plot-controls-outside .plotly .modebar-btn{color:#053B71!important}
   .plot-controls-outside .plotly .modebar-btn:hover{background:#E8EDF3!important;color:#0A4D8C!important}
-  .plot-controls-outside .plotly .modebar-group{margin-right:1px}
+  .plot-controls-outside .plotly .modebar-group{margin-right:0}
   .js-plotly-plot .plotly .gridlayer path,
   .js-plotly-plot .plotly .gridlayer line{stroke:transparent!important}
   @media (max-width:700px){
-    .plot-controls-outside .plotly .modebar{transform:scale(.66);transform-origin:top right}
+    .plot-controls-outside .plotly .modebar{top:2px!important;transform:scale(.5);transform-origin:top right}
   }
 
   /* tooltip "como ler" */
@@ -328,7 +331,7 @@
 
   <!-- DRILL-DOWN TERRITORIAL -->
   <details class="secacc" open>
-    <summary>Detalhamento territorial — clique para explorar <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Coordenadoria → Município → Escola (escola só <span data-dyn="lastYear">2025</span>)</span><span class="chev">▶</span></summary>
+    <summary>Detalhamento territorial — clique para explorar <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Coordenadoria → Município → Escola (tabela <span data-dyn="lastYear">2025</span> + histórico da escola)</span><span class="chev">▶</span></summary>
     <div class="secbody">
 
   <div class="bread" id="bread"></div>
@@ -374,8 +377,8 @@
   <!-- Passo 3: escolas 2025 -->
   <div class="card" id="escCard" style="margin-top:16px;display:none">
     <h3 id="escTitle">Escolas · 2025
-      <span class="help">i<span class="tip"><b>Como ler:</b> uma linha por escola. Células em <b>vermelho</b> = abaixo da média de MS naquela área (atenção); verde = acima. <b>Part.</b> = nº de participantes presentes; <b>Tx</b> = participantes ÷ concluintes da escola. Disponível só para <span data-dyn="lastYear">2025</span>. <b>População:</b> presentes nos 2 dias da rede estadual — em <span data-dyn="lastYear">2025</span> ainda pode incluir não-concluintes vinculados à escola.</span></span></h3>
-    <div class="coh"><span class="dot"></span> Rede estadual · presentes 2 dias (<span data-dyn="lastYear">2025</span> pode incluir não-concluintes) · ordenado por menor média · célula vermelha = abaixo de MS na área</div>
+      <span class="help">i<span class="tip"><b>Como ler:</b> a tabela mostra o retrato de <span data-dyn="lastYear">2025</span> por escola. Células em <b>vermelho</b> = abaixo da média de MS naquela área (atenção); verde = acima. <b>Part.</b> = nº de participantes presentes; <b>Tx</b> = participantes ÷ concluintes da escola. O gráfico abaixo mostra a <b>trajetória histórica</b> da escola selecionada, respeitando o filtro de notas zero. <b>População:</b> presentes nos 2 dias da rede estadual — em <span data-dyn="lastYear">2025</span> ainda pode incluir não-concluintes vinculados à escola.</span></span></h3>
+    <div class="coh"><span class="dot"></span> Rede estadual · presentes 2 dias (<span data-dyn="lastYear">2025</span> pode incluir não-concluintes) · clique numa escola para ver o histórico · tabela ordenada por menor média</div>
     <div class="chart-toolbar" role="group" aria-label="Filtros das escolas">
       <div class="chart-field">
         <label for="escZeroMode">Notas zero</label>
@@ -384,6 +387,12 @@
           <option value="no_zero">Excluir zeros</option>
         </select>
       </div>
+    </div>
+    <div class="idx-panel school-hist-panel" id="escHistWrap">
+      <h5 id="escHistTitle">Histórico da escola selecionada</h5>
+      <div class="coh"><span class="dot"></span> Clique numa linha da tabela para trocar a escola · o gráfico segue o filtro ativo do painel</div>
+      <div id="g_esc_hist" class="plot"></div>
+      <div class="nota" id="escHistNota"></div>
     </div>
     <div class="scroll">
       <table class="attbl">
@@ -586,14 +595,14 @@
 <script defer src="js/data-utils.js?v=3" charset="utf-8"></script>
 <script defer src="js/chart-factory.js?v=3" charset="utf-8"></script>
 <script defer src="js/app-context.js?v=3" charset="utf-8"></script>
-<script defer src="js/area-detail.js?v=7" charset="utf-8"></script>
+<script defer src="js/area-detail.js?v=8" charset="utf-8"></script>
 <script defer src="js/kpi-section.js?v=3" charset="utf-8"></script>
 <script defer src="js/trajectory-section.js?v=3" charset="utf-8"></script>
 <script defer src="js/redes-section.js?v=4" charset="utf-8"></script>
 <script defer src="js/integridade-section.js?v=3" charset="utf-8"></script>
 <script defer src="js/stats-section.js?v=8" charset="utf-8"></script>
 <script defer src="js/cv-section.js?v=3" charset="utf-8"></script>
-<script defer src="js/drill-section.js?v=6" charset="utf-8"></script>
+<script defer src="js/drill-section.js?v=8" charset="utf-8"></script>
 <script defer src="js/snapshot-section.js?v=3" charset="utf-8"></script>
 <script defer src="data-loader.js?v=3" charset="utf-8"></script>
 <script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>

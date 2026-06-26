@@ -154,7 +154,10 @@
   .attbl td{padding:6px 7px;border-bottom:1px solid var(--bg-subtle)}
   .attbl th:nth-child(n+3),.attbl td:nth-child(n+3){text-align:center}
   .attbl td.bad{color:var(--critico);font-weight:800} .attbl td.ok{color:var(--verde);font-weight:700}
+  .attbl tbody tr{cursor:pointer}
   .attbl tbody tr:hover{background:var(--insight)}
+  .attbl tbody tr.is-sel{background:var(--insight)}
+  .attbl tbody tr.is-sel td:first-child{box-shadow:inset 3px 0 0 var(--azulEsc);font-weight:700}
   .scroll{max-height:330px;overflow:auto}
   .muted{color:var(--muted)} .b{font-weight:700}
 
@@ -217,5 +220,7 @@
   .idx-panel{background:#fff;border:1px solid var(--borda);border-radius:10px;padding:10px 12px 6px}
   .idx-panel h5{margin:0 0 4px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.02em}
   .idx-plot{min-height:200px}
+  .school-hist-panel{margin-bottom:12px}
+  #g_esc_hist{min-height:280px}
   .idx-empty{margin:24px 8px;font-size:12px;color:var(--muted);text-align:center}
   #areaModalBody.index-detail-on{padding:4px 2px}

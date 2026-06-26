@@ -2,7 +2,7 @@ if(location.protocol==='file:'){
   showFileWarning();
 } else {
   const s = document.createElement('script');
-  s.src = './data/painel_data.js?v=25';
+  s.src = './data/painel_data.js?v=26';
   s.onload = () => {
     if (window.bootDashboard && typeof Plotly !== 'undefined') window.bootDashboard();
   };

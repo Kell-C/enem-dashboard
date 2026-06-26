@@ -182,6 +182,52 @@ def _ler_ano(ano: int, cols: list[str]) -> pd.DataFrame:
     return preparar_ano(df)
 
 
+def _agregar_escolas_ano(sub: pd.DataFrame, conc_esc: pd.DataFrame, ano: int) -> pd.DataFrame:
+    if sub.empty or "CO_ESCOLA" not in sub.columns or not sub["CO_ESCOLA"].notna().any():
+        return pd.DataFrame()
+
+    esc = sub.groupby("CO_ESCOLA", observed=True).agg(
+        estudantes=("NU_INSCRICAO", "count"),
+        media_geral=("MEDIA_GERAL", "mean"),
+        **{f"media_{c.lower()}": (c, "mean") for c in COLS_NOTAS},
+        NOME_ESCOLA=("NOME_ESCOLA", "first"),
+        NO_MUNICIPIO_ESC=("NO_MUNICIPIO_ESC", "first"),
+        CRE=("CRE", "first"),
+    ).reset_index()
+
+    sem_zero = sub[(sub[COLS_NOTAS] > 0).all(axis=1)]
+    if not sem_zero.empty:
+        esc_sem_zero = sem_zero.groupby("CO_ESCOLA", observed=True).agg(
+            estudantes_sem_zero=("NU_INSCRICAO", "count"),
+            media_geral_sem_zero=("MEDIA_GERAL", "mean"),
+            **{f"media_{c.lower()}_sem_zero": (c, "mean") for c in COLS_NOTAS},
+        ).reset_index()
+        esc = esc.merge(esc_sem_zero, on="CO_ESCOLA", how="left")
+    else:
+        esc["estudantes_sem_zero"] = 0
+        esc["media_geral_sem_zero"] = pd.NA
+        for c in COLS_NOTAS:
+            esc[f"media_{c.lower()}_sem_zero"] = pd.NA
+
+    esc["ano"] = ano
+    esc["dependencia"] = "Estadual"
+    esc["cre_curto"] = esc["CRE"].map(cre_curto)
+    ce = conc_esc[conc_esc["NU_ANO"] == ano][["CO_ESCOLA", "Concluintes"]]
+    esc = esc.merge(ce, on="CO_ESCOLA", how="left")
+    esc["Concluintes"] = esc["Concluintes"].fillna(0).astype(int)
+    esc["estudantes_sem_zero"] = esc["estudantes_sem_zero"].fillna(0).astype(int)
+    tx_esc = esc["estudantes"] / esc["Concluintes"].replace(0, pd.NA) * 100
+    esc["tx_part"] = pd.to_numeric(tx_esc, errors="coerce").round(1)
+    tx_esc_sem_zero = esc["estudantes_sem_zero"] / esc["Concluintes"].replace(0, pd.NA) * 100
+    esc["tx_part_sem_zero"] = pd.to_numeric(tx_esc_sem_zero, errors="coerce").round(1)
+    esc["observacao"] = esc["CO_ESCOLA"].map(observacao_oferta_escola)
+    esc["nome_exibicao"] = esc.apply(
+        lambda r: nome_exibicao_escola(r["CO_ESCOLA"], r["NOME_ESCOLA"]),
+        axis=1,
+    )
+    return esc
+
+
 def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) -> dict:
     ano = int(df_ano["NU_ANO"].iloc[0])
     df = aplicar_flags(df_ano)
@@ -198,6 +244,7 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         "referencias": [],
         "evolucao_cre": [],
         "evolucao_muni": [],
+        "evolucao_escolas": [],
         "integridade": [],
         "integridade_cre": [],
         "integridade_muni": [],
@@ -370,51 +417,16 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
                     )
                 )
 
-    if ano == ANO_FINAL:
-        sub24 = enriquecer_ms(ms_valido[ms_valido["DEP_ADM"] == "Estadual"], cres, mapa_muni)
-        if not sub24.empty and sub24["CO_ESCOLA"].notna().any():
-            esc = sub24.groupby("CO_ESCOLA", observed=True).agg(
-                estudantes=("NU_INSCRICAO", "count"),
-                media_geral=("MEDIA_GERAL", "mean"),
-                **{f"media_{c.lower()}": (c, "mean") for c in COLS_NOTAS},
-                NOME_ESCOLA=("NOME_ESCOLA", "first"),
-                NO_MUNICIPIO_ESC=("NO_MUNICIPIO_ESC", "first"),
-                CRE=("CRE", "first"),
-            ).reset_index()
-            sem_zero = sub24[(sub24[COLS_NOTAS] > 0).all(axis=1)]
-            if not sem_zero.empty:
-                esc_sem_zero = sem_zero.groupby("CO_ESCOLA", observed=True).agg(
-                    estudantes_sem_zero=("NU_INSCRICAO", "count"),
-                    media_geral_sem_zero=("MEDIA_GERAL", "mean"),
-                    **{f"media_{c.lower()}_sem_zero": (c, "mean") for c in COLS_NOTAS},
-                ).reset_index()
-                esc = esc.merge(esc_sem_zero, on="CO_ESCOLA", how="left")
-            else:
-                esc["estudantes_sem_zero"] = 0
-                esc["media_geral_sem_zero"] = pd.NA
-                for c in COLS_NOTAS:
-                    esc[f"media_{c.lower()}_sem_zero"] = pd.NA
-            esc["ano"] = ANO_FINAL
-            esc["dependencia"] = "Estadual"
-            esc["cre_curto"] = esc["CRE"].map(cre_curto)
-            ce = conc_esc[conc_esc["NU_ANO"] == ANO_FINAL][["CO_ESCOLA", "Concluintes"]]
-            esc = esc.merge(ce, on="CO_ESCOLA", how="left")
-            esc["Concluintes"] = esc["Concluintes"].fillna(0).astype(int)
-            esc["estudantes_sem_zero"] = esc["estudantes_sem_zero"].fillna(0).astype(int)
-            tx_esc = esc["estudantes"] / esc["Concluintes"].replace(0, pd.NA) * 100
-            esc["tx_part"] = pd.to_numeric(tx_esc, errors="coerce").round(1)
-            tx_esc_sem_zero = esc["estudantes_sem_zero"] / esc["Concluintes"].replace(0, pd.NA) * 100
-            esc["tx_part_sem_zero"] = pd.to_numeric(tx_esc_sem_zero, errors="coerce").round(1)
-            esc["observacao"] = esc["CO_ESCOLA"].map(observacao_oferta_escola)
-            esc["nome_exibicao"] = esc.apply(
-                lambda r: nome_exibicao_escola(r["CO_ESCOLA"], r["NOME_ESCOLA"]),
-                axis=1,
-            )
-            out["escolas_2024"].append(esc)
-
     ms_est_val = ms_valido[ms_valido["DEP_ADM"] == "Estadual"]
     ms_est_val_sem_zero = ms_est_val[(ms_est_val[COLS_NOTAS] > 0).all(axis=1)] if len(ms_est_val) else ms_est_val
     ms_est_base = ms[(ms["DEP_ADM"] == "Estadual") & ms["CONCLUINTE"]]
+    esc_hist = pd.DataFrame()
+    if len(ms_est_val):
+        esc_hist = _agregar_escolas_ano(enriquecer_ms(ms_est_val, cres, mapa_muni), conc_esc, ano)
+        if not esc_hist.empty:
+            out["evolucao_escolas"].append(esc_hist)
+    if ano == ANO_FINAL and not esc_hist.empty:
+        out["escolas_2024"].append(esc_hist.copy())
     if len(ms_est_val):
         srow = {
             "ano": ano,
@@ -506,7 +518,7 @@ def main():
         k: [] for k in [
             "participacao_ano", "participacao_cre", "participacao_municipios",
             "desempenho", "desempenho_uf", "escolas_2024", "sumario",
-            "referencias", "evolucao_cre", "evolucao_muni", "integridade",
+            "referencias", "evolucao_cre", "evolucao_muni", "evolucao_escolas", "integridade",
             "integridade_cre", "integridade_muni", "histograma", "histograma_sem_zero",
             "desvio_cv", "quantis", "quantis_sem_zero", "area_detail", "area_detail_sem_zero",
         ]
