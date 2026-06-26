@@ -1,7 +1,7 @@
 {
   "script": "gerar_web_data.py",
-  "timestamp": "2026-06-25T20:42:43.950417Z",
-  "duration_seconds": 10.5,
-  "json_bytes": 260052,
-  "js_bytes": 260072
+  "timestamp": "2026-06-26T12:37:04.746106Z",
+  "duration_seconds": 10.4,
+  "json_bytes": 262279,
+  "js_bytes": 262299
 }

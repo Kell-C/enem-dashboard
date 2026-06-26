@@ -34,6 +34,22 @@ def _ler(name: str) -> pd.DataFrame:
     return pd.read_parquet(p) if p.exists() else pd.DataFrame()
 
 
+def _rank_school_name(row: pd.Series, nome_col: str) -> str:
+    nome = row.get(nome_col)
+    if pd.notna(nome) and str(nome).strip():
+        return str(nome).strip()
+    nome_base = row.get("NOME_ESCOLA")
+    if pd.notna(nome_base) and str(nome_base).strip():
+        return str(nome_base).strip()
+    codigo = row.get("CO_ESCOLA")
+    if pd.notna(codigo):
+        try:
+            return str(int(float(codigo)))
+        except (TypeError, ValueError):
+            return str(codigo).strip()
+    return ""
+
+
 def _serie_por_ano(df: pd.DataFrame, dep: str, col: str, anos=ANOS) -> list:
     out = []
     for a in anos:
@@ -486,19 +502,25 @@ def build_painel_data() -> dict:
         }
         for k, col in col_map.items():
             nome_col = "nome_exibicao" if "nome_exibicao" in esc24.columns else "NOME_ESCOLA"
-            tmp = esc24[[nome_col, col]].dropna().sort_values(col, ascending=False)
+            tmp = esc24[[c for c in [nome_col, "NOME_ESCOLA", "CO_ESCOLA", "estudantes", col] if c in esc24.columns]].dropna(subset=[col]).copy()
+            if "estudantes" in tmp.columns:
+                tmp = tmp[tmp["estudantes"] >= 10]
+            tmp["nome_rank"] = tmp.apply(lambda r: _rank_school_name(r, nome_col), axis=1)
+            tmp = tmp[tmp["nome_rank"].str.strip() != ""].sort_values(col, ascending=False)
             for _, r in tmp.head(10).iterrows():
-                esc_rank[k].append({"nome": str(r[nome_col]), "nota": round(float(r[col]), 1)})
+                esc_rank[k].append({"nome": r["nome_rank"], "nota": round(float(r[col]), 1)})
             for _, r in tmp.tail(10).sort_values(col).iterrows():
-                esc_rank[k].append({"nome": str(r[nome_col]), "nota": round(float(r[col]), 1)})
+                esc_rank[k].append({"nome": r["nome_rank"], "nota": round(float(r[col]), 1)})
             col_sem_zero = f"{col}_sem_zero"
             if col_sem_zero in esc24.columns:
-                tmp_sem_zero = esc24[[nome_col, col_sem_zero, "estudantes_sem_zero"]].dropna().copy()
-                tmp_sem_zero = tmp_sem_zero[tmp_sem_zero["estudantes_sem_zero"] > 0].sort_values(col_sem_zero, ascending=False)
+                tmp_sem_zero = esc24[[c for c in [nome_col, "NOME_ESCOLA", "CO_ESCOLA", "estudantes_sem_zero", col_sem_zero] if c in esc24.columns]].dropna(subset=[col_sem_zero]).copy()
+                tmp_sem_zero = tmp_sem_zero[tmp_sem_zero["estudantes_sem_zero"] >= 10]
+                tmp_sem_zero["nome_rank"] = tmp_sem_zero.apply(lambda r: _rank_school_name(r, nome_col), axis=1)
+                tmp_sem_zero = tmp_sem_zero[tmp_sem_zero["nome_rank"].str.strip() != ""].sort_values(col_sem_zero, ascending=False)
                 for _, r in tmp_sem_zero.head(10).iterrows():
-                    esc_rank_sem_zero[k].append({"nome": str(r[nome_col]), "nota": round(float(r[col_sem_zero]), 1)})
+                    esc_rank_sem_zero[k].append({"nome": r["nome_rank"], "nota": round(float(r[col_sem_zero]), 1)})
                 for _, r in tmp_sem_zero.tail(10).sort_values(col_sem_zero).iterrows():
-                    esc_rank_sem_zero[k].append({"nome": str(r[nome_col]), "nota": round(float(r[col_sem_zero]), 1)})
+                    esc_rank_sem_zero[k].append({"nome": r["nome_rank"], "nota": round(float(r[col_sem_zero]), 1)})
 
     ms_area_2024 = {}
     ms_area_2024_sem_zero = {}

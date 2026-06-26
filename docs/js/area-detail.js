@@ -166,7 +166,8 @@
     const { uid, detail, areaCor, n, brN } = shell;
     const i = ANOS.indexOf(Number(ano));
     const brNVal = brN ?? detail.brN ?? scoped.brEstadualN?.[i] ?? null;
-    const key = `${uid}|${areaKey}|${ano}`;
+    const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
+    const key = `${uid}|${areaKey}|${ano}|${zeroMode}`;
     if (_lastDetailKey === key) return;
     _lastDetailKey = key;
 
