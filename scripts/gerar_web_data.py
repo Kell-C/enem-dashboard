@@ -373,6 +373,8 @@ def build_painel_data() -> dict:
     desvio_por_area_df = _ler("desvio_cv_por_area")
     refs_por_area_df = _ler("referencias_por_area")
     part_por_area_df = _ler("participacao_por_area")
+    evol_cre_por_area_df = _ler("evolucao_cre_por_area")
+    evol_muni_por_area_df = _ler("evolucao_muni_por_area")
     _, conc_esc = carregar_concluintes_sed()
 
     ms_part = part[part["dependencia"] == "Estadual"].sort_values("ano")
@@ -749,6 +751,62 @@ def build_painel_data() -> dict:
             estadual_n_por_area_sem_zero[area_k] = [int(r["n_ms_sem_zero"]) for _, r in sub.iterrows()]
             br_estadual_n_por_area_sem_zero[area_k] = [int(r["n_br_sem_zero"]) for _, r in sub.iterrows()]
 
+    cre_por_area = {}
+    if not evol_cre_por_area_df.empty and "cre_curto" in evol_cre_por_area_df.columns:
+        for cre_name in sorted(evol_cre_por_area_df["cre_curto"].dropna().unique()):
+            cre_sub = evol_cre_por_area_df[evol_cre_por_area_df["cre_curto"] == cre_name]
+            areas_pa = {}
+            for k in AREA_KEYS:
+                col = f"media_nu_nota_{k.lower()}" if k != "RED" else "media_nu_nota_redacao"
+                if col not in cre_sub.columns:
+                    col = f"media_{NOTA_MAP[k].lower()}"
+                area_sub = cre_sub[cre_sub["area"] == k]
+                serie = []
+                for a in ANOS:
+                    row = area_sub[area_sub["ano"] == a]
+                    if row.empty or col not in row.columns or pd.isna(row.iloc[0][col]):
+                        serie.append(None)
+                    else:
+                        serie.append(round(float(row.iloc[0][col]), 1))
+                areas_pa[k] = serie
+            cre_por_area[cre_name] = {"areas": areas_pa}
+
+    mun_por_area = {}
+    if not evol_muni_por_area_df.empty:
+        for mname in evol_muni_por_area_df["NO_MUNICIPIO_ESC"].dropna().unique():
+            muni_sub = evol_muni_por_area_df[evol_muni_por_area_df["NO_MUNICIPIO_ESC"] == mname]
+            a2024_pa = {}
+            for k in AREA_KEYS:
+                col = f"media_nu_nota_{k.lower()}" if k != "RED" else "media_nu_nota_redacao"
+                if col not in muni_sub.columns:
+                    col = f"media_{NOTA_MAP[k].lower()}"
+                area_sub = muni_sub[(muni_sub["area"] == k) & (muni_sub["ano"] == ANO_FINAL)]
+                if not area_sub.empty and col in area_sub.columns and pd.notna(area_sub.iloc[0][col]):
+                    a2024_pa[k] = round(float(area_sub.iloc[0][col]), 1)
+            areas_pa = {}
+            for k in AREA_KEYS:
+                col = f"media_nu_nota_{k.lower()}" if k != "RED" else "media_nu_nota_redacao"
+                if col not in muni_sub.columns:
+                    col = f"media_{NOTA_MAP[k].lower()}"
+                area_sub = muni_sub[muni_sub["area"] == k]
+                serie = []
+                for a in ANOS:
+                    row = area_sub[area_sub["ano"] == a]
+                    if row.empty or col not in row.columns or pd.isna(row.iloc[0][col]):
+                        serie.append(None)
+                    else:
+                        serie.append(round(float(row.iloc[0][col]), 1))
+                areas_pa[k] = serie
+            mun_por_area[str(mname)] = {"a2024": a2024_pa, "areas": areas_pa}
+
+    ms_area_2024_por_area = {}
+    if not refs_por_area_df.empty:
+        for k in AREA_KEYS:
+            ref_area_col = REF_AREAS[k]
+            row = refs_por_area_df[(refs_por_area_df["ano"] == ANO_FINAL) & (refs_por_area_df["area"] == ref_area_col)]
+            if not row.empty and pd.notna(row.iloc[0].get("media_ms")):
+                ms_area_2024_por_area[k] = round(float(row.iloc[0]["media_ms"]), 1)
+
     tx_elim = [
         float(ms_part[ms_part["ano"] == a].iloc[0]["eliminados_redacao"])
         / float(ms_part[ms_part["ano"] == a].iloc[0]["presentes"])
@@ -840,6 +898,9 @@ def build_painel_data() -> dict:
         "brEstadualNPorAreaSemZero": br_estadual_n_por_area_sem_zero,
         "desvioPadraoPorArea": desvio_padrao_por_area,
         "cvPorArea": cv_por_area,
+        "crePorArea": cre_por_area,
+        "munPorArea": mun_por_area,
+        "msArea2024PorArea": ms_area_2024_por_area,
     }
 
 

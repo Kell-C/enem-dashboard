@@ -16,7 +16,12 @@
     function renderSnap(ano) {
       const i = ANOS.indexOf(ano);
       const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
-      const areaData = zeroMode === 'no_zero' ? (DATA.msAreaSemZero || DATA.msArea || {}) : (DATA.msArea || {});
+      const porArea = ED.getPopulationMode ? ED.getPopulationMode() === 'por_area' : false;
+      const areaData = porArea
+        ? (zeroMode === 'no_zero'
+          ? (DATA.msAreaPorAreaSemZero || DATA.msAreaSemZero || DATA.msArea || {})
+          : (DATA.msAreaPorArea || DATA.msArea || {}))
+        : (zeroMode === 'no_zero' ? (DATA.msAreaSemZero || DATA.msArea || {}) : (DATA.msArea || {}));
       const ufRankData = zeroMode === 'no_zero' ? UF_RANK_SEM_ZERO : UF_RANK;
       const ms = AKEYS.map((k) => (areaData[k] && areaData[k].ms ? areaData[k].ms[i] : null));
       const br = AKEYS.map((k) => (areaData[k] && areaData[k].br ? areaData[k].br[i] : null));
@@ -62,6 +67,9 @@
 
     document.getElementById('snapAno').onchange = (e) => renderSnap(parseInt(e.target.value, 10));
     document.addEventListener('enemdash:schoolZeroMode', () => {
+      renderSnap(parseInt(document.getElementById('snapAno').value, 10));
+    });
+    document.addEventListener('enemdash:populationMode', () => {
       renderSnap(parseInt(document.getElementById('snapAno').value, 10));
     });
     renderSnap(LAST_YEAR);

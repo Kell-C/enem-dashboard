@@ -263,6 +263,8 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         "area_detail_por_area_sem_zero": [],
         "referencias_por_area": [],
         "participacao_por_area": [],
+        "evolucao_cre_por_area": [],
+        "evolucao_muni_por_area": [],
     }
 
     ms = df[df["SG_UF_ESC"] == "MS"]
@@ -574,6 +576,31 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         detail_pa_sz.update({"ano": ano, "area": area})
         out["area_detail_por_area_sem_zero"].append(detail_pa_sz)
 
+        ms_est_area_enr = enriquecer_ms(ms_est_area, cres, mapa_muni)
+        if not ms_est_area_enr.empty and "CRE" in ms_est_area_enr.columns:
+            cre_pa = ms_est_area_enr.groupby("CRE", observed=True).agg(
+                estudantes=("NU_INSCRICAO", "count"),
+                **{f"media_{col.lower()}": (col, "mean")},
+            ).reset_index()
+            cre_pa["ano"] = ano
+            cre_pa["area"] = area
+            cre_pa["dependencia"] = "Estadual"
+            cre_pa["cre_curto"] = cre_pa["CRE"].map(cre_curto)
+            out["evolucao_cre_por_area"].append(cre_pa)
+
+            muni_pa = ms_est_area_enr.groupby("NO_MUNICIPIO_ESC", observed=True).agg(
+                estudantes=("NU_INSCRICAO", "count"),
+                **{f"media_{col.lower()}": (col, "mean")},
+            ).reset_index()
+            muni_pa["ano"] = ano
+            muni_pa["area"] = area
+            muni_pa["dependencia"] = "Estadual"
+            muni_pa["CRE"] = ms_est_area_enr.groupby("NO_MUNICIPIO_ESC")["CRE"].agg(
+                lambda s: s.mode().iloc[0] if len(s.mode()) else pd.NA
+            ).values
+            muni_pa["cre_curto"] = muni_pa["CRE"].map(cre_curto)
+            out["evolucao_muni_por_area"].append(muni_pa)
+
     del df, ms, valido, ms_valido
     limpar()
     return out
@@ -606,6 +633,7 @@ def main():
             "histograma_por_area", "histograma_por_area_sem_zero",
             "desvio_cv_por_area", "area_detail_por_area", "area_detail_por_area_sem_zero",
             "referencias_por_area", "participacao_por_area",
+            "evolucao_cre_por_area", "evolucao_muni_por_area",
         ]
     }
 
