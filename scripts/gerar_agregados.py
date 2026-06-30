@@ -254,6 +254,15 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         "area_detail": [],
         "area_detail_sem_zero": [],
         "quantis_sem_zero": [],
+        "quantis_por_area": [],
+        "quantis_por_area_sem_zero": [],
+        "histograma_por_area": [],
+        "histograma_por_area_sem_zero": [],
+        "desvio_cv_por_area": [],
+        "area_detail_por_area": [],
+        "area_detail_por_area_sem_zero": [],
+        "referencias_por_area": [],
+        "participacao_por_area": [],
     }
 
     ms = df[df["SG_UF_ESC"] == "MS"]
@@ -493,6 +502,78 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         detail_sem_zero.update({"ano": ano, "area": area})
         out["area_detail_sem_zero"].append(detail_sem_zero)
 
+    for area, col in zip(AREA_KEYS, COLS_NOTAS):
+        flag = f"VALIDO_{area}"
+        ms_est_area = ms[(ms["DEP_ADM"] == "Estadual") & ms[flag]]
+        br_area = df[(df["DEP_ADM"] == "Estadual") & df[flag]]
+        ms_est_area_sem_zero = (
+            ms_est_area[ms_est_area[col] > 0] if len(ms_est_area) else ms_est_area
+        )
+        br_area_sem_zero = (
+            br_area[br_area[col] > 0] if len(br_area) else br_area
+        )
+
+        out["participacao_por_area"].append({
+            "ano": ano,
+            "area": area,
+            "n_ms": len(ms_est_area),
+            "n_br": len(br_area),
+            "n_ms_sem_zero": len(ms_est_area_sem_zero),
+            "n_br_sem_zero": len(br_area_sem_zero),
+        })
+
+        out["referencias_por_area"].append({
+            "ano": ano,
+            "area": col,
+            "media_ms": ms_est_area[col].mean() if len(ms_est_area) else None,
+            "media_br": br_area[col].mean() if len(br_area) else None,
+            "media_ms_sem_zero": ms_est_area_sem_zero[col].mean() if len(ms_est_area_sem_zero) else None,
+            "media_br_sem_zero": br_area_sem_zero[col].mean() if len(br_area_sem_zero) else None,
+        })
+
+        q_pa = quantis_serie(ms_est_area[col]) if len(ms_est_area) else quantis_serie(pd.Series(dtype=float))
+        q_pa.update({"ano": ano, "area": area, "escopo": "MS-Estadual"})
+        out.setdefault("quantis_por_area", []).append(q_pa)
+
+        q_pa_sz = quantis_serie(ms_est_area_sem_zero[col]) if len(ms_est_area_sem_zero) else quantis_serie(pd.Series(dtype=float))
+        q_pa_sz.update({"ano": ano, "area": area, "escopo": "MS-Estadual-sem-zero"})
+        out["quantis_por_area_sem_zero"].append(q_pa_sz)
+
+        ms_s_pa = ms_est_area[col] if len(ms_est_area) else pd.Series(dtype=float)
+        br_s_pa = br_area[col] if len(br_area) else pd.Series(dtype=float)
+        ms_s_pa_sz = ms_est_area_sem_zero[col] if len(ms_est_area_sem_zero) else pd.Series(dtype=float)
+        br_s_pa_sz = br_area_sem_zero[col] if len(br_area_sem_zero) else pd.Series(dtype=float)
+
+        out["histograma_por_area"].append({
+            "ano": ano,
+            "area": area,
+            "ms": _hist_pct(ms_s_pa),
+            "br": _hist_pct(br_s_pa),
+        })
+        out["histograma_por_area_sem_zero"].append({
+            "ano": ano,
+            "area": area,
+            "ms": _hist_pct(ms_s_pa_sz),
+            "br": _hist_pct(br_s_pa_sz),
+        })
+
+        std_pa = ms_s_pa.std()
+        mean_pa = ms_s_pa.mean()
+        out["desvio_cv_por_area"].append({
+            "ano": ano,
+            "area": area,
+            "desvio": round(float(std_pa), 1) if pd.notna(std_pa) else None,
+            "cv": round(100 * float(std_pa) / float(mean_pa), 1) if pd.notna(std_pa) and mean_pa else None,
+        })
+
+        detail_pa = _area_detail_stats(ms_est_area, area, col)
+        detail_pa.update({"ano": ano, "area": area})
+        out["area_detail_por_area"].append(detail_pa)
+
+        detail_pa_sz = _area_detail_stats(ms_est_area_sem_zero, area, col)
+        detail_pa_sz.update({"ano": ano, "area": area})
+        out["area_detail_por_area_sem_zero"].append(detail_pa_sz)
+
     del df, ms, valido, ms_valido
     limpar()
     return out
@@ -521,6 +602,10 @@ def main():
             "referencias", "evolucao_cre", "evolucao_muni", "evolucao_escolas", "integridade",
             "integridade_cre", "integridade_muni", "histograma", "histograma_sem_zero",
             "desvio_cv", "quantis", "quantis_sem_zero", "area_detail", "area_detail_sem_zero",
+            "quantis_por_area", "quantis_por_area_sem_zero",
+            "histograma_por_area", "histograma_por_area_sem_zero",
+            "desvio_cv_por_area", "area_detail_por_area", "area_detail_por_area_sem_zero",
+            "referencias_por_area", "participacao_por_area",
         ]
     }
 
