@@ -78,6 +78,15 @@
   .card .coh .dot{width:7px;height:7px;border-radius:50%;background:var(--azul)}
   .card .nota{font-size:11px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--borda);padding-top:7px}
   .plot{width:100%;min-height:220px}
+  .global-filters{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-top:12px;
+    padding:10px 16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:10px}
+  .gf-item{display:flex;flex-direction:column;gap:4px}
+  .gf-item label{font-size:10px;font-weight:700;color:#CADBF0;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:5px}
+  .gf-select{padding:7px 12px;border:1px solid rgba(255,255,255,.3);border-radius:8px;font-size:12px;font-weight:600;
+    color:#fff;background:rgba(255,255,255,.1);cursor:pointer;min-width:200px;transition:border-color .15s}
+  .gf-select:hover{border-color:rgba(255,255,255,.5)}
+  .gf-select:focus{outline:none;border-color:#F2C230;box-shadow:0 0 0 3px rgba(242,194,48,.2)}
+  .gf-select option{color:#0F172A;background:#fff}
   .chart-ux-tip{margin-top:12px;padding:10px 12px;border:1px solid var(--borda);border-radius:10px;
     background:rgba(255,255,255,.16);color:#EAF1FB;font-size:12px;line-height:1.45;display:flex;gap:8px;align-items:flex-start}
   .chart-ux-tip b{color:#fff}
@@ -228,6 +237,24 @@
       <span class="sep">·</span><span class="it">Participação efetiva = presentes ÷ concluintes</span>
       <span class="sep">·</span><span class="it" style="color:#F4A460">Nos recortes de <span data-dyn="schoolRange">2024–2025</span>, os concluintes presentes podem incluir estudantes de outras modalidades vinculadas à escola, como EJA, e a leitura deve ser feita com cautela</span>
     </div>
+    <div class="global-filters">
+      <div class="gf-item">
+        <label for="globalPopMode">População (áreas)
+          <span class="help">i<span class="tip"><b>Geral:</b> concluintes presentes nos 2 dias e não eliminados (mesma base para todas as áreas). <b>Por área:</b> todos os concluintes que realizaram a prova daquela área específica, independente de presença nas demais. Afeta boxplots, histogramas, índice por área, desvio/CV, snapshot, CRE e municípios.</span></span>
+        </label>
+        <select id="globalPopMode" class="gf-select" data-population-mode aria-label="População de referência por área">
+          <option value="geral">Geral — presentes nos 2 dias</option>
+          <option value="por_area">Por área — participantes da prova</option>
+        </select>
+      </div>
+      <div class="gf-item">
+        <label for="globalZeroMode">Notas zero</label>
+        <select id="globalZeroMode" class="gf-select" data-school-zero-mode aria-label="Incluir ou excluir notas zero">
+          <option value="all">Incluir zeros</option>
+          <option value="no_zero">Excluir zeros</option>
+        </select>
+      </div>
+    </div>
     <div class="chart-ux-tip">
       <span class="dot"></span>
       <span><b>Navegação:</b> os controles de zoom e retorno ficam apenas na seção Trajetória e no gráfico de dispersão por escolas. <b>Duplo clique</b> também redefine a visão.</span>
@@ -283,15 +310,6 @@
       <select id="trajZeroMode" class="dash-select" data-school-zero-mode aria-label="Filtrar trajetória por notas zero">
         <option value="all">Incluir zeros</option>
         <option value="no_zero">Excluir zeros</option>
-      </select>
-    </div>
-    <div class="chart-field">
-      <label for="trajPopMode">População (áreas)
-        <span class="help">i<span class="tip"><b>Geral:</b> concluintes presentes nos 2 dias e não eliminados (mesma base para todas as áreas). <b>Por área:</b> todos os concluintes que realizaram a prova daquela área específica, independente de presença nas demais.</span></span>
-      </label>
-      <select id="trajPopMode" class="dash-select" data-population-mode aria-label="Filtrar por população de referência">
-        <option value="geral">Geral — presentes 2 dias</option>
-        <option value="por_area">Por área — participantes da prova</option>
       </select>
     </div>
   </div>
@@ -447,15 +465,6 @@
           <select id="distZeroMode" class="dash-select" data-school-zero-mode aria-label="Filtrar distribuição por notas zero">
             <option value="all">Incluir zeros</option>
             <option value="no_zero">Excluir zeros</option>
-          </select>
-        </div>
-        <div class="chart-field">
-          <label for="distPopMode">População (áreas)
-            <span class="help">i<span class="tip"><b>Geral:</b> concluintes presentes nos 2 dias e não eliminados. <b>Por área:</b> todos os concluintes que realizaram a prova daquela área.</span></span>
-          </label>
-          <select id="distPopMode" class="dash-select" data-population-mode aria-label="Filtrar por população de referência">
-            <option value="geral">Geral — presentes 2 dias</option>
-            <option value="por_area">Por área — participantes da prova</option>
           </select>
         </div>
       </div>
