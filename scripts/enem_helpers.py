@@ -351,20 +351,6 @@ def aplicar_flags(df: pd.DataFrame) -> pd.DataFrame:
         & ~df["ELIM_OBJ"]
         & ~df["ELIM_RED"]
     )
-
-    _PRES_AREA = {
-        "CN": "TP_PRESENCA_CN",
-        "CH": "TP_PRESENCA_CH",
-        "LC": "TP_PRESENCA_LC",
-        "MT": "TP_PRESENCA_MT",
-    }
-    for area_key in AREA_KEYS:
-        if area_key == "RED":
-            df[f"VALIDO_{area_key}"] = df["CONCLUINTE"] & ~df["ELIM_RED"]
-        else:
-            pres_col = _PRES_AREA[area_key]
-            df[f"VALIDO_{area_key}"] = df["CONCLUINTE"] & (df[pres_col] == 1)
-
     for c in COLS_NOTAS:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
@@ -586,6 +572,24 @@ def medias_por_area(df: pd.DataFrame) -> dict[str, float]:
         if pd.notna(v):
             out["GERAL"] = round(float(v), 1)
     return out
+
+
+_PRES_AREA_MAP = {
+    "CN": "TP_PRESENCA_CN",
+    "CH": "TP_PRESENCA_CH",
+    "LC": "TP_PRESENCA_LC",
+    "MT": "TP_PRESENCA_MT",
+}
+
+
+def filtrar_valido_area(df: pd.DataFrame, area_key: str) -> pd.DataFrame:
+    """Retorna o subconjunto de concluintes que realizaram a prova da área."""
+    if area_key == "RED":
+        mask = df["CONCLUINTE"] & ~df["ELIM_RED"]
+    else:
+        pres_col = _PRES_AREA_MAP[area_key]
+        mask = df["CONCLUINTE"] & (df[pres_col] == 1)
+    return df[mask]
 
 
 def limpar():

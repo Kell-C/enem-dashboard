@@ -17,6 +17,7 @@ from enem_config import ANOS, ANO_FINAL, AREA_KEYS, COLS_NOTAS, DEPENDENCIAS, NO
 logger = configure_logging(__name__)
 from enem_helpers import (
     aplicar_flags,
+    filtrar_valido_area,
     observacao_oferta_escola,
     COL_MUNICIPIO,
     carregar_concluintes_sed,
@@ -505,9 +506,8 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         out["area_detail_sem_zero"].append(detail_sem_zero)
 
     for area, col in zip(AREA_KEYS, COLS_NOTAS):
-        flag = f"VALIDO_{area}"
-        ms_est_area = ms[(ms["DEP_ADM"] == "Estadual") & ms[flag]]
-        br_area = df[(df["DEP_ADM"] == "Estadual") & df[flag]]
+        ms_est_area = filtrar_valido_area(ms[ms["DEP_ADM"] == "Estadual"], area)
+        br_area = filtrar_valido_area(df[df["DEP_ADM"] == "Estadual"], area)
         ms_est_area_sem_zero = (
             ms_est_area[ms_est_area[col] > 0] if len(ms_est_area) else ms_est_area
         )
