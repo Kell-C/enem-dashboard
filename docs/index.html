@@ -78,27 +78,6 @@
   .card .coh .dot{width:7px;height:7px;border-radius:50%;background:var(--azul)}
   .card .nota{font-size:11px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--borda);padding-top:7px}
   .plot{width:100%;min-height:220px}
-  .method-bar{margin-top:18px;margin-bottom:4px;background:linear-gradient(135deg,#fff 0%,#F8FAFC 100%);
-    border:2px solid var(--azul);border-radius:14px;padding:16px 20px 14px;box-shadow:0 4px 22px rgba(10,77,140,.12)}
-  .method-bar-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-  .method-bar-tag{background:var(--azul);color:#fff;font-size:10px;font-weight:800;text-transform:uppercase;
-    letter-spacing:.08em;padding:4px 10px;border-radius:6px}
-  .method-bar-title{margin:0;font-size:16px;font-weight:800;color:var(--azul-esc)}
-  .method-bar-controls{display:grid;grid-template-columns:1.35fr 1fr;gap:14px}
-  @media (max-width:900px){.method-bar-controls{grid-template-columns:1fr}}
-  .method-field{display:flex;flex-direction:column;gap:6px;background:var(--bg-subtle);border:1px solid var(--borda);
-    border-radius:10px;padding:12px 14px}
-  .method-field label{font-size:11px;font-weight:800;color:var(--azul);text-transform:uppercase;letter-spacing:.05em;
-    display:flex;align-items:center;gap:6px}
-  .method-select{padding:9px 12px;border:2px solid var(--borda);border-radius:8px;font-size:13px;font-weight:700;
-    color:var(--azul-esc);background:#fff;cursor:pointer;transition:border-color .15s,box-shadow .15s}
-  .method-select:hover{border-color:var(--azul-claro)}
-  .method-select:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px rgba(10,77,140,.14)}
-  .method-field-hint{font-size:11.5px;color:var(--muted);line-height:1.45;margin:0}
-  .method-bar-explain{margin:12px 0 0;padding:12px 14px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;
-    font-size:12.5px;color:var(--txt2);line-height:1.55}
-  .method-bar-explain b{color:var(--azul-esc)}
-  .method-bar-scope{margin-top:8px;font-size:11px;color:var(--muted);line-height:1.4}
   .chart-ux-tip{margin-top:12px;padding:10px 12px;border:1px solid var(--borda);border-radius:10px;
     background:rgba(255,255,255,.16);color:#EAF1FB;font-size:12px;line-height:1.45;display:flex;gap:8px;align-items:flex-start}
   .chart-ux-tip b{color:#fff}
@@ -294,44 +273,28 @@
     <div class="fstages" id="fstages"></div>
   </div>
 
-  <!-- FILTROS GLOBAIS DE METODOLOGIA -->
-  <section class="method-bar" aria-label="Filtros globais de metodologia">
-    <div class="method-bar-head">
-      <span class="method-bar-tag">Filtros globais</span>
-      <h2 class="method-bar-title">Metodologia de cálculo das médias</h2>
-    </div>
-    <div class="method-bar-controls">
-      <div class="method-field">
-        <label for="globalPopMode">População de referência
-          <span class="help">i<span class="tip"><b>Geral:</b> um único conjunto de concluintes presentes nos 2 dias e não eliminados — a mesma base entra em CN, CH, LC, MT e Redação.<br><br><b>Por prova:</b> para cada área, entram todos os concluintes que entregaram aquela prova, independentemente de presença nas demais (metodologia compatível com ENEM por Escola / AIO).</span></span>
-        </label>
-        <select id="globalPopMode" class="method-select" data-population-mode aria-label="População de referência">
-          <option value="geral">Concluintes presentes nos 2 dias — não eliminados</option>
-          <option value="por_area">Por prova — todos que concluíram cada prova</option>
-        </select>
-        <p class="method-field-hint" id="methodPopHint">Mesma base de alunos para as 5 áreas: quem terminou o ENEM (presente em CN, CH, LC, MT e não eliminado).</p>
-      </div>
-      <div class="method-field">
-        <label for="globalZeroMode">Tratamento de notas zero
-          <span class="help">i<span class="tip"><b>Incluir zeros:</b> redação em branco/cópia (status 4, nota 0) e zeros objetivos entram na média.<br><br><b>Excluir zeros:</b> remove da base participantes com qualquer nota zero em CN, CH, LC, MT ou Redação.</span></span>
-        </label>
-        <select id="globalZeroMode" class="method-select" data-school-zero-mode aria-label="Incluir ou excluir notas zero">
-          <option value="all">Incluir zeros (redação em branco = 0)</option>
-          <option value="no_zero">Excluir zeros</option>
-        </select>
-        <p class="method-field-hint" id="methodZeroHint">Redação em branco e demais zeros permanecem na média.</p>
-      </div>
-    </div>
-    <div class="method-bar-explain" id="methodExplain" role="status" aria-live="polite">
-      <b>Como ler:</b> estes filtros são <b>globais</b> — alteram simultaneamente trajetória, índice por área, distribuição, snapshot, drill-down territorial (CRE/município), desvio/CV e tabelas de escola. KPIs, funil, trajetória conjunta, bump chart, evolução MS×Brasil, comparação entre redes e integridade mantêm população fixa (presentes nos 2 dias).
-    </div>
-    <p class="method-bar-scope" id="methodScope">Metodologias diferentes respondem perguntas diferentes: <b>Geral</b> mede quem <em>terminou</em> o exame; <b>Por prova</b> mede a média de cada prova entre quem a <em>entregou</em> (como ENEM por Escola / AIO). Por isso CH, LC e Redação podem divergir entre os modos.</p>
-  </section>
-
   <!-- ÂNCORAS TEMPORAIS -->
   <details class="secacc" open>
     <summary>Trajetória <span data-dyn="range">2019–2025</span> <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Como desempenho e participação evoluíram juntos · rede estadual</span><span class="chev">▶</span></summary>
     <div class="secbody">
+  <div class="chart-toolbar" role="group" aria-label="Filtros da trajetória">
+    <div class="chart-field">
+      <label for="trajZeroMode">Notas zero</label>
+      <select id="trajZeroMode" class="dash-select" data-school-zero-mode aria-label="Filtrar trajetória por notas zero">
+        <option value="all">Incluir zeros</option>
+        <option value="no_zero">Excluir zeros</option>
+      </select>
+    </div>
+    <div class="chart-field">
+      <label for="trajPopMode">População (áreas)
+        <span class="help">i<span class="tip"><b>Geral:</b> concluintes presentes nos 2 dias e não eliminados (mesma base para todas as áreas). <b>Por área:</b> todos os concluintes que realizaram a prova daquela área específica, independente de presença nas demais.</span></span>
+      </label>
+      <select id="trajPopMode" class="dash-select" data-population-mode aria-label="Filtrar por população de referência">
+        <option value="geral">Geral — presentes 2 dias</option>
+        <option value="por_area">Por área — participantes da prova</option>
+      </select>
+    </div>
+  </div>
   <div class="grid2u">
     <div class="card">
       <h3>Trajetória conjunta · participação × desempenho
@@ -425,9 +388,18 @@
     <h3 id="escTitle">Escolas · 2025
       <span class="help">i<span class="tip"><b>Como ler:</b> a tabela mostra o retrato de <span data-dyn="lastYear">2025</span> por escola. Células em <b>vermelho</b> = abaixo da média de MS naquela área (atenção); verde = acima. <b>Part.</b> = nº de participantes presentes; <b>Tx</b> = participantes ÷ concluintes da escola. O gráfico abaixo mostra a <b>trajetória histórica</b> da escola selecionada, respeitando o filtro de notas zero. <b>População:</b> presentes nos 2 dias da rede estadual — em <span data-dyn="lastYear">2025</span> ainda pode incluir não-concluintes vinculados à escola.</span></span></h3>
     <div class="coh"><span class="dot"></span> Rede estadual · presentes 2 dias (<span data-dyn="lastYear">2025</span> pode incluir não-concluintes) · clique numa escola para ver o histórico · tabela ordenada por menor média</div>
+    <div class="chart-toolbar" role="group" aria-label="Filtros das escolas">
+      <div class="chart-field">
+        <label for="escZeroMode">Notas zero</label>
+        <select id="escZeroMode" class="dash-select" data-school-zero-mode aria-label="Filtrar escolas por notas zero">
+          <option value="all">Incluir zeros</option>
+          <option value="no_zero">Excluir zeros</option>
+        </select>
+      </div>
+    </div>
     <div class="idx-panel school-hist-panel" id="escHistWrap">
       <h5 id="escHistTitle">Histórico da escola selecionada</h5>
-      <div class="coh"><span class="dot"></span> Clique numa linha da tabela para trocar a escola · respeita os filtros globais de metodologia</div>
+      <div class="coh"><span class="dot"></span> Clique numa linha da tabela para trocar a escola · o gráfico segue o filtro ativo do painel</div>
       <div id="g_esc_hist" class="plot"></div>
       <div class="nota" id="escHistNota"></div>
     </div>
@@ -449,6 +421,11 @@
         <option value="2025">2025</option><option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option>
         <option value="2021">2021</option><option value="2020">2020</option><option value="2019">2019</option>
       </select>
+      <span style="font-size:12px;color:var(--muted)">Notas zero:</span>
+      <select id="snapZeroMode" class="dash-select" data-school-zero-mode aria-label="Filtrar snapshot por notas zero">
+        <option value="all">Incluir zeros</option>
+        <option value="no_zero">Excluir zeros</option>
+      </select>
     </div>
     <div class="grid2" style="margin-top:14px">
       <div class="card"><h3 id="snapDumbTitle">MS × Brasil por área · 2025 (dumbbell)</h3>
@@ -464,6 +441,24 @@
   <details class="secacc">
     <summary>Distribuição do desempenho <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Boxplot, histograma e dispersão por área ao longo dos anos</span><span class="chev">▶</span></summary>
     <div class="secbody">
+      <div class="chart-toolbar" role="group" aria-label="Filtros da distribuição">
+        <div class="chart-field">
+          <label for="distZeroMode">Notas zero</label>
+          <select id="distZeroMode" class="dash-select" data-school-zero-mode aria-label="Filtrar distribuição por notas zero">
+            <option value="all">Incluir zeros</option>
+            <option value="no_zero">Excluir zeros</option>
+          </select>
+        </div>
+        <div class="chart-field">
+          <label for="distPopMode">População (áreas)
+            <span class="help">i<span class="tip"><b>Geral:</b> concluintes presentes nos 2 dias e não eliminados. <b>Por área:</b> todos os concluintes que realizaram a prova daquela área.</span></span>
+          </label>
+          <select id="distPopMode" class="dash-select" data-population-mode aria-label="Filtrar por população de referência">
+            <option value="geral">Geral — presentes 2 dias</option>
+            <option value="por_area">Por área — participantes da prova</option>
+          </select>
+        </div>
+      </div>
       <div class="dist-grid" style="margin-top:4px">
         <div class="card card-box">
           <h3>Boxplot por área · evolução <span data-dyn="range">2019–2025</span>
@@ -479,7 +474,7 @@
         </div>
         <div class="card card-hist">
           <h3>Histograma de notas
-            <span class="help">i<span class="tip"><b>Como ler:</b> distribuição percentual das notas em 6 faixas. A barra colorida = MS estadual; cinza = Brasil estadual. Respeita os filtros globais de metodologia.</span></span></h3>
+            <span class="help">i<span class="tip"><b>Como ler:</b> distribuição percentual das notas em 6 faixas. A barra colorida = MS estadual; cinza = Brasil estadual. Use os filtros acima do gráfico.</span></span></h3>
           <div class="chart-toolbar" role="group" aria-label="Filtros do histograma">
             <div class="chart-field">
               <label for="histArea">Área</label>
@@ -506,6 +501,13 @@
           <div class="chart-field">
             <label for="dispCre">CRE</label>
             <select id="dispCre" class="dash-select" aria-label="Filtrar dispersão por CRE"></select>
+          </div>
+          <div class="chart-field">
+            <label for="dispZeroMode">Notas zero</label>
+            <select id="dispZeroMode" class="dash-select" data-school-zero-mode aria-label="Filtrar dispersão por notas zero">
+              <option value="all">Incluir zeros</option>
+              <option value="no_zero">Excluir zeros</option>
+            </select>
           </div>
         </div>
         <p class="disp-caption" id="dispCaption">—</p>
