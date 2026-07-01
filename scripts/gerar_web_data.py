@@ -15,7 +15,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from enem_config import ANOS, ANO_FINAL, AREA_KEYS, CONCLUINTES_XLSX, NOTA_MAP, PASTA_AGREGADOS, WEB_DATA, configure_logging
+from enem_config import ANOS, ANO_FINAL, AREA_KEYS, NOTA_MAP, PASTA_AGREGADOS, WEB_DATA, configure_logging
 
 logger = configure_logging(__name__)
 from enem_helpers import COL_MUNICIPIO, carregar_concluintes_sed, cre_curto, normalizar_texto, quantis_serie
@@ -375,21 +375,7 @@ def build_painel_data() -> dict:
     part_por_area_df = _ler("participacao_por_area")
     evol_cre_por_area_df = _ler("evolucao_cre_por_area")
     evol_muni_por_area_df = _ler("evolucao_muni_por_area")
-    try:
-        _, conc_esc = carregar_concluintes_sed()
-    except FileNotFoundError:
-        logger.warning(
-            "Concluintes SED ausentes (%s); derivando totais de evolucao_escolas.",
-            CONCLUINTES_XLSX,
-        )
-        if evol_esc.empty:
-            conc_esc = pd.DataFrame(columns=["NU_ANO", "CO_ESCOLA", COL_MUNICIPIO, "Concluintes"])
-        else:
-            conc_esc = (
-                evol_esc[["ano", "CO_ESCOLA", "NO_MUNICIPIO_ESC", "Concluintes"]]
-                .rename(columns={"ano": "NU_ANO", "NO_MUNICIPIO_ESC": COL_MUNICIPIO})
-                .drop_duplicates(subset=["NU_ANO", "CO_ESCOLA"], keep="last")
-            )
+    _, conc_esc = carregar_concluintes_sed()
 
     ms_part = part[part["dependencia"] == "Estadual"].sort_values("ano")
     br_part = part[part["dependencia"] == "Brasil-Estadual"].sort_values("ano")
