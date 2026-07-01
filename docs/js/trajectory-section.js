@@ -245,7 +245,6 @@
     }
     document.addEventListener('enemdash:schoolZeroMode', renderTrajectoryCharts);
     document.addEventListener('enemdash:populationMode', () => {
-      renderTrajectoryCharts();
       mountIndexChart(ctx);
     });
   };
