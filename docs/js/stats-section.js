@@ -252,7 +252,6 @@
     creList.forEach((c, i) => { creColors[c] = crePalette[i % crePalette.length]; });
 
     const dispCre = document.getElementById('dispCre');
-    const dispZeroMode = document.getElementById('dispZeroMode');
     const dispCaption = document.getElementById('dispCaption');
     const dispLegend = document.getElementById('dispLegend');
     const creHidden = new Set();
@@ -413,7 +412,6 @@
 
     buildDispLegend(toggleCreChip);
     if (dispCre) dispCre.onchange = renderDisp;
-    if (dispZeroMode && ED.setSchoolZeroMode) dispZeroMode.value = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
     document.addEventListener('enemdash:schoolZeroMode', () => {
       renderBoxplots();
       renderHist();
