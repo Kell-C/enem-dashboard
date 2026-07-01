@@ -764,7 +764,17 @@ def main():
         if isinstance(rows[0], pd.DataFrame):
             df_out = pd.concat(rows, ignore_index=True)
             if nome in ("escolas_2024", "escolas_por_area_2024") and "ano" in df_out.columns:
-                df_out = df_out[df_out["ano"] == df_out["ano"].max()]
+                if ANO_FINAL in df_out["ano"].values:
+                    snap_ano = ANO_FINAL
+                else:
+                    snap_ano = int(df_out["ano"].max())
+                    logger.warning(
+                        "%s: ano %s ausente no parquet; snapshot usa %s.",
+                        nome,
+                        ANO_FINAL,
+                        snap_ano,
+                    )
+                df_out = df_out[df_out["ano"] == snap_ano]
         else:
             df_out = pd.DataFrame(rows)
         path = PASTA_AGREGADOS / f"{nome}.parquet"
