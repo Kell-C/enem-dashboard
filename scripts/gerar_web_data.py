@@ -109,7 +109,105 @@ def _weighted_mean(df: pd.DataFrame, value_col: str, weight_col: str) -> float |
     return float(np.average(sub[value_col], weights=sub[weight_col]))
 
 
-def _school_history_by_municipality(evol_esc: pd.DataFrame) -> dict:
+def _school_hist_block(grp: pd.DataFrame, col_map: dict, col_map_sem_zero: dict, *, part_areas: bool = False) -> dict:
+    block = {
+        "part": [],
+        "concl": [],
+        "tx": [],
+        "geral": [],
+        "areas": {k: [] for k in AREA_KEYS},
+        "semZero": {
+            "part": [],
+            "tx": [],
+            "geral": [],
+            "areas": {k: [] for k in AREA_KEYS},
+        },
+    }
+    if part_areas:
+        block["partAreas"] = {k: [] for k in AREA_KEYS}
+
+    for ano in ANOS:
+        row = grp[grp["ano"] == ano]
+        if row.empty:
+            block["part"].append(0)
+            block["concl"].append(0)
+            block["tx"].append(None)
+            block["geral"].append(None)
+            block["semZero"]["part"].append(0)
+            block["semZero"]["tx"].append(None)
+            block["semZero"]["geral"].append(None)
+            for k in AREA_KEYS:
+                block["areas"][k].append(None)
+                block["semZero"]["areas"][k].append(None)
+                if part_areas:
+                    block["partAreas"][k].append(0)
+            continue
+        r = row.iloc[0]
+        block["part"].append(int(r.get("estudantes", 0) or 0))
+        block["concl"].append(int(r.get("Concluintes", 0) or 0))
+        block["tx"].append(round(float(r["tx_part"]), 1) if pd.notna(r.get("tx_part")) else None)
+        block["geral"].append(round(float(r["media_geral"]), 1) if pd.notna(r.get("media_geral")) else None)
+        block["semZero"]["part"].append(int(r.get("estudantes_sem_zero", 0) or 0))
+        block["semZero"]["tx"].append(
+            round(float(r["tx_part_sem_zero"]), 1) if pd.notna(r.get("tx_part_sem_zero")) else None
+        )
+        block["semZero"]["geral"].append(
+            round(float(r["media_geral_sem_zero"]), 1) if pd.notna(r.get("media_geral_sem_zero")) else None
+        )
+        for k, col in col_map.items():
+            block["areas"][k].append(round(float(r[col]), 1) if pd.notna(r.get(col)) else None)
+            col_zero = col_map_sem_zero[k]
+            block["semZero"]["areas"][k].append(
+                round(float(r[col_zero]), 1) if pd.notna(r.get(col_zero)) else None
+            )
+            if part_areas:
+                n_col = f"n_{k.lower()}"
+                block["partAreas"][k].append(int(r.get(n_col, 0) or 0))
+    return block
+
+
+def _escola_row_web(r: pd.Series, mname: str, nome_col: str) -> dict:
+    conc = int(r["Concluintes"]) if pd.notna(r.get("Concluintes")) else 0
+    part_n = int(r["estudantes"])
+    part_n_sem_zero = int(r.get("estudantes_sem_zero", 0)) if pd.notna(r.get("estudantes_sem_zero")) else 0
+    tx = round(100 * part_n / conc, 1) if conc else None
+    tx_sem_zero = round(100 * part_n_sem_zero / conc, 1) if conc and part_n_sem_zero else None
+    nome_exib = _rank_school_name(r, nome_col)
+    obs = r.get("observacao")
+    if pd.isna(obs):
+        obs = None
+    return {
+        "id": _school_id(r.get("CO_ESCOLA")),
+        "nome": str(nome_exib),
+        "obs": obs,
+        "part": part_n,
+        "concl": conc,
+        "tx": tx,
+        "cn": round(float(r["media_nu_nota_cn"]), 1),
+        "ch": round(float(r["media_nu_nota_ch"]), 1),
+        "lc": round(float(r["media_nu_nota_lc"]), 1),
+        "mt": round(float(r["media_nu_nota_mt"]), 1),
+        "red": round(float(r["media_nu_nota_redacao"]), 1),
+        "geral": round(float(r["media_geral"]), 1),
+        "semZero": {
+            "part": part_n_sem_zero,
+            "tx": tx_sem_zero,
+            "cn": round(float(r["media_nu_nota_cn_sem_zero"]), 1) if pd.notna(r.get("media_nu_nota_cn_sem_zero")) else None,
+            "ch": round(float(r["media_nu_nota_ch_sem_zero"]), 1) if pd.notna(r.get("media_nu_nota_ch_sem_zero")) else None,
+            "lc": round(float(r["media_nu_nota_lc_sem_zero"]), 1) if pd.notna(r.get("media_nu_nota_lc_sem_zero")) else None,
+            "mt": round(float(r["media_nu_nota_mt_sem_zero"]), 1) if pd.notna(r.get("media_nu_nota_mt_sem_zero")) else None,
+            "red": round(float(r["media_nu_nota_redacao_sem_zero"]), 1) if pd.notna(r.get("media_nu_nota_redacao_sem_zero")) else None,
+            "geral": round(float(r["media_geral_sem_zero"]), 1) if pd.notna(r.get("media_geral_sem_zero")) else None,
+        },
+        "_mun": str(mname),
+        "_cre": cre_curto(r.get("CRE")),
+    }
+
+
+def _school_history_by_municipality(
+    evol_esc: pd.DataFrame,
+    evol_esc_pa: pd.DataFrame | None = None,
+) -> dict:
     out = {}
     if evol_esc.empty:
         return out
@@ -123,6 +221,14 @@ def _school_history_by_municipality(evol_esc: pd.DataFrame) -> dict:
         "RED": "media_nu_nota_redacao",
     }
     col_map_sem_zero = {k: f"{col}_sem_zero" for k, col in col_map.items()}
+
+    pa_by_muni: dict[str, dict[str, pd.DataFrame]] = {}
+    if evol_esc_pa is not None and not evol_esc_pa.empty:
+        for mname, mgrp in evol_esc_pa.groupby("NO_MUNICIPIO_ESC"):
+            pa_by_muni[str(mname)] = {
+                _school_id(sid): grp.sort_values("ano")
+                for sid, grp in mgrp.groupby("CO_ESCOLA")
+            }
 
     for mname, grp_m in evol_esc.groupby("NO_MUNICIPIO_ESC"):
         muni_hist = {}
@@ -145,48 +251,11 @@ def _school_history_by_municipality(evol_esc: pd.DataFrame) -> dict:
                 "cre": str(cre_curto(sample.get("CRE"))) if pd.notna(sample.get("CRE")) else None,
                 "obs": obs,
                 "anos": ANOS,
-                "part": [],
-                "concl": [],
-                "tx": [],
-                "geral": [],
-                "areas": {k: [] for k in AREA_KEYS},
-                "semZero": {
-                    "part": [],
-                    "tx": [],
-                    "geral": [],
-                    "areas": {k: [] for k in AREA_KEYS},
-                },
+                **_school_hist_block(grp, col_map, col_map_sem_zero),
             }
-            for ano in ANOS:
-                row = grp[grp["ano"] == ano]
-                if row.empty:
-                    item["part"].append(0)
-                    item["concl"].append(0)
-                    item["tx"].append(None)
-                    item["geral"].append(None)
-                    item["semZero"]["part"].append(0)
-                    item["semZero"]["tx"].append(None)
-                    item["semZero"]["geral"].append(None)
-                    for k in AREA_KEYS:
-                        item["areas"][k].append(None)
-                        item["semZero"]["areas"][k].append(None)
-                    continue
-                r = row.iloc[0]
-                item["part"].append(int(r.get("estudantes", 0) or 0))
-                item["concl"].append(int(r.get("Concluintes", 0) or 0))
-                item["tx"].append(round(float(r["tx_part"]), 1) if pd.notna(r.get("tx_part")) else None)
-                item["geral"].append(round(float(r["media_geral"]), 1) if pd.notna(r.get("media_geral")) else None)
-                item["semZero"]["part"].append(int(r.get("estudantes_sem_zero", 0) or 0))
-                item["semZero"]["tx"].append(round(float(r["tx_part_sem_zero"]), 1) if pd.notna(r.get("tx_part_sem_zero")) else None)
-                item["semZero"]["geral"].append(
-                    round(float(r["media_geral_sem_zero"]), 1) if pd.notna(r.get("media_geral_sem_zero")) else None
-                )
-                for k, col in col_map.items():
-                    item["areas"][k].append(round(float(r[col]), 1) if pd.notna(r.get(col)) else None)
-                    col_zero = col_map_sem_zero[k]
-                    item["semZero"]["areas"][k].append(
-                        round(float(r[col_zero]), 1) if pd.notna(r.get(col_zero)) else None
-                    )
+            pa_grp = pa_by_muni.get(str(mname), {}).get(sid)
+            if pa_grp is not None and not pa_grp.empty:
+                item["porArea"] = _school_hist_block(pa_grp, col_map, col_map_sem_zero, part_areas=True)
             muni_hist[sid] = item
         out[str(mname)] = muni_hist
     return out
@@ -352,7 +421,9 @@ def build_painel_data() -> dict:
     evol_cre = _ler("evolucao_cre")
     evol_muni = _ler("evolucao_muni")
     evol_esc = _ler("evolucao_escolas")
+    evol_esc_pa = _ler("evolucao_escolas_por_area")
     esc24 = _ler("escolas_2024")
+    esc24_pa = _ler("escolas_por_area_2024")
     refs = _ler("referencias")
     quantis = _ler("quantis")
     quantis_sem_zero = _ler("quantis_sem_zero")
@@ -521,59 +592,52 @@ def build_painel_data() -> dict:
             }
 
     esc = {}
-    esc_hist = _school_history_by_municipality(evol_esc)
+    escPorArea = {}
+    esc_hist = _school_history_by_municipality(evol_esc, evol_esc_pa)
     dispersao = []
+    nome_col_esc = "nome_exibicao" if not esc24.empty and "nome_exibicao" in esc24.columns else "NOME_ESCOLA"
+    pa_by_id: dict[str, pd.Series] = {}
+    if not esc24_pa.empty:
+        for _, pr in esc24_pa.iterrows():
+            pa_by_id[_school_id(pr.get("CO_ESCOLA"))] = pr
+
     if not esc24.empty:
         for mname, grp in esc24.groupby("NO_MUNICIPIO_ESC"):
             rows = []
+            rows_pa = []
             for _, r in grp.sort_values("media_geral").iterrows():
-                conc = int(r["Concluintes"]) if pd.notna(r.get("Concluintes")) else 0
-                part_n = int(r["estudantes"])
-                part_n_sem_zero = int(r.get("estudantes_sem_zero", 0)) if pd.notna(r.get("estudantes_sem_zero")) else 0
-                tx = round(100 * part_n / conc, 1) if conc else None
-                tx_sem_zero = round(100 * part_n_sem_zero / conc, 1) if conc and part_n_sem_zero else None
-                nome_exib = _rank_school_name(r, "nome_exibicao" if "nome_exibicao" in esc24.columns else "NOME_ESCOLA")
-                obs = r.get("observacao")
-                if pd.isna(obs):
-                    obs = None
-                item = {
-                    "id": _school_id(r.get("CO_ESCOLA")),
-                    "nome": str(nome_exib),
-                    "obs": obs,
-                    "part": part_n,
-                    "concl": conc,
-                    "tx": tx,
-                    "cn": round(float(r["media_nu_nota_cn"]), 1),
-                    "ch": round(float(r["media_nu_nota_ch"]), 1),
-                    "lc": round(float(r["media_nu_nota_lc"]), 1),
-                    "mt": round(float(r["media_nu_nota_mt"]), 1),
-                    "red": round(float(r["media_nu_nota_redacao"]), 1),
-                    "geral": round(float(r["media_geral"]), 1),
-                    "semZero": {
-                        "part": part_n_sem_zero,
-                        "tx": tx_sem_zero,
-                        "cn": round(float(r["media_nu_nota_cn_sem_zero"]), 1) if pd.notna(r.get("media_nu_nota_cn_sem_zero")) else None,
-                        "ch": round(float(r["media_nu_nota_ch_sem_zero"]), 1) if pd.notna(r.get("media_nu_nota_ch_sem_zero")) else None,
-                        "lc": round(float(r["media_nu_nota_lc_sem_zero"]), 1) if pd.notna(r.get("media_nu_nota_lc_sem_zero")) else None,
-                        "mt": round(float(r["media_nu_nota_mt_sem_zero"]), 1) if pd.notna(r.get("media_nu_nota_mt_sem_zero")) else None,
-                        "red": round(float(r["media_nu_nota_redacao_sem_zero"]), 1) if pd.notna(r.get("media_nu_nota_redacao_sem_zero")) else None,
-                        "geral": round(float(r["media_geral_sem_zero"]), 1) if pd.notna(r.get("media_geral_sem_zero")) else None,
-                    },
-                }
+                item = _escola_row_web(r, mname, nome_col_esc)
+                mun_nome = item.pop("_mun")
+                cre_nome = item.pop("_cre")
                 rows.append(item)
+                pr = pa_by_id.get(item["id"])
+                item_pa = None
+                if pr is not None:
+                    item_pa = _escola_row_web(pr, mname, nome_col_esc)
+                    item_pa.pop("_mun", None)
+                    item_pa.pop("_cre", None)
+                    rows_pa.append(item_pa)
                 dispersao.append({
                     "nome": item["nome"],
-                    "obs": obs,
-                    "mun": str(mname),
-                    "cre": cre_curto(r.get("CRE")),
+                    "obs": item.get("obs"),
+                    "mun": mun_nome,
+                    "cre": cre_nome,
                     "nota": item["geral"],
-                    "n": part_n,
-                    "tx": tx,
+                    "n": item["part"],
+                    "tx": item["tx"],
                     "notaSemZero": item["semZero"]["geral"],
-                    "nSemZero": part_n_sem_zero,
-                    "txSemZero": tx_sem_zero,
+                    "nSemZero": item["semZero"]["part"],
+                    "txSemZero": item["semZero"]["tx"],
+                    "notaPorArea": item_pa["geral"] if item_pa else None,
+                    "nPorArea": item_pa["part"] if item_pa else None,
+                    "txPorArea": item_pa["tx"] if item_pa else None,
+                    "notaPorAreaSemZero": item_pa["semZero"]["geral"] if item_pa else None,
+                    "nPorAreaSemZero": item_pa["semZero"]["part"] if item_pa else None,
+                    "txPorAreaSemZero": item_pa["semZero"]["tx"] if item_pa else None,
                 })
             esc[str(mname)] = rows
+            if rows_pa:
+                escPorArea[str(mname)] = sorted(rows_pa, key=lambda x: (x.get("geral") is None, x.get("geral") or 0))
 
     integ = {"rede": {}, "cre": {}, "mun": {}}
     for escopo in ["Estadual", "Federal", "Municipal", "Privada", "Brasil-Estadual"]:
@@ -873,6 +937,7 @@ def build_painel_data() -> dict:
         },
         "mun": mun,
         "esc": esc,
+        "escPorArea": escPorArea,
         "escHist": esc_hist,
         "msArea": ms_area_series,
         "redes": redes,
@@ -954,14 +1019,15 @@ def main():
 
     logger.info("Gerado: %s (%s KB)", json_path, json_path.stat().st_size // 1024)
     logger.info("Gerado: %s", js_path)
-    f24 = painel["funil2024"]["Estadual"]
-    logger.info(
-        "MS %s: %s validos / %s concluintes SED = %.1f%%",
-        ANO_FINAL,
-        f24["presfilt"],
-        f24["concluintes"],
-        100 * f24["presfilt"] / f24["concluintes"],
-    )
+    f24 = painel.get("funil2024", {}).get("Estadual")
+    if f24 and f24.get("concluintes"):
+        logger.info(
+            "MS %s: %s validos / %s concluintes SED = %.1f%%",
+            ANO_FINAL,
+            f24["presfilt"],
+            f24["concluintes"],
+            100 * f24["presfilt"] / f24["concluintes"],
+        )
 
     try:
         meta = {
