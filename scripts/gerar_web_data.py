@@ -1007,6 +1007,14 @@ def main():
     WEB_DATA.mkdir(parents=True, exist_ok=True)
     painel = _sanitize(build_painel_data())
 
+    anos = painel.get("anos") or ANOS
+    if anos and painel.get("medMs") and len(painel["medMs"]) >= len(anos):
+        if painel["medMs"][len(anos) - 1] is None:
+            raise SystemExit(
+                f"Ano {ANO_FINAL} sem dados no painel (medMs=null). "
+                f"Verifique o parquet consolidado e rode gerar_agregados.py antes de publicar."
+            )
+
     json_path = WEB_DATA / "data.json"
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(painel, f, ensure_ascii=False, separators=(",", ":"))
