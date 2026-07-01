@@ -1,5 +1,11 @@
 __pycache__/
 *.pyc
 venv/
+.venv/
+.env
 *.log
 dados/
+tmp_*.py
+tmp_*.html
+tmp_*.js
+scripts/docs/

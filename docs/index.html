@@ -5,244 +5,102 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Painel ENEM MS — 2019-2025</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A4D8C'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='14' font-family='Segoe UI,sans-serif' fill='white'%3EMS%3C/text%3E%3C/svg%3E" />
-<link rel="stylesheet" href="style.css?v=5">
-<style>
-:root{
-    --bg-app:#DCE3EC; --bg-card:#FFFFFF; --bg-subtle:#E8EDF3; --insight:#F1F5F9;
-    --txt:#0F172A; --txt2:#334155; --muted:#475569; --borda:#B8C4D4;
-    --azul:#0A4D8C; --azul-esc:#053B71; --azul-sed:#1B7FD6; --azul-claro:#3BA4E8;
-    --verde:#2EAD6E; --laranja:#F07A28; --dourado:#F2C230; --critico:#D6453D; --brasil:#7B8794;
-    --radius:12px; --shadow:0 1px 3px rgba(8,30,60,.08),0 4px 18px rgba(8,30,60,.06);
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg-app);color:var(--txt);
-    font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;font-size:14px}
-  .wrap{max-width:1600px;margin:0 auto;padding:18px 22px 60px}
-  @media (max-width:1440px){.wrap{padding:14px 16px 40px}}
-  @media (max-width:1200px){.wrap{padding:12px 14px 30px}}
-
-  .cab{background:linear-gradient(135deg,#0A4D8C 0%,#053B71 100%);border-radius:16px;
-    padding:18px 24px;color:#fff;box-shadow:var(--shadow)}
-  .cab-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-  .cab h1{margin:0;font-size:22px;letter-spacing:.2px}
-  .cab .sub{margin:2px 0 0;font-size:13px;color:#CADBF0}
-  .cohort{display:flex;gap:8px;align-ems:center;flex-wrap:wrap}
-  .pill{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);
-    border-radius:999px;padding:6px 12px;font-size:12px;color:#fff;display:flex;gap:8px;align-ems:center}
-  .pill select{background:transparent;border:none;color:#fff;font-size:12px;font-weight:600;outline:none}
-  .pill select option{color:#0F172A}
-  .refbar{display:flex;gap:10px;align-ems:center;flex-wrap:wrap;margin-top:12px;
-    background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:8px 14px}
-  .refbar .tag{background:var(--dourado);color:#3a2c00;font-weight:700;font-size:11px;
-    padding:3px 9px;border-radius:6px;text-transform:uppercase;letter-spacing:.4px}
-  .refbar .{font-size:12.5px;color:#EaF1Fb} .refbar .sep{color:#7FA8D6}
-
-  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:16px}
-  @media (max-width:1400px){.kpis{grid-template-columns:repeat(4,1fr)}}
-  @media (max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}}
-  .kpi{background:var(--bg-card);border:1px solid var(--borda);border-radius:var(--radius);
-    padding:14px 16px;box-shadow:var(--shadow);posion:relative;overflow:hidden}
-  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--azul)}
-  .kpi.neg::before{background:var(--critico)}
-  .kpi .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0 0 6px;display:flex;align-items:center;gap:5px}
-  .kpi .rowv{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
-  .kpi .val{font-size:25px;font-weight:800;color:var(--azul-esc);line-height:1}
-  .kpi .spark{width:96px;height:34px}
-  .kpi .vsub{font-size:11px;color:var(--muted);margin-top:7px}
-  .trend{font-weight:700} .trend.up{color:var(--verde)} .trend.down{color:var(--critico)}
-  .funil{margin-top:16px;background:var(--bg-card);border:1px solid var(--borda);border-radius:var(--radius);padding:12px 18px 14px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-  .funil .fl{display:flex;align-items:center;gap:6px;margin-bottom:4px}
-  .funil .fh{font-weight:700;color:var(--azul);font-size:14px}
-  .funil .fsub{font-size:11.5px;color:var(--muted)}
-  .fstages{display:flex;align-items:stretch;flex-wrap:wrap;margin-top:8px}
-  .fstage{flex:1;min-width:150px;padding:4px 14px;position:relative}
-  .fstage+.fstage{border-left:1px dashed var(--borda)}
-  .fstage .fv{font-size:23px;font-weight:800;color:var(--azul-esc);line-height:1}
-  .fstage .fk{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
-  .fstage .fp{font-size:12px;font-weight:700;color:var(--brasil);margin-top:3px}
-  .fstage.hl .fv{color:var(--azul-sed)} .fstage.hl .fp{color:var(--verde)}
-
-  .sech{display:flex;align-items:center;gap:10px;margin:22px 2px 10px}
-  .sech h2{margin:0;font-size:15px;color:var(--azul);font-weight:700}
-  .sech .hint{font-size:12px;color:var(--muted)}
-  .sech .line{flex:1;height:1px;background:var(--borda)}
-
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .grid2u{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
-  @media (max-width:1200px){.grid2,.grid2u{grid-template-columns:1fr}}
-  @media (min-width:1601px){.grid2{gap:12px}.grid2u{gap:12px}}
-  .card{background:var(--bg-card);border:1px solid var(--borda);border-radius:var(--radius);
-    box-shadow:var(--shadow);padding:14px 16px}
-  .card h3{margin:0;font-size:14px;color:var(--txt);font-weight:700;display:flex;align-items:center;gap:6px}
-  .card .coh{font-size:11px;color:var(--muted);margin:3px 0 8px;display:flex;gap:6px;align-items:center}
-  .card .coh .dot{width:7px;height:7px;border-radius:50%;background:var(--azul)}
-  .card .nota{font-size:11px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--borda);padding-top:7px}
-  .plot{width:100%;min-height:220px}
-  .chart-ux-tip{margin-top:12px;padding:10px 12px;border:1px solid var(--borda);border-radius:10px;
-    background:rgba(255,255,255,.16);color:#EAF1FB;font-size:12px;line-height:1.45;display:flex;gap:8px;align-items:flex-start}
-  .chart-ux-tip b{color:#fff}
-  .chart-ux-tip .dot{width:8px;height:8px;border-radius:50%;background:#F2C230;flex:0 0 auto;margin-top:5px}
-  .plot-controls-outside{position:relative;overflow:visible}
-  .plot-controls-outside .plotly .modebar{
-    top:2px!important;right:2px!important;background:rgba(255,255,255,.78)!important;border:1px solid rgba(159,176,199,.7);
-    border-radius:6px;padding:0 1px;box-shadow:0 1px 4px rgba(8,30,60,.06);opacity:.76;
-    transform:scale(.54);transform-origin:top right;transition:opacity .15s ease,box-shadow .15s ease
-  }
-  .plot-controls-outside:hover .plotly .modebar,
-  .plot-controls-outside:focus-within .plotly .modebar{opacity:1;box-shadow:0 2px 7px rgba(8,30,60,.12)}
-  .plot-controls-outside .plotly .modebar-btn{color:#053B71!important}
-  .plot-controls-outside .plotly .modebar-btn:hover{background:#E8EDF3!important;color:#0A4D8C!important}
-  .plot-controls-outside .plotly .modebar-group{margin-right:0}
-  .js-plotly-plot .plotly .gridlayer path,
-  .js-plotly-plot .plotly .gridlayer line{stroke:transparent!important}
-  @media (max-width:700px){
-    .plot-controls-outside .plotly .modebar{top:2px!important;transform:scale(.5);transform-origin:top right}
-  }
-
-  /* tooltip "como ler" */
-  .help{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;
-    background:var(--bg-subtle);color:var(--muted);font-size:10px;font-weight:800;cursor:help;position:relative;border:1px solid var(--borda)}
-  .help:hover .tip{display:block}
-  .tip{display:none;position:absolute;z-index:30;top:20px;left:50%;transform:translateX(-50%);
-    width:248px;background:#0F172A;color:#EAF1FB;font-size:11px;font-weight:400;line-height:1.45;
-    padding:9px 11px;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.25);text-transform:none;letter-spacing:0}
-  .tip b{color:#fff}
-
-  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--txt2);margin-top:4px}
-  .legend span{display:inline-flex;align-items:center;gap:5px}
-  .sw{width:12px;height:3px;border-radius:2px;display:inline-block} .sw.box{height:11px;width:11px;border-radius:3px}
-
-  /* drill-down */
-  .crow{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:6px}
-  .ctile{border:1px solid var(--borda);border-radius:9px;padding:6px 8px 2px;cursor:pointer;background:var(--bg-card);transition:.12s}
-  .ctile:hover{border-color:var(--azul-sed);box-shadow:0 2px 10px rgba(10,77,140,.12)}
-  .ctile.sel{border-color:var(--azul);box-shadow:0 0 0 2px rgba(10,77,140,.18)}
-  .ctile .ct{font-size:11px;font-weight:600;color:var(--txt2);display:flex;justify-content:space-between}
-  .ctile .ct .arr{font-weight:800}
-
-  .bread{display:flex;align-items:center;gap:8px;font-size:13px;margin:2px 0 4px;flex-wrap:wrap}
-  .bread .crumb{padding:4px 10px;border-radius:7px;background:var(--bg-subtle);color:var(--azul);font-weight:600;cursor:pointer}
-  .bread .crumb.active{background:var(--azul);color:#fff;cursor:default}
-  .bread .sepc{color:var(--muted)}
-
-  .areagrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px 12px;margin-top:6px}
-  .atile{border:1px solid var(--bg-subtle);border-radius:8px;padding:5px 7px 2px}
-  .atile.warn{border-color:var(--critico);background:rgba(214,69,61,.045)}
-  .atile .at{font-size:11px;font-weight:700;color:var(--txt2);display:flex;justify-content:space-between}
-  .atile .at .fl{font-size:9px;font-weight:800}
-
-  .attbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
-  .attbl th{text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.3px;
-    border-bottom:1.5px solid var(--borda);padding:5px 7px;position:sticky;top:0;background:#fff}
-  .attbl td{padding:6px 7px;border-bottom:1px solid var(--bg-subtle)}
-  .attbl th:nth-child(n+3),.attbl td:nth-child(n+3){text-align:center}
-  .attbl td.bad{color:var(--critico);font-weight:800} .attbl td.ok{color:var(--verde);font-weight:700}
-  .attbl tbody tr:hover{background:var(--insight)}
-  .scroll{max-height:330px;overflow:auto}
-  .muted{color:var(--muted)} .b{font-weight:700}
-
-  details.more{margin-top:16px}
-  details.more>summary{cursor:pointer;list-style:none;background:var(--bg-card);border:1px solid var(--borda);
-    border-radius:10px;padding:10px 14px;font-weight:600;color:var(--azul);box-shadow:var(--shadow);display:flex;align-items:center;gap:8px}
-  details.more>summary::-webkit-details-marker{display:none}
-  details.more>summary .chev{transition:transform .2s} details.more[open]>summary .chev{transform:rotate(90deg)}
-
-  /* accordion para secoes principais */
-  .secacc{margin-top:18px;border:1px solid var(--borda);border-radius:var(--radius);background:var(--bg-card);box-shadow:var(--shadow);overflow:hidden}
-  .secacc summary{cursor:pointer;list-style:none;padding:12px 18px;font-weight:700;color:var(--azul);font-size:15px;display:flex;align-items:center;gap:10px;background:var(--bg-subtle)}
-  .secacc summary::-webkit-details-marker{display:none}
-  .secacc summary .chev{transition:transform .2s;margin-left:auto;font-size:12px;color:var(--muted)} .secacc[open]>summary .chev{transform:rotate(90deg)}
-  .secacc .secbody{padding:14px 18px 18px}
-
-  /* modal drill-down */
-  .modal{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;display:none;align-items:center;justify-content:center}
-  .modal.on{display:flex}
-  .modalbox{background:var(--bg-card);border-radius:var(--radius);box-shadow:0 20px 60px rgba(0,0,0,.35);width:92vw;max-width:1100px;max-height:90vh;display:flex;flex-direction:column}
-  .modalhead{padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between}
-  .modalhead h3{margin:0;font-size:15px;color:var(--azul)}
-  .modalclose{cursor:pointer;background:var(--bg-subtle);border:1px solid var(--borda);border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700;color:var(--muted)}
-  .modalclose:hover{background:var(--critico);color:#fff;border-color:var(--critico)}
-  .modalbody{padding:14px 18px;overflow:auto;flex:1}
-
-  .footer{margin-top:26px;font-size:11px;color:var(--muted);text-align:center}
-  .mini-table{width:100%;border-collapse:collapse;font-size:12px}
-  .mini-table td{padding:4px 6px;border-bottom:1px solid var(--bg-subtle);vertical-align:top}
-  .mini-table td:last-child{text-align:right;font-weight:600;white-space:nowrap}
-  .file-warn{position:fixed;inset:0;z-index:100000;background:linear-gradient(160deg,#E8EDF3 0%,#DCE3EC 100%);
-    display:flex;align-items:center;justify-content:center;padding:24px}
-  .file-warn-box{max-width:560px;background:#fff;border:1px solid var(--borda);border-radius:16px;padding:28px 32px;box-shadow:var(--shadow)}
-  .file-warn-box h2{margin:0 0 12px;color:var(--azul-esc);font-size:20px}
-  .file-warn-box p{margin:0 0 10px;line-height:1.55;color:var(--txt2)}
-  .file-warn-box code{background:var(--bg-subtle);padding:2px 6px;border-radius:4px;font-size:13px}
-  .file-warn-box .cmd{display:block;margin:14px 0;padding:12px 14px;background:#0F172A;color:#E2E8F0;border-radius:8px;font-size:13px;white-space:pre-wrap}
-  .index-drill{margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .index-drill select{padding:4px 8px;border:1px solid var(--borda);border-radius:6px;font-size:12px;background:#fff}
-  .index-drill button{padding:5px 12px;border:1px solid var(--azul);border-radius:6px;background:var(--azul);color:#fff;font-size:12px;font-weight:600;cursor:pointer}
-  .index-detail{display:none;margin-top:14px;padding:16px 18px;border:1px solid var(--borda);border-radius:12px;background:linear-gradient(180deg,#fff 0%,var(--bg-subtle) 100%);box-shadow:var(--shadow)}
-  .index-detail-wide{margin-top:16px}
-  .index-detail.on{display:block}
-  .index-detail h4,.idx-head h4{margin:0;font-size:15px;color:var(--azul-esc);display:flex;align-items:center;gap:8px}
-  .idx-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
-  .idx-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-  .idx-sub{font-size:11px;color:var(--muted)}
-  .idx-kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;margin-bottom:14px}
-  @media (max-width:1200px){.idx-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
-  @media (max-width:700px){.idx-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  .idx-kpi{background:#fff;border:1px solid var(--borda);border-radius:10px;padding:10px 12px}
-  .idx-kl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-  .idx-kv{font-size:20px;font-weight:700;margin-top:3px;color:var(--azul-esc);line-height:1.15}
-  .idx-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:12px}
-  @media (max-width:1100px){.idx-grid{grid-template-columns:1fr}}
-  .idx-ranks{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
-  @media (max-width:1100px){.idx-ranks{grid-template-columns:1fr}}
-  .idx-kpi .idx-kh{font-size:9px;color:var(--muted);margin-top:2px;line-height:1.2}
-  .idx-cmp-note{margin:0 0 6px;font-size:10px;color:var(--muted);line-height:1.35}
-  .idx-panel{background:#fff;border:1px solid var(--borda);border-radius:10px;padding:10px 12px 6px}
-  .idx-panel h5{margin:0 0 4px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.02em}
-  .idx-plot{min-height:200px}
-  .idx-empty{margin:24px 8px;font-size:12px;color:var(--muted);text-align:center}
-  #areaModalBody.index-detail-on{padding:4px 2px}
-
-</style>
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <div class="wrap">
 
-  <div class="cab">
-    <div class="cab-top">
+  <header class="page-header">
+    <div class="page-header-top">
       <div>
+        <p class="page-eyebrow">SED/MS · Coordenadoria do Ensino Médio</p>
         <h1>Painel ENEM · Mato Grosso do Sul</h1>
-        <p class="sub">Evolução de desempenho e participação · Coordenadoria do Ensino Médio — SED/MS · <span data-dyn="range">2019–2025</span></p>
+        <p class="page-sub">Rede estadual · <span data-dyn="range">2019–2025</span></p>
       </div>
-      <div class="cohort">
-        <span class="pill">Período <select id="periodoSelect" name="periodo" aria-label="Período"><option data-dyn="range">2019–2025</option><option data-dyn="recentRange">2022–2025</option></select></span>
-        <span class="pill">Comparar com <select name="comparar" aria-label="Comparar com"><option>Brasil — rede estadual</option><option>Brasil — todas as redes</option></select></span>
-        <span class="pill">Rede <select name="rede" aria-label="Rede"><option>Estadual</option><option>Todas as redes</option><option>Federal</option><option>Privada</option></select></span>
+      <div class="page-filters">
+        <label class="filter-pill">Período
+          <select id="periodoSelect" name="periodo" aria-label="Período"><option data-dyn="range">2019–2025</option><option data-dyn="recentRange">2022–2025</option></select>
+        </label>
       </div>
     </div>
-    <div class="refbar">
-      <span class="tag">População de referência</span>
-      <span class="it">Prováveis concluintes do EM (3º ano) · presentes nos 2 dias · não eliminados
-        <span class="help">i<span class="tip"><b>Concluinte</b> = estudante cursando o 3º ano e concluindo o EM no ano da edição. <b>2019–2023:</b> identificado pela autodeclaração do participante (<code>TP_ST_CONCLUSAO = 2</code>), <b>sem egressos</b>. <b><span data-dyn="schoolRange">2024–2025</span>:</b> o INEP não divulga a autodeclaração por escola, mas vincula cada participante à sua escola, permitindo o recorte de <b>prováveis concluintes do EM</b> com escola identificada. Assim, os recortes por escola/município/CRE, bem como as comparações por rede entre MS, demais UFs e Brasil, passam a considerar <b>essa população de referência</b> (presentes nos 2 dias, não eliminados). O denominador da participação continua sendo a matrícula de concluintes (Censo SED/MS).</span></span></span>
-      <span class="sep">·</span><span class="it"><b>Mesma população de referência</b> em MS, demais UFs e Brasil (<span data-dyn="schoolRange">2024–2025</span> via vínculo com escola)</span>
-      <span class="sep">·</span><span class="it">Participação efetiva = presentes ÷ concluintes</span>
-      <span class="sep">·</span><span class="it" style="color:#F4A460">Nos recortes de <span data-dyn="schoolRange">2024–2025</span>, os concluintes presentes podem incluir estudantes de outras modalidades vinculadas à escola, como EJA, e a leitura deve ser feita com cautela</span>
+  </header>
+
+  <details class="ref-note">
+    <summary>Metodologia e população de referência</summary>
+    <div class="ref-body">
+      <p><strong>População de referência (médias, rankings e comparativos):</strong> participantes que concluíram a prova em ao menos uma área objetiva (CN, CH, LC ou MT), ou seja, <code>TP_PRESENCA = 1</code> na área, excluindo eliminados por fraude/fuga (<code>TP_PRESENCA = 2</code>) ou na redação (<code>TP_STATUS_REDACAO = 2</code>). A nota de cada área entra na média apenas quando o participante concluiu aquela prova; a média geral é a média das notas disponíveis.</p>
+      <p><strong>Recorte de concluintes:</strong> 2019–2023 = autodeclaração de conclusão do EM (<code>TP_ST_CONCLUSAO = 2</code>); 2024–2025 = vínculo com escola no microdado INEP (<code>CO_ESCOLA</code> preenchido).</p>
+      <p><strong>Participação efetiva</strong> = participantes na população de referência ÷ concluintes matriculados (Censo SED/MS). Mesma definição em MS, demais UFs e Brasil.</p>
     </div>
-    <div class="chart-ux-tip">
-      <span class="dot"></span>
-      <span><b>Navegação:</b> os controles de zoom e retorno ficam apenas na seção Trajetória e no gráfico de dispersão por escolas. <b>Duplo clique</b> também redefine a visão.</span>
+  </details>
+
+  <details class="secacc secacc-primary" id="rankEscSection" open>
+    <summary>Ranking das escolas estaduais · 2025<span class="chev">▶</span></summary>
+    <div class="secbody">
+      <div class="rank-panel-head">
+        <h2>Desempenho e posição no ENEM</h2>
+        <p id="rankEscMeta">Carregando…</p>
+      </div>
+      <p class="rank-scope-note">Posições na tabela referem-se ao ranking entre <strong>escolas estaduais</strong> (município, MS e Brasil). Fonte: microdados INEP / ENEM.</p>
+      <div id="rankEscListView" class="rank-list-view">
+        <div class="rank-search-wrap">
+          <input type="search" class="rank-search" id="rankEscSearch" placeholder="Buscar escola, município ou INEP…" aria-label="Buscar escola" />
+        </div>
+        <div class="rank-toolbar" role="group" aria-label="Filtros do ranking">
+          <label>Município
+            <select id="rankEscMunicipio" aria-label="Filtrar município"><option value="">Todos</option></select>
+          </label>
+          <label>Ordenar
+            <select id="rankEscSort" aria-label="Ordenar ranking">
+              <option value="ms_uf">Posição em MS (estaduais)</option>
+              <option value="media">Média geral</option>
+              <option value="br_est">Posição no Brasil (estaduais)</option>
+              <option value="mun">Nome (A–Z)</option>
+            </select>
+          </label>
+        </div>
+        <div class="rank-table-wrap">
+          <table class="rank-table" aria-describedby="rankEscMeta">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Escola</th>
+                <th>Média</th>
+                <th>Município</th>
+                <th>MS</th>
+                <th>Brasil</th>
+              </tr>
+            </thead>
+            <tbody id="rankEscBody"></tbody>
+          </table>
+        </div>
+        <p class="rank-hint">Clique na escola para ver posição entre todas as redes e a evolução das notas por área.</p>
+      </div>
+      <div id="rankEscDetailView" class="rank-detail-view" aria-live="polite">
+        <div class="rank-hist-head">
+          <div>
+            <h4 id="rankEscHistTitle">Escola selecionada</h4>
+            <p class="rank-hist-sub" id="rankEscHistSub"></p>
+          </div>
+          <button type="button" id="rankEscHistClose" class="modalclose">Voltar à lista</button>
+        </div>
+        <p class="rank-detail-media">Média geral · ENEM 2025: <strong id="rankEscDetailMedia">—</strong></p>
+        <div id="rankEscPosicoes" class="rank-pos-grid"></div>
+        <div id="rankEscHistPlot" class="rank-hist-plot plot-unified-hover"></div>
+      </div>
+      <div class="rank-empty">Dados não carregados. Execute <code>python scripts/gerar_ranking_aio_web.py</code>.</div>
     </div>
-  </div>
+  </details>
 
   <!-- KPIs -->
   <div class="kpis">
     <div class="kpi">
-      <p class="lbl">Média geral · estadual <span class="help">i<span class="tip"><b>O que é:</b> média das 5 notas (CN, CH, LC, MT, Redação) dos concluintes presentes. <b>Como ler:</b> o número mostra <span data-dyn="lastYear">2025</span>; a mini-linha acompanha a trajetória <span data-dyn="range">2019–2025</span>. Subir é melhor.</span></span></p>
+      <p class="lbl">Média geral · estadual <span class="help">i<span class="tip"><b>O que é:</b> média das notas disponíveis (CN, CH, LC, MT, Redação) dos participantes na população de referência. <b>Como ler:</b> o número mostra <span data-dyn="lastYear">2025</span>; a mini-linha acompanha a trajetória <span data-dyn="range">2019–2025</span>. Subir é melhor.</span></span></p>
       <div class="rowv"><div class="val" id="kpiMedVal">—</div><div id="s_media" class="spark"></div></div>
       <div class="vsub" id="kpiMedSub">—</div>
     </div>
     <div class="kpi">
-      <p class="lbl">Participação efetiva <span class="help">i<span class="tip"><b>O que é:</b> presentes nos 2 dias ÷ <b>concluintes</b> do EM (não os inscritos). Mede quantos concluintes a rede leva à prova. <b>Como ler:</b> o vale de 2020–2021 é a pandemia.</span></span></p>
+      <p class="lbl">Participação efetiva <span class="help">i<span class="tip"><b>O que é:</b> participantes na população de referência ÷ <b>concluintes</b> do EM (matrícula SED). Inclui quem concluiu ao menos uma área objetiva, sem eliminação. <b>Como ler:</b> o vale de 2020–2021 é a pandemia.</span></span></p>
       <div class="rowv"><div class="val" id="kpiPartVal">—</div><div id="s_part" class="spark"></div></div>
       <div class="vsub" id="kpiPartSub">—</div>
     </div>
@@ -256,7 +114,7 @@
       <div class="rowv"><div class="val" id="kpiGapVal">—</div><div id="s_gap" class="spark"></div></div>
       <div class="vsub" id="kpiGapSub">—</div>
     </div>
-    <div class="kpi">
+    <div class="kpi kpi-extra">
       <p class="lbl">Taxa de eliminação <span class="help">i<span class="tip"><b>O que é:</b> % de participantes efetivos que foram eliminados em alguma prova (presença = 2) ou na redação (status = 4). <b>Como ler:</b> quanto menor, melhor. A redação é o principal vetor.</span></span></p>
       <div class="rowv"><div class="val" id="kpiElimVal">1,2%</div><div id="s_elim" class="spark"></div></div>
       <div class="vsub" id="kpiElimSub"><span data-dyn="lastYear">2025</span> · <span class="trend up">▲ estável</span> vs <span data-dyn="startYear">2019</span></div>
@@ -267,14 +125,14 @@
   <div class="funil">
     <div class="fl">
       <span class="fh">Funil de <span data-dyn="lastYear">2025</span> · rede estadual</span>
-      <span class="help">i<span class="tip"><b>O que é:</b> do universo de <b>concluintes do EM</b> (matrícula da rede) até os participantes efetivos. A <b>participação efetiva</b> = participantes efetivos (presentes nos 2 dias, não eliminados) ÷ concluintes. Fonte: microdados ENEM <span data-dyn="lastYear">2025</span> + matrícula SED/MS.</span></span>
+      <span class="help">i<span class="tip"><b>O que é:</b> do universo de <b>concluintes do EM</b> (matrícula da rede) até os participantes na população de referência. A <b>participação efetiva</b> = quem concluiu ao menos uma área objetiva, sem eliminação, ÷ concluintes. Fonte: microdados ENEM <span data-dyn="lastYear">2025</span> + matrícula SED/MS.</span></span>
       <span class="fsub">extraído dos microdados ENEM <span data-dyn="lastYear">2025</span></span>
     </div>
     <div class="fstages" id="fstages"></div>
   </div>
 
   <!-- ÂNCORAS TEMPORAIS -->
-  <details class="secacc" open>
+  <details class="secacc">
     <summary>Trajetória <span data-dyn="range">2019–2025</span> <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Como desempenho e participação evoluíram juntos · rede estadual</span><span class="chev">▶</span></summary>
     <div class="secbody">
   <div class="chart-toolbar" role="group" aria-label="Filtros da trajetória">
@@ -330,7 +188,7 @@
   </details>
 
   <!-- DRILL-DOWN TERRITORIAL -->
-  <details class="secacc" open>
+  <details class="secacc">
     <summary>Detalhamento territorial — clique para explorar <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Coordenadoria → Município → Escola (tabela <span data-dyn="lastYear">2025</span> + histórico da escola)</span><span class="chev">▶</span></summary>
     <div class="secbody">
 
@@ -377,8 +235,8 @@
   <!-- Passo 3: escolas 2025 -->
   <div class="card" id="escCard" style="margin-top:16px;display:none">
     <h3 id="escTitle">Escolas · 2025
-      <span class="help">i<span class="tip"><b>Como ler:</b> a tabela mostra o retrato de <span data-dyn="lastYear">2025</span> por escola. Células em <b>vermelho</b> = abaixo da média de MS naquela área (atenção); verde = acima. <b>Part.</b> = nº de participantes presentes; <b>Tx</b> = participantes ÷ concluintes da escola. O gráfico abaixo mostra a <b>trajetória histórica</b> da escola selecionada, respeitando o filtro de notas zero. <b>População:</b> presentes nos 2 dias da rede estadual — em <span data-dyn="lastYear">2025</span> ainda pode incluir não-concluintes vinculados à escola.</span></span></h3>
-    <div class="coh"><span class="dot"></span> Rede estadual · presentes 2 dias (<span data-dyn="lastYear">2025</span> pode incluir não-concluintes) · clique numa escola para ver o histórico · tabela ordenada por menor média</div>
+      <span class="help">i<span class="tip"><b>Como ler:</b> a tabela mostra o retrato de <span data-dyn="lastYear">2025</span> por escola. Células em <b>vermelho</b> = abaixo da média de MS naquela área; verde = acima. <b>Part.</b> = participantes na população de referência; <b>Tx</b> = participantes ÷ concluintes da escola. <b>População:</b> quem concluiu ao menos uma área objetiva, sem eliminação — mesma regra do painel.</span></span></h3>
+    <div class="coh"><span class="dot"></span> Rede estadual · população de referência unificada · clique numa escola para ver o histórico</div>
     <div class="chart-toolbar" role="group" aria-label="Filtros das escolas">
       <div class="chart-field">
         <label for="escZeroMode">Notas zero</label>
@@ -502,7 +360,7 @@
 
   <!-- COMPARAÇÃO ENTRE REDES (MS) -->
   <details class="secacc">
-    <summary>Comparação entre redes de MS <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Mesma população (concluintes presentes, não eliminados) · redes do estado de MS</span><span class="chev">▶</span></summary>
+    <summary>Comparação entre redes de MS <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Mesma população de referência · redes do estado de MS</span><span class="chev">▶</span></summary>
     <div class="secbody">
   <div class="grid2" style="margin-top:4px">
     <div class="card">
@@ -589,14 +447,15 @@
     </div>
   </div>
 
-  <div class="footer">Dados: microdado INEP + concluintes SED (<code>Concluintes EM <span data-dyn="fileRange">2019 a 2025</span>.xlsx</code>) · eliminados: TP_PRESENCA/TP_STATUS_REDACAO = 2 · redação em branco incluída · paleta SED/MS</div>
+  <div class="footer">Dados: microdado INEP + concluintes SED (<code>Concluintes EM <span data-dyn="fileRange">2019 a 2025</span>.xlsx</code>) · população de referência: presentes em ≥1 área objetiva, sem eliminação · redação em branco incluída · paleta SED/MS</div>
 </div>
-<script defer src="js/config.js?v=3" charset="utf-8"></script>
+<script defer src="js/config.js?v=4" charset="utf-8"></script>
 <script defer src="js/data-utils.js?v=3" charset="utf-8"></script>
 <script defer src="js/chart-factory.js?v=3" charset="utf-8"></script>
 <script defer src="js/app-context.js?v=3" charset="utf-8"></script>
 <script defer src="js/area-detail.js?v=8" charset="utf-8"></script>
-<script defer src="js/kpi-section.js?v=3" charset="utf-8"></script>
+<script defer src="js/ranking-escolas-section.js?v=7" charset="utf-8"></script>
+<script defer src="js/kpi-section.js?v=4" charset="utf-8"></script>
 <script defer src="js/trajectory-section.js?v=3" charset="utf-8"></script>
 <script defer src="js/redes-section.js?v=4" charset="utf-8"></script>
 <script defer src="js/integridade-section.js?v=3" charset="utf-8"></script>

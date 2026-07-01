@@ -37,8 +37,45 @@
     CN: 'Ci\u00eancias Nat.', CH: 'Ci\u00eancias Hum.', LC: 'Linguagens',
     MT: 'Matem\u00e1tica', RED: 'Reda\u00e7\u00e3o',
   };
+  const AREANOME_FULL = {
+    LC: 'Linguagens', CH: 'Ci\u00eancias Humanas', CN: 'Ci\u00eancias da Natureza',
+    MT: 'Matem\u00e1tica', RED: 'Reda\u00e7\u00e3o',
+  };
   const ACOR = {
     CN: C.verde, CH: C.dourado, LC: C.azulC, MT: C.critico, RED: C.roxo,
   };
-  ED.Config = { C, BL, CFG, CFG_INTERACTIVE, AREAKEYS, AREANOME, ACOR };
+  const HOVER = {
+    bgcolor: '#FFFFFF',
+    bordercolor: '#E5E7EF',
+    font: { family: 'Segoe UI, system-ui, sans-serif', size: 13, color: '#1A1D26' },
+    align: 'left',
+  };
+  const XSPIKE = {
+    showspikes: true,
+    spikemode: 'across',
+    spikesnap: 'cursor',
+    spikecolor: '#CBD5E1',
+    spikethickness: 1,
+    spikedash: 'dot',
+  };
+  function layoutLineChart(extra = {}) {
+    const xaxis = { ...XSPIKE, ...(extra.xaxis || {}) };
+    const { xaxis: _xa, ...rest } = extra;
+    return {
+      ...BL,
+      hovermode: 'x unified',
+      hoverdistance: 24,
+      spikedistance: -1,
+      hoverlabel: { ...HOVER, ...(rest.hoverlabel || {}) },
+      xaxis,
+      ...rest,
+    };
+  }
+  function hoverAreaTemplate(name) {
+    return `${name}: %{y:.0f}<extra></extra>`;
+  }
+  ED.Config = {
+    C, BL, CFG, CFG_INTERACTIVE, AREAKEYS, AREANOME, AREANOME_FULL, ACOR,
+    HOVER, XSPIKE, layoutLineChart, hoverAreaTemplate,
+  };
 })(window.EnemDash = window.EnemDash || {});

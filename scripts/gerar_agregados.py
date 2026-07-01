@@ -128,10 +128,10 @@ def _area_detail_stats(val: pd.DataFrame, area: str, col: str) -> dict:
 
 
 def _integridade_row(base: pd.DataFrame, val: pd.DataFrame, extra: dict) -> dict:
-    comp = int(base["PRESENTE_2_DIAS"].sum())
-    present = base[base["PRESENTE_2_DIAS"]]
-    elim_red = int((base["PRESENTE_2_DIAS"] & base["ELIM_RED"]).sum())
-    branco = int((base["PRESENTE_2_DIAS"] & base["RED_BRANCO"]).sum())
+    comp = int(base["PRESENTE_AREA"].sum())
+    present = base[base["PRESENTE_AREA"]]
+    elim_red = int((base["PRESENTE_AREA"] & base["ELIM_RED"]).sum())
+    branco = int((base["PRESENTE_AREA"] & base["RED_BRANCO"]).sum())
     em = zm = sm = 0
     if len(present):
         em = int(((present[PRES_COLS] == 2).sum(axis=1) >= 2).sum())
@@ -264,9 +264,9 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         base = ms[(ms["DEP_ADM"] == dep) & ms["CONCLUINTE"]]
         val = ms_valido[ms_valido["DEP_ADM"] == dep]
         val_sem_zero = val[(val[COLS_NOTAS] > 0).all(axis=1)] if len(val) else val
-        presentes = int(base["PRESENTE_2_DIAS"].sum())
-        elim_red = int((base["PRESENTE_2_DIAS"] & base["ELIM_RED"]).sum())
-        branco = int((base["PRESENTE_2_DIAS"] & base["RED_BRANCO"]).sum())
+        presentes = int(base["PRESENTE_AREA"].sum())
+        elim_red = int((base["PRESENTE_AREA"] & base["ELIM_RED"]).sum())
+        branco = int((base["PRESENTE_AREA"] & base["RED_BRANCO"]).sum())
         conc = conc_ano if dep == "Estadual" else None
 
         out["participacao_ano"].append({
@@ -296,9 +296,9 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
     br_val_sem_zero = br_val[(br_val[COLS_NOTAS] > 0).all(axis=1)] if len(br_val) else br_val
     br_base = df[(df["DEP_ADM"] == "Estadual") & df["CONCLUINTE"]]
     if len(br_base) or len(br_val):
-        comp_br = int(br_base["PRESENTE_2_DIAS"].sum())
-        elim_br = int((br_base["PRESENTE_2_DIAS"] & br_base["ELIM_RED"]).sum())
-        branco_br = int((br_base["PRESENTE_2_DIAS"] & br_base["RED_BRANCO"]).sum())
+        comp_br = int(br_base["PRESENTE_AREA"].sum())
+        elim_br = int((br_base["PRESENTE_AREA"] & br_base["ELIM_RED"]).sum())
+        branco_br = int((br_base["PRESENTE_AREA"] & br_base["RED_BRANCO"]).sum())
         out["participacao_ano"].append({
             "ano": ano,
             "dependencia": "Brasil-Estadual",
@@ -431,9 +431,9 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         srow = {
             "ano": ano,
             "total_inscritos": len(ms_est_base),
-            "total_presentes": int(ms_est_base["PRESENTE_2_DIAS"].sum()),
-            "total_eliminados_redacao": int((ms_est_base["PRESENTE_2_DIAS"] & ms_est_base["ELIM_RED"]).sum()),
-            "total_redacao_branco": int((ms_est_base["PRESENTE_2_DIAS"] & ms_est_base["RED_BRANCO"]).sum()),
+            "total_presentes": int(ms_est_base["PRESENTE_AREA"].sum()),
+            "total_eliminados_redacao": int((ms_est_base["PRESENTE_AREA"] & ms_est_base["ELIM_RED"]).sum()),
+            "total_redacao_branco": int((ms_est_base["PRESENTE_AREA"] & ms_est_base["RED_BRANCO"]).sum()),
             "total_concluintes_sed": conc_ano,
             "total_validos": len(ms_est_val),
             "total_validos_sem_zero": len(ms_est_val_sem_zero),

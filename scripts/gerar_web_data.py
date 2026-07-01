@@ -15,7 +15,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from enem_config import ANOS, ANO_FINAL, AREA_KEYS, NOTA_MAP, PASTA_AGREGADOS, WEB_DATA, configure_logging
+from enem_config import ANOS, ANO_FINAL, AREA_KEYS, NOTA_MAP, PASTA_AGREGADOS, POP_REF_PARTICIPANTES, POP_REF_RESUMO, WEB_DATA, configure_logging
 
 logger = configure_logging(__name__)
 from enem_helpers import COL_MUNICIPIO, carregar_concluintes_sed, cre_curto, normalizar_texto, quantis_serie
@@ -691,14 +691,17 @@ def build_painel_data() -> dict:
 
     meta = {
         "filtros": {
+            "populacao_referencia": POP_REF_PARTICIPANTES,
+            "areas_objetivas": POP_REF_RESUMO,
             "concluintes_2019_2023": "TP_ST_CONCLUSAO = 2",
             "concluintes_2024": "CO_ESCOLA preenchido (RESULTADOS; pode incluir EJA/outras modalidades)",
-            "presentes": "TP_PRESENCA = 1 em CN, CH, LC, MT",
+            "presentes": "TP_PRESENCA = 1 em ao menos uma area objetiva (CN, CH, LC ou MT)",
             "eliminados": "TP_PRESENCA = 2 ou TP_STATUS_REDACAO = 2",
             "redacao_branco": "incluidos (TP_STATUS_REDACAO = 4)",
             "concluintes_denominador": "Concluintes 3o ano EM regular (SED)",
             "aviso_2024": "Sem merge PARTICIPANTES+RESULTADOS; taxa vs SED nao homogenea com 2019-2023",
             "concluintes_pos_2024": "Para 2024+ o painel usa RESULTADOS com CO_ESCOLA preenchido como proxy de concluintes vinculados a escola.",
+            "media_por_area": "Nota da area considerada apenas se TP_PRESENCA = 1 na area; media geral = media das notas disponiveis.",
         },
         "gerado_em": pd.Timestamp.now().isoformat(),
         "pipeline": "pipeline_dashboard",

@@ -60,6 +60,16 @@ CONCLUINTES_CSV = Path(
 )
 COLS_NOTAS = ["NU_NOTA_CN", "NU_NOTA_CH", "NU_NOTA_LC", "NU_NOTA_MT", "NU_NOTA_REDACAO"]
 PRES_COLS = ["TP_PRESENCA_CN", "TP_PRESENCA_CH", "TP_PRESENCA_LC", "TP_PRESENCA_MT"]
+
+# População de referência do painel (textos exibidos no frontend)
+POP_REF_RESUMO = (
+    "Participantes que concluíram a prova em ao menos uma área objetiva "
+    "(TP_PRESENCA = 1 em CN, CH, LC ou MT), excluindo eliminados."
+)
+POP_REF_PARTICIPANTES = (
+    "Concluintes do recorte + presentes em ≥1 área objetiva, "
+    "sem eliminação objetiva (TP_PRESENCA = 2) nem na redação (TP_STATUS = 2)."
+)
 DEP_MAP = {1: "Federal", 2: "Estadual", 3: "Municipal", 4: "Privada"}
 DEPENDENCIAS = ["Federal", "Estadual", "Municipal", "Privada"]
 AREA_KEYS = ["CN", "CH", "LC", "MT", "RED"]

@@ -325,9 +325,22 @@ def preparar_ano(df_ano: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def mascara_populacao_referencia(df: pd.DataFrame) -> pd.Series:
+    """Presente em >=1 area objetiva e nao eliminado (objetiva ou redacao)."""
+    pres = df[PRES_COLS]
+    presente_area = pres.eq(1).any(axis=1)
+    eliminado_obj = pres.eq(2).any(axis=1)
+    if "TP_STATUS_REDACAO" in df.columns:
+        elim_red = df["TP_STATUS_REDACAO"].eq(2)
+    else:
+        elim_red = pd.Series(False, index=df.index)
+    return presente_area & ~eliminado_obj & ~elim_red
+
+
 def aplicar_flags(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df["DEP_ADM"] = df["TP_DEPENDENCIA_ADM_ESC"].map(DEP_MAP)
+    df["PRESENTE_AREA"] = df[PRES_COLS].eq(1).any(axis=1)
     df["PRESENTE_2_DIAS"] = df[PRES_COLS].eq(1).all(axis=1)
     df["ELIM_OBJ"] = df[PRES_COLS].eq(2).any(axis=1)
     df["ELIM_RED"] = df["TP_STATUS_REDACAO"] == 2
@@ -346,7 +359,7 @@ def aplicar_flags(df: pd.DataFrame) -> pd.DataFrame:
 
     df["VALIDO"] = (
         df["CONCLUINTE"]
-        & df["PRESENTE_2_DIAS"]
+        & df["PRESENTE_AREA"]
         & ~df["ELIM_OBJ"]
         & ~df["ELIM_RED"]
     )

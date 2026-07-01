@@ -67,6 +67,7 @@ function bootDashboard() {
 
   applyDynamicStaticText(ctx);
 
+  if (ED.initRankingEscolas) ED.initRankingEscolas();
   ED.initAreaDetail(ctx);
   ED.initKpi(ctx);
   ED.initTrajectory(ctx);

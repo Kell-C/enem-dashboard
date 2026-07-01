@@ -79,8 +79,8 @@
       const st = [
         { k: 'Concluintes do EM', v: f.concluintes, p: 'universo da rede (matr\u00edcula)', hl: false },
         { k: 'Inscritos no ENEM', v: f.inscritos, p: `${pc(f.inscritos)} dos concluintes`, hl: false },
-        { k: 'Presentes nos 2 dias de prova', v: f.presentes, p: `${pc(f.presentes)} dos concluintes`, hl: false },
-        { k: 'Participantes efetivos', v: f.presfilt, p: `${pc(f.presfilt)} = participa\u00e7\u00e3o efetiva`, hl: true },
+        { k: 'Presentes em ao menos uma \u00e1rea', v: f.presentes, p: `${pc(f.presentes)} dos concluintes`, hl: false },
+        { k: 'Participantes na popula\u00e7\u00e3o de refer\u00eancia', v: f.presfilt, p: `${pc(f.presfilt)} = participa\u00e7\u00e3o efetiva`, hl: true },
       ];
       document.getElementById('fstages').innerHTML = st.map((s) =>
         `<div class="fstage${s.hl ? ' hl' : ''}"><div class="fk">${s.k}</div><div class="fv">${nf(s.v)}</div><div class="fp">${s.p}</div></div>`
