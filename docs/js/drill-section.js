@@ -72,11 +72,13 @@
       return;
     }
 
+    const porArea = ED.getPopulationMode ? ED.getPopulationMode() === 'por_area' : false;
     const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
-    const series = zeroMode === 'no_zero' ? (school.semZero || {}) : school;
+    const base = porArea && school.porArea ? school.porArea : school;
+    const series = zeroMode === 'no_zero' ? (base.semZero || {}) : base;
     const histYears = ANOS.filter((ano) => ano >= 2024);
     const histIdx = histYears.map((ano) => ANOS.indexOf(ano)).filter((idx) => idx >= 0);
-    const geral = histIdx.map((idx) => (series.geral || school.geral || [])[idx] ?? null);
+    const geral = histIdx.map((idx) => (series.geral || base.geral || school.geral || [])[idx] ?? null);
     const vals = [];
     const areasByYear = {};
     ctx.AREAKEYS.forEach((k) => {
@@ -86,11 +88,15 @@
     geral.forEach((v) => { if (v != null) vals.push(v); });
     if (!vals.length) {
       title.textContent = `${school.nome} · histórico`;
-      note.textContent = 'Sem série histórica suficiente com o filtro atual.';
+      note.textContent = porArea
+        ? 'Sem série histórica por prova com o filtro atual.'
+        : 'Sem série histórica suficiente com o filtro atual.';
       host.innerHTML = '<p class="idx-empty">Sem dados históricos para exibir com os parâmetros atuais.</p>';
       return;
     }
 
+    const partAreas = series.partAreas || base.partAreas || {};
+    const partLabel = porArea ? 'Part. da prova' : 'Part. efetivos';
     const custom = histYears.map((ano, pos) => {
       const idx = histIdx[pos];
       return [
@@ -106,7 +112,12 @@
     const traces = ctx.AREAKEYS.map((k) => ({
       x: histYears,
       y: areasByYear[k],
-      customdata: custom,
+      customdata: histYears.map((ano, pos) => {
+        const idx = histIdx[pos];
+        const row = custom[pos].slice();
+        if (porArea) row[1] = NF(partAreas[k]?.[idx] || 0);
+        return row;
+      }),
       mode: 'lines+markers',
       name: AREANOME[k],
       line: { color: ACOR[k], width: 2 },
@@ -114,7 +125,7 @@
       hovertemplate: `<b>${school.nome}</b><br>%{customdata[0]} · ${AREANOME[k]}: %{y:.1f}<br>`
         + 'Município: %{customdata[5]}<br>'
         + 'CRE: %{customdata[6]}<br>'
-        + 'Part. efetivos: %{customdata[1]}<br>'
+        + `${partLabel}: %{customdata[1]}<br>`
         + 'Concluintes: %{customdata[2]}<br>'
         + 'Tx: %{customdata[3]}<br>'
         + 'Média geral: %{customdata[4]}<extra></extra>',
@@ -153,13 +164,15 @@
     const zeroLbl = zeroMode === 'no_zero'
       ? 'Filtro ativo: excluindo participantes com alguma nota zero.'
       : 'Filtro ativo: incluindo todos os participantes efetivos.';
+    const popLbl = porArea ? 'Metodologia por prova (média entre quem entregou cada área).' : '';
     const lastPos = histYears.length - 1;
     const lastIdx = histIdx[lastPos];
     const partLast = series.part?.[lastIdx] || 0;
     const conclLast = school.concl?.[lastIdx] || 0;
     const txLast = series.tx?.[lastIdx];
-    title.textContent = `${school.nome} · histórico 2024–${LAST_YEAR}`;
-    note.innerHTML = `${zeroLbl} <b>${LAST_YEAR}:</b> ${NF(partLast)} part. efetivos`
+    const partDesc = porArea ? 'part. por prova (máx. por área)' : 'part. efetivos';
+    title.textContent = `${school.nome} · histórico 2024–${LAST_YEAR}${porArea ? ' · por prova' : ''}`;
+    note.innerHTML = `${popLbl ? `${popLbl} ` : ''}${zeroLbl} <b>${LAST_YEAR}:</b> ${NF(partLast)} ${partDesc}`
       + `${conclLast ? ` · ${NF(conclLast)} concluintes` : ''}`
       + `${txLast != null ? ` · taxa ${txLast.toFixed(1)}%` : ''}`
       + `${school.obs ? ` · ${school.obs}` : ''}`;
@@ -320,14 +333,16 @@
     bread();
     document.querySelector('#creAreaTitle span').textContent = `${name} \u00b7 ${ctx.ANOS[0]}\u2013${LAST_YEAR}`;
     if (DATA.mun[name]) renderAreas('creAreas', _getMunAreas(name), _getRefArea2024());
+    const porArea = ED.getPopulationMode ? ED.getPopulationMode() === 'por_area' : false;
     const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
     const refArea = zeroMode === 'no_zero' && Object.keys(MS_AREA_2024_SEM_ZERO || {}).length
       ? MS_AREA_2024_SEM_ZERO
-      : MS_AREA_2024;
+      : _getRefArea2024();
     const refGeral = zeroMode === 'no_zero' && MS_GERAL_2024_SEM_ZERO != null
       ? MS_GERAL_2024_SEM_ZERO
       : MS_GERAL_2024;
-    const list = (DATA.esc[name] || [])
+    const escSource = porArea ? (DATA.escPorArea?.[name] || DATA.esc[name] || []) : (DATA.esc[name] || []);
+    const list = escSource
       .map((s) => {
         if (zeroMode !== 'no_zero') return s;
         const nz = s.semZero || {};
@@ -346,7 +361,7 @@
       .filter((s) => s.geral != null && (s.part || 0) >= 10)
       .sort((a, b) => a.geral - b.geral);
     document.getElementById('escCard').style.display = list.length ? 'block' : 'none';
-    document.getElementById('escTitle').childNodes[0].nodeValue = `Escolas de ${name} \u00b7 ${LAST_YEAR} `;
+    document.getElementById('escTitle').childNodes[0].nodeValue = `Escolas de ${name} \u00b7 ${LAST_YEAR}${porArea ? ' \u00b7 por prova' : ''} `;
     const body = document.getElementById('escBody');
     body.innerHTML = '';
     const cell = (v, k) => {

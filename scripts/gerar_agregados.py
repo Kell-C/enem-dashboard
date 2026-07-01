@@ -180,6 +180,8 @@ def _ler_ano(ano: int, cols: list[str]) -> pd.DataFrame:
     schema = pq.read_schema(PARQUET).names
     cols_ok = [c for c in cols if c in schema]
     df = pd.read_parquet(PARQUET, columns=cols_ok, filters=[("NU_ANO", "==", ano)])
+    if df.empty:
+        return df
     return preparar_ano(df)
 
 
@@ -209,6 +211,87 @@ def _agregar_escolas_ano(sub: pd.DataFrame, conc_esc: pd.DataFrame, ano: int) ->
         esc["media_geral_sem_zero"] = pd.NA
         for c in COLS_NOTAS:
             esc[f"media_{c.lower()}_sem_zero"] = pd.NA
+
+    esc["ano"] = ano
+    esc["dependencia"] = "Estadual"
+    esc["cre_curto"] = esc["CRE"].map(cre_curto)
+    ce = conc_esc[conc_esc["NU_ANO"] == ano][["CO_ESCOLA", "Concluintes"]]
+    esc = esc.merge(ce, on="CO_ESCOLA", how="left")
+    esc["Concluintes"] = esc["Concluintes"].fillna(0).astype(int)
+    esc["estudantes_sem_zero"] = esc["estudantes_sem_zero"].fillna(0).astype(int)
+    tx_esc = esc["estudantes"] / esc["Concluintes"].replace(0, pd.NA) * 100
+    esc["tx_part"] = pd.to_numeric(tx_esc, errors="coerce").round(1)
+    tx_esc_sem_zero = esc["estudantes_sem_zero"] / esc["Concluintes"].replace(0, pd.NA) * 100
+    esc["tx_part_sem_zero"] = pd.to_numeric(tx_esc_sem_zero, errors="coerce").round(1)
+    esc["observacao"] = esc["CO_ESCOLA"].map(observacao_oferta_escola)
+    esc["nome_exibicao"] = esc.apply(
+        lambda r: nome_exibicao_escola(r["CO_ESCOLA"], r["NOME_ESCOLA"]),
+        axis=1,
+    )
+    return esc
+
+
+def _media_col_escola(area_key: str) -> str:
+    return f"media_nu_nota_{area_key.lower()}" if area_key != "RED" else "media_nu_nota_redacao"
+
+
+def _n_col_escola(area_key: str) -> str:
+    return f"n_{area_key.lower()}"
+
+
+def _agregar_escolas_por_prova(sub: pd.DataFrame, conc_esc: pd.DataFrame, ano: int) -> pd.DataFrame:
+    """Médias escolares por prova (população AIO-compatível): um conjunto por área."""
+    if sub.empty or "CO_ESCOLA" not in sub.columns or not sub["CO_ESCOLA"].notna().any():
+        return pd.DataFrame()
+
+    esc = sub.groupby("CO_ESCOLA", observed=True).agg(
+        NOME_ESCOLA=("NOME_ESCOLA", "first"),
+        NO_MUNICIPIO_ESC=("NO_MUNICIPIO_ESC", "first"),
+        CRE=("CRE", "first"),
+    ).reset_index()
+
+    for area_key, col in zip(AREA_KEYS, COLS_NOTAS):
+        mcol = _media_col_escola(area_key)
+        ncol = _n_col_escola(area_key)
+        mcol_sz = f"{mcol}_sem_zero"
+        ncol_sz = f"{ncol}_sem_zero"
+
+        area_sub = filtrar_valido_area(sub, area_key)
+        if area_sub.empty:
+            esc[mcol] = pd.NA
+            esc[ncol] = 0
+            esc[mcol_sz] = pd.NA
+            esc[ncol_sz] = 0
+            continue
+
+        g = area_sub.groupby("CO_ESCOLA", observed=True).agg(
+            **{mcol: (col, "mean"), ncol: ("NU_INSCRICAO", "count")},
+        ).reset_index()
+        esc = esc.merge(g, on="CO_ESCOLA", how="left")
+
+        sz = area_sub[area_sub[col] > 0]
+        if sz.empty:
+            esc[mcol_sz] = pd.NA
+            esc[ncol_sz] = 0
+        else:
+            gsz = sz.groupby("CO_ESCOLA", observed=True).agg(
+                **{mcol_sz: (col, "mean"), ncol_sz: ("NU_INSCRICAO", "count")},
+            ).reset_index()
+            esc = esc.merge(gsz, on="CO_ESCOLA", how="left")
+
+    n_cols = [_n_col_escola(k) for k in AREA_KEYS]
+    n_cols_sz = [f"{_n_col_escola(k)}_sem_zero" for k in AREA_KEYS]
+    for c in n_cols + n_cols_sz:
+        if c not in esc.columns:
+            esc[c] = 0
+        esc[c] = esc[c].fillna(0).astype(int)
+
+    media_cols = [_media_col_escola(k) for k in AREA_KEYS]
+    media_cols_sz = [f"{c}_sem_zero" for c in media_cols]
+    esc["estudantes"] = esc[n_cols].max(axis=1)
+    esc["estudantes_sem_zero"] = esc[n_cols_sz].max(axis=1)
+    esc["media_geral"] = esc[media_cols].mean(axis=1, skipna=True)
+    esc["media_geral_sem_zero"] = esc[media_cols_sz].mean(axis=1, skipna=True)
 
     esc["ano"] = ano
     esc["dependencia"] = "Estadual"
@@ -266,6 +349,8 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         "participacao_por_area": [],
         "evolucao_cre_por_area": [],
         "evolucao_muni_por_area": [],
+        "evolucao_escolas_por_area": [],
+        "escolas_por_area_2024": [],
     }
 
     ms = df[df["SG_UF_ESC"] == "MS"]
@@ -437,8 +522,16 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         esc_hist = _agregar_escolas_ano(enriquecer_ms(ms_est_val, cres, mapa_muni), conc_esc, ano)
         if not esc_hist.empty:
             out["evolucao_escolas"].append(esc_hist)
-    if ano == ANO_FINAL and not esc_hist.empty:
-        out["escolas_2024"].append(esc_hist.copy())
+            out["escolas_2024"].append(esc_hist.copy())
+
+    ms_est_conc = ms[(ms["DEP_ADM"] == "Estadual") & ms["CONCLUINTE"]]
+    esc_pa = pd.DataFrame()
+    if len(ms_est_conc):
+        esc_pa = _agregar_escolas_por_prova(enriquecer_ms(ms_est_conc, cres, mapa_muni), conc_esc, ano)
+        if not esc_pa.empty:
+            out["evolucao_escolas_por_area"].append(esc_pa)
+            out["escolas_por_area_2024"].append(esc_pa.copy())
+
     if len(ms_est_val):
         srow = {
             "ano": ano,
@@ -617,7 +710,20 @@ def main():
 
     cres = carregar_cres()
     mapa_muni = carregar_mapa_municipio_cre()
-    conc_totais, conc_esc = carregar_concluintes_sed()
+    try:
+        conc_totais, conc_esc = carregar_concluintes_sed()
+    except FileNotFoundError:
+        evol_path = PASTA_AGREGADOS / "evolucao_escolas.parquet"
+        if not evol_path.exists():
+            raise
+        logger.warning("Concluintes SED ausentes; derivando de %s.", evol_path.name)
+        evol_esc = pd.read_parquet(evol_path)
+        conc_esc = (
+            evol_esc[["ano", "CO_ESCOLA", "NO_MUNICIPIO_ESC", "Concluintes"]]
+            .rename(columns={"ano": "NU_ANO", "NO_MUNICIPIO_ESC": COL_MUNICIPIO})
+            .drop_duplicates(subset=["NU_ANO", "CO_ESCOLA"], keep="last")
+        )
+        conc_totais = conc_esc.groupby("NU_ANO", observed=True)["Concluintes"].sum().reset_index()
     logger.info("Concluintes SED por ano:")
     logger.info("%s", conc_totais.to_string(index=False))
     logger.info("CREs carregados: %s escolas", len(cres))
@@ -634,6 +740,7 @@ def main():
             "desvio_cv_por_area", "area_detail_por_area", "area_detail_por_area_sem_zero",
             "referencias_por_area", "participacao_por_area",
             "evolucao_cre_por_area", "evolucao_muni_por_area",
+            "evolucao_escolas_por_area", "escolas_por_area_2024",
         ]
     }
 
@@ -641,6 +748,9 @@ def main():
     for ano in ANOS:
         logger.info("Processando %s...", ano)
         df_ano = _ler_ano(ano, cols)
+        if df_ano.empty:
+            logger.warning("Ano %s sem dados no parquet; pulando.", ano)
+            continue
         res = processar_ano(df_ano, cres, mapa_muni, conc_totais, conc_esc)
         for k, v in res.items():
             if k in acumulado:
@@ -653,6 +763,8 @@ def main():
             continue
         if isinstance(rows[0], pd.DataFrame):
             df_out = pd.concat(rows, ignore_index=True)
+            if nome in ("escolas_2024", "escolas_por_area_2024") and "ano" in df_out.columns:
+                df_out = df_out[df_out["ano"] == df_out["ano"].max()]
         else:
             df_out = pd.DataFrame(rows)
         path = PASTA_AGREGADOS / f"{nome}.parquet"
@@ -660,13 +772,16 @@ def main():
         logger.info("%s: %s linhas", path.name, len(df_out))
 
     pa = pd.read_parquet(PASTA_AGREGADOS / "participacao_ano.parquet")
-    ms = pa[(pa["dependencia"] == "Estadual") & (pa["ano"] == ANO_FINAL)].iloc[0]
-    logger.info("MS Estadual %s:", ANO_FINAL)
-    logger.info("  concluintes SED: %s", int(ms['concluintes']))
-    logger.info("  potenciais concluintes (CO_ESCOLA): %s", int(ms['inscritos']))
-    logger.info("  validos (filtro): %s", int(ms['presentes_filt']))
-    if ms["concluintes"]:
-        logger.info("  taxa efetiva: %.1f%%", 100 * ms['presentes_filt'] / ms['concluintes'])
+    pa_ms = pa[pa["dependencia"] == "Estadual"]
+    if not pa_ms.empty:
+        ultimo_ano = int(pa_ms["ano"].max())
+        ms = pa_ms[pa_ms["ano"] == ultimo_ano].iloc[0]
+        logger.info("MS Estadual %s:", ultimo_ano)
+        logger.info("  concluintes SED: %s", int(ms['concluintes']))
+        logger.info("  potenciais concluintes (CO_ESCOLA): %s", int(ms['inscritos']))
+        logger.info("  validos (filtro): %s", int(ms['presentes_filt']))
+        if ms["concluintes"]:
+            logger.info("  taxa efetiva: %.1f%%", 100 * ms['presentes_filt'] / ms['concluintes'])
 
     # Escrever metadados do gerador
     try:

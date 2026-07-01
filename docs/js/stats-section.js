@@ -300,11 +300,27 @@
 
     function renderDisp() {
       const creFilter = dispCre?.value || '';
+      const porArea = currentPopMode() === 'por_area';
       const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
-      const msMed = zeroMode === 'no_zero' && ctx.MS_GERAL_2024_SEM_ZERO != null
-        ? ctx.MS_GERAL_2024_SEM_ZERO
-        : ctx.DATA.medMs?.[ANOS.length - 1];
+      const msAreaPa = ctx.DATA.msArea2024PorArea || {};
+      const msMedPorAreaVals = Object.values(msAreaPa).filter((v) => v != null);
+      const msMedPorArea = msMedPorAreaVals.length
+        ? msMedPorAreaVals.reduce((a, b) => a + b, 0) / msMedPorAreaVals.length
+        : null;
+      const msMed = porArea
+        ? (msMedPorArea ?? ctx.DATA.medMs?.[ANOS.length - 1])
+        : (zeroMode === 'no_zero' && ctx.MS_GERAL_2024_SEM_ZERO != null
+          ? ctx.MS_GERAL_2024_SEM_ZERO
+          : ctx.DATA.medMs?.[ANOS.length - 1]);
       const pts = DISP.map((e) => {
+        if (porArea) {
+          return {
+            ...e,
+            nota: zeroMode === 'no_zero' ? (e.notaPorAreaSemZero ?? null) : (e.notaPorArea ?? null),
+            n: zeroMode === 'no_zero' ? (e.nPorAreaSemZero ?? 0) : (e.nPorArea ?? 0),
+            tx: zeroMode === 'no_zero' ? (e.txPorAreaSemZero ?? null) : (e.txPorArea ?? null),
+          };
+        }
         if (zeroMode !== 'no_zero') return e;
         return {
           ...e,
@@ -398,7 +414,8 @@
         const nOver = pts.filter((e) => (e.tx ?? 0) > 100).length;
         const creLbl = creFilter || 'todas as CREs';
         const zeroLbl = zeroMode === 'no_zero' ? 'excluindo notas zero' : 'incluindo notas zero';
-        dispCaption.textContent = `${pts.length} escolas · ${creLbl} · ${zeroLbl} · eixo X at\u00e9 ${xMax}%`
+        const popLbl = porArea ? 'por prova' : 'geral (2 dias)';
+        dispCaption.textContent = `${pts.length} escolas · ${creLbl} · ${popLbl} · ${zeroLbl} · eixo X at\u00e9 ${xMax}%`
           + (nOver ? ` \u00b7 ${nOver} com participa\u00e7\u00e3o > 100%` : '');
       }
     }
@@ -420,6 +437,7 @@
     document.addEventListener('enemdash:populationMode', () => {
       renderBoxplots();
       renderHist();
+      renderDisp();
     });
     renderDisp();
   };
