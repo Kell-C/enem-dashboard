@@ -15,7 +15,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from enem_config import ANOS, ANO_FINAL, AREA_KEYS, NOTA_MAP, PASTA_AGREGADOS, WEB_DATA, configure_logging
+from enem_config import ANOS, ANO_FINAL, AREA_KEYS, CONCLUINTES_XLSX, NOTA_MAP, PASTA_AGREGADOS, WEB_DATA, configure_logging
 
 logger = configure_logging(__name__)
 from enem_helpers import COL_MUNICIPIO, carregar_concluintes_sed, cre_curto, normalizar_texto, quantis_serie
@@ -450,7 +450,8 @@ def build_painel_data() -> dict:
         _, conc_esc = carregar_concluintes_sed()
     except FileNotFoundError:
         logger.warning(
-            "Concluintes SED ausentes; derivando totais de evolucao_escolas."
+            "Concluintes SED ausentes (%s); derivando totais de evolucao_escolas.",
+            CONCLUINTES_XLSX,
         )
         if evol_esc.empty:
             conc_esc = pd.DataFrame(columns=["NU_ANO", "CO_ESCOLA", COL_MUNICIPIO, "Concluintes"])

@@ -116,8 +116,6 @@ function bootDashboard() {
   });
   document.addEventListener('enemdash:populationMode', () => updateMethodologyBar(ED));
   document.addEventListener('enemdash:schoolZeroMode', () => updateMethodologyBar(ED));
-  if (ED.setPopulationMode) ED.setPopulationMode(ED.getPopulationMode ? ED.getPopulationMode() : 'geral');
-  if (ED.setSchoolZeroMode) ED.setSchoolZeroMode(ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all');
   updateMethodologyBar(ED);
 
   ED.initAreaDetail(ctx);
