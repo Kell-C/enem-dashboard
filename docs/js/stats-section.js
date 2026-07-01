@@ -4,25 +4,15 @@
     const CFGI = ED.Config.CFG_INTERACTIVE || CFG;
     const BP = DATA.boxplot || {};
     const BP_SEM_ZERO = DATA.boxplotSemZero || {};
-    const BP_POR_AREA = DATA.boxplotPorArea || {};
-    const BP_POR_AREA_SEM_ZERO = DATA.boxplotPorAreaSemZero || {};
     const AD = DATA.areaDetail || {};
     const AD_SEM_ZERO = DATA.areaDetailSemZero || {};
-    const AD_POR_AREA = DATA.areaDetailPorArea || {};
-    const AD_POR_AREA_SEM_ZERO = DATA.areaDetailPorAreaSemZero || {};
     const HIST = DATA.histograma || {};
     const HIST_SEM_ZERO = DATA.histogramaSemZero || {};
-    const HIST_POR_AREA = DATA.histogramaPorArea || {};
-    const HIST_POR_AREA_SEM_ZERO = DATA.histogramaPorAreaSemZero || {};
     const DISP = DATA.dispersao || [];
     const DU = ED.DataUtils;
 
     function currentZeroMode() {
       return ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
-    }
-
-    function currentPopMode() {
-      return ED.getPopulationMode ? ED.getPopulationMode() : 'geral';
     }
 
     function boxMinPos(d, areaKey, ano, detailData) {
@@ -41,13 +31,8 @@
 
     function renderBoxplots() {
       const zeroMode = currentZeroMode();
-      const porArea = currentPopMode() === 'por_area';
-      const boxData = porArea
-        ? (zeroMode === 'no_zero' ? BP_POR_AREA_SEM_ZERO : BP_POR_AREA)
-        : (zeroMode === 'no_zero' ? BP_SEM_ZERO : BP);
-      const detailData = porArea
-        ? (zeroMode === 'no_zero' ? AD_POR_AREA_SEM_ZERO : AD_POR_AREA)
-        : (zeroMode === 'no_zero' ? AD_SEM_ZERO : AD);
+      const boxData = zeroMode === 'no_zero' ? BP_SEM_ZERO : BP;
+      const detailData = zeroMode === 'no_zero' ? AD_SEM_ZERO : AD;
       AREAKEYS.forEach((k) => {
         const cor = ACOR[k];
         const xVals = [];
@@ -183,17 +168,13 @@
       const k = hArea.value;
       const a = String(hAno.value);
       const zeroMode = currentZeroMode();
-      const porArea = currentPopMode() === 'por_area';
-      const histData = porArea
-        ? (zeroMode === 'no_zero' ? HIST_POR_AREA_SEM_ZERO : HIST_POR_AREA)
-        : (zeroMode === 'no_zero' ? HIST_SEM_ZERO : HIST);
+      const histData = zeroMode === 'no_zero' ? HIST_SEM_ZERO : HIST;
       const d = (histData[k] || {})[a];
       if (!d) return;
       const cor = ACOR[k];
       const faixas = ['0\u2013200', '200\u2013400', '400\u2013500', '500\u2013600', '600\u2013800', '800\u20131000'];
       if (histCaption) {
-        const popLabel = porArea ? 'participantes da prova da área' : 'participantes efetivos';
-        histCaption.textContent = `${AREANOME[k]} · ${a} · ${popLabel}${zeroMode === 'no_zero' ? ' · excluindo notas zero' : ''}`;
+        histCaption.textContent = `${AREANOME[k]} · ${a} · participantes efetivos${zeroMode === 'no_zero' ? ' · excluindo notas zero' : ''}`;
       }
       document.querySelectorAll('.hist-dot-ms').forEach((el) => { el.style.background = cor; });
       Plotly.react('g_histograma', [
@@ -418,10 +399,6 @@
       renderBoxplots();
       renderHist();
       renderDisp();
-    });
-    document.addEventListener('enemdash:populationMode', () => {
-      renderBoxplots();
-      renderHist();
     });
     renderDisp();
   };

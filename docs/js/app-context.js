@@ -30,18 +30,6 @@
         detail: { mode: ED.schoolZeroMode },
       }));
     };
-    ED.getPopulationMode = function () {
-      return ED.populationMode === 'por_area' ? 'por_area' : 'geral';
-    };
-    ED.setPopulationMode = function (mode) {
-      ED.populationMode = mode === 'por_area' ? 'por_area' : 'geral';
-      document.querySelectorAll('[data-population-mode]').forEach((el) => {
-        if (el.value !== ED.populationMode) el.value = ED.populationMode;
-      });
-      document.dispatchEvent(new CustomEvent('enemdash:populationMode', {
-        detail: { mode: ED.populationMode },
-      }));
-    };
     return {
       DATA, ANOS, LAST_INDEX, LAST_YEAR, PREV_YEAR, MED_MS, MED_BR, MED_MS_SEM_ZERO, MED_BR_SEM_ZERO,
       TX_MS, TX_MS_SEM_ZERO, RANK_MS, RANK_MS_SEM_ZERO, GAP,

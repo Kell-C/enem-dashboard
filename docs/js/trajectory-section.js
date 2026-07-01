@@ -3,10 +3,6 @@
     return ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
   }
 
-  function currentPopMode() {
-    return ED.getPopulationMode ? ED.getPopulationMode() : 'geral';
-  }
-
   function indexPointFromClick(el, ev, areaKeys) {
     if (!el || !el._fullLayout || !el.data) return null;
     const fl = el._fullLayout;
@@ -79,14 +75,9 @@
     const { DATA, ANOS, AREAKEYS, AREANOME, ACOR, BL, CFG, C } = ctx;
     const CFGI = ED.Config.CFG_INTERACTIVE || CFG;
     const zeroMode = currentZeroMode();
-    const porArea = currentPopMode() === 'por_area';
-    const AS = porArea
-      ? (zeroMode === 'no_zero'
-        ? (DATA.indexAreasPorAreaSemZero || DATA.indexAreasSemZero || DATA.indexAreas || { CN: [], CH: [], LC: [], MT: [], RED: [] })
-        : (DATA.indexAreasPorArea || DATA.indexAreas || { CN: [], CH: [], LC: [], MT: [], RED: [] }))
-      : (zeroMode === 'no_zero'
-        ? (DATA.indexAreasSemZero || DATA.indexAreas || { CN: [], CH: [], LC: [], MT: [], RED: [] })
-        : (DATA.indexAreas || { CN: [], CH: [], LC: [], MT: [], RED: [] }));
+    const AS = zeroMode === 'no_zero'
+      ? (DATA.indexAreasSemZero || DATA.indexAreas || { CN: [], CH: [], LC: [], MT: [], RED: [] })
+      : (DATA.indexAreas || { CN: [], CH: [], LC: [], MT: [], RED: [] });
     const tr = AREAKEYS.map((k) => {
       const b = AS[k][0] || 1;
       return {
@@ -244,8 +235,5 @@
       io.observe(indexEl);
     }
     document.addEventListener('enemdash:schoolZeroMode', renderTrajectoryCharts);
-    document.addEventListener('enemdash:populationMode', () => {
-      mountIndexChart(ctx);
-    });
   };
 })(window.EnemDash);

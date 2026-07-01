@@ -67,10 +67,6 @@ function bootDashboard() {
 
   applyDynamicStaticText(ctx);
 
-  document.querySelectorAll('[data-population-mode]').forEach((el) => {
-    el.addEventListener('change', (e) => ED.setPopulationMode(e.target.value));
-  });
-
   ED.initAreaDetail(ctx);
   ED.initKpi(ctx);
   ED.initTrajectory(ctx);
