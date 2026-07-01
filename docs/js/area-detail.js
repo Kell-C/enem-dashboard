@@ -17,31 +17,36 @@
     return s.length > n ? `${s.slice(0, n - 1)}\u2026` : s;
   }
 
-  function scopeData(ctx) {
+  function scopeData(ctx, areaKey) {
     const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
-    return zeroMode === 'no_zero'
-      ? {
-        areaDetail: ctx.DATA.areaDetailSemZero || ctx.DATA.areaDetail || {},
-        boxplot: ctx.DATA.boxplotSemZero || ctx.DATA.boxplot || {},
-        histograma: ctx.DATA.histogramaSemZero || ctx.DATA.histograma || {},
-        msArea: ctx.DATA.msAreaSemZero || ctx.DATA.msArea || {},
+    const popMode = ED.getPopulationMode ? ED.getPopulationMode() : 'geral';
+    const porArea = popMode === 'por_area';
+    if (zeroMode === 'no_zero') {
+      return {
+        areaDetail: (porArea ? ctx.DATA.areaDetailPorAreaSemZero : ctx.DATA.areaDetailSemZero) || ctx.DATA.areaDetail || {},
+        boxplot: (porArea ? ctx.DATA.boxplotPorAreaSemZero : ctx.DATA.boxplotSemZero) || ctx.DATA.boxplot || {},
+        histograma: (porArea ? ctx.DATA.histogramaPorAreaSemZero : ctx.DATA.histogramaSemZero) || ctx.DATA.histograma || {},
+        msArea: (porArea ? ctx.DATA.msAreaPorAreaSemZero : ctx.DATA.msAreaSemZero) || ctx.DATA.msArea || {},
         escRank: ctx.DATA.escRankSemZero || ctx.DATA.escRank || {},
-        estadualN: ctx.DATA.estadualNSemZero || ctx.DATA.estadualN || [],
-        brEstadualN: ctx.DATA.brEstadualNSemZero || ctx.DATA.brEstadualN || [],
-      }
-      : {
-        areaDetail: ctx.DATA.areaDetail || {},
-        boxplot: ctx.DATA.boxplot || {},
-        histograma: ctx.DATA.histograma || {},
-        msArea: ctx.DATA.msArea || {},
-        escRank: ctx.DATA.escRank || {},
-        estadualN: ctx.DATA.estadualN || [],
-        brEstadualN: ctx.DATA.brEstadualN || [],
+        estadualN: (porArea && areaKey && ctx.DATA.estadualNPorAreaSemZero?.[areaKey]) || ctx.DATA.estadualNSemZero || ctx.DATA.estadualN || [],
+        brEstadualN: (porArea && areaKey && ctx.DATA.brEstadualNPorAreaSemZero?.[areaKey]) || ctx.DATA.brEstadualNSemZero || ctx.DATA.brEstadualN || [],
+        popMode: popMode,
       };
+    }
+    return {
+      areaDetail: (porArea ? ctx.DATA.areaDetailPorArea : null) || ctx.DATA.areaDetail || {},
+      boxplot: (porArea ? ctx.DATA.boxplotPorArea : null) || ctx.DATA.boxplot || {},
+      histograma: (porArea ? ctx.DATA.histogramaPorArea : null) || ctx.DATA.histograma || {},
+      msArea: (porArea ? ctx.DATA.msAreaPorArea : null) || ctx.DATA.msArea || {},
+      escRank: ctx.DATA.escRank || {},
+      estadualN: (porArea && areaKey && ctx.DATA.estadualNPorArea?.[areaKey]) || ctx.DATA.estadualN || [],
+      brEstadualN: (porArea && areaKey && ctx.DATA.brEstadualNPorArea?.[areaKey]) || ctx.DATA.brEstadualN || [],
+      popMode: popMode,
+    };
   }
 
   function getDetailData(ctx, areaKey, ano) {
-    const scoped = scopeData(ctx);
+    const scoped = scopeData(ctx, areaKey);
     const ad = scoped.areaDetail?.[areaKey]?.[String(ano)];
     const i = ctx.ANOS.indexOf(Number(ano));
     if (ad) return ad;
@@ -85,7 +90,7 @@
 
   function buildAreaDetailShell(ctx, areaKey, ano) {
     const { AREANOME, ACOR, C, FMT, ANOS } = ctx;
-    const scoped = scopeData(ctx);
+    const scoped = scopeData(ctx, areaKey);
     const nome = AREANOME[areaKey] || areaKey;
     const areaCor = ACOR[areaKey] || C.azul;
     const bp = scoped.boxplot?.[areaKey]?.[String(ano)] || {};
@@ -131,7 +136,7 @@
       n,
       html: `<div class="idx-head">`
         + `<h4><span class="idx-dot" style="background:${areaCor}"></span>${nome} \u00b7 ${ano}</h4>`
-        + `<span class="idx-sub">N = <b>${fmtN(n)}</b> participantes efetivos \u00b7 rede estadual MS \u00b7 mesma base dos histogramas</span></div>`
+        + `<span class="idx-sub">N = <b>${fmtN(n)}</b> ${scoped.popMode === 'por_area' ? 'participantes que realizaram esta \u00e1rea' : 'participantes efetivos'} \u00b7 rede estadual MS \u00b7 mesma base dos histogramas</span></div>`
         + `<div class="idx-kpis">${kpis}</div>`
         + `<div class="idx-grid">`
         + `<div class="idx-panel"><h5>Distribui\u00e7\u00e3o das notas \u00b7 MS</h5><div id="${uid}_hist" class="idx-plot"></div></div>`
@@ -162,12 +167,13 @@
 
   function mountAreaDetailCharts(ctx, areaKey, ano, shell) {
     const { ANOS, LAST_YEAR, C, BL, CFG } = ctx;
-    const scoped = scopeData(ctx);
+    const scoped = scopeData(ctx, areaKey);
     const { uid, detail, areaCor, n, brN } = shell;
     const i = ANOS.indexOf(Number(ano));
     const brNVal = brN ?? detail.brN ?? scoped.brEstadualN?.[i] ?? null;
     const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
-    const key = `${uid}|${areaKey}|${ano}|${zeroMode}`;
+    const popMode = ED.getPopulationMode ? ED.getPopulationMode() : 'geral';
+    const key = `${uid}|${areaKey}|${ano}|${zeroMode}|${popMode}`;
     if (_lastDetailKey === key) return;
     _lastDetailKey = key;
 
@@ -320,7 +326,8 @@
         if (e.key === 'Escape') ED.closeAreaModal();
       });
     }
-    document.addEventListener('enemdash:schoolZeroMode', () => {
+    function _refreshAreaViews() {
+      _lastDetailKey = '';
       const panel = document.getElementById('indexDetail');
       if (panel?.dataset?.areaKey && panel?.dataset?.ano) {
         renderAreaDetail(ctx, panel.dataset.areaKey, parseInt(panel.dataset.ano, 10), 'indexDetail');
@@ -333,7 +340,9 @@
         const areaKey = ctx.AREAKEYS.find((k) => title.toUpperCase().includes((ctx.AREANOME[k] || '').toUpperCase()));
         if (areaKey) ED.openAreaModal(ctx, areaKey, ano);
       }
-    });
+    }
+    document.addEventListener('enemdash:schoolZeroMode', _refreshAreaViews);
+    document.addEventListener('enemdash:populationMode', _refreshAreaViews);
     window.openAreaModal = (areaKey, ano) => ED.openAreaModal(ctx, areaKey, ano);
     window.closeAreaModal = () => ED.closeAreaModal();
     window.showIndexDetail = (areaKey, ano) => ED.showIndexDetail(ctx, areaKey, ano);

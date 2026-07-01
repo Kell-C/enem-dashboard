@@ -16,9 +16,17 @@
     b.innerHTML = h;
   }
 
+  function _getAreaRefData() {
+    const porArea = ED.getPopulationMode ? ED.getPopulationMode() === 'por_area' : false;
+    return porArea
+      ? (_ctx.DATA.msAreaPorArea || _ctx.DATA.msArea || {})
+      : (_ctx.DATA.msArea || {});
+  }
+
   function renderAreas(containerId, areas, refMap) {
     const ctx = _ctx;
     const { ANOS, DATA, AREANOME, ACOR, C, BL, CFG } = ctx;
+    const msAreaRef = _getAreaRefData();
     const host = document.getElementById(containerId);
     host.innerHTML = '';
     ctx.AREAKEYS.forEach((k) => {
@@ -31,8 +39,9 @@
       const delta = last - ref;
       tile.innerHTML = `<div class="at"><span>${k}</span><span class="fl" style="color:${warn ? C.critico : C.verde}">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}</span></div><div id="${containerId}_${k}" style="height:74px"></div>`;
       host.appendChild(tile);
+      const msRef = msAreaRef[k]?.ms || DATA.msArea?.[k]?.ms || [];
       Plotly.newPlot(`${containerId}_${k}`, [
-        { x: ANOS, y: DATA.msArea[k].ms, mode: 'lines', line: { color: C.brasil, width: 1.4, dash: 'dot' }, hovertemplate: `${AREANOME[k]} \u00b7 MS estadual<br><b>%{x}</b> \u00b7 %{y:.0f} pts<extra></extra>` },
+        { x: ANOS, y: msRef, mode: 'lines', line: { color: C.brasil, width: 1.4, dash: 'dot' }, hovertemplate: `${AREANOME[k]} \u00b7 MS estadual<br><b>%{x}</b> \u00b7 %{y:.0f} pts<extra></extra>` },
         { x: ANOS, y: v, mode: 'lines+markers', line: { color: ACOR[k], width: 2 }, marker: { size: 3 }, hovertemplate: `${AREANOME[k]}<br><b>%{x}</b> \u00b7 %{y:.0f} pts<extra></extra>` },
       ], {
         ...BL, height: 74, margin: { l: 4, r: 6, t: 4, b: 14 },
@@ -158,7 +167,8 @@
 
   function renderMun(creName, muns) {
     const ctx = _ctx;
-    const { C, BL, CFG, NF, LAST_YEAR, LAST_INDEX, MS_GERAL_2024, MS_AREA_2024 } = ctx;
+    const { C, BL, CFG, NF, LAST_YEAR, LAST_INDEX, MS_GERAL_2024 } = ctx;
+    const MS_AREA_2024 = _getRefArea2024();
     document.getElementById('munTitle').childNodes[0].nodeValue = `Munic\u00edpios de ${creName} \u00b7 participa\u00e7\u00e3o \u00d7 desempenho (${LAST_YEAR}) `;
     document.getElementById('munAttTitle').childNodes[0].nodeValue = `Aten\u00e7\u00e3o por \u00e1rea \u00b7 munic\u00edpios de ${creName} (${LAST_YEAR}) `;
     const xs = [];
@@ -228,13 +238,17 @@
       ? `<b>Sem taxa de participa\u00e7\u00e3o (${semtx.length}):</b> ${semtx.join(', ')} \u2014 sem registro de concluintes na base municipal.${singleWithoutTx ? ' Como esta CRE possui apenas um munic\u00edpio, ele \u00e9 exibido acima apenas pelo desempenho.' : ' Eles continuam no mapa de aten\u00e7\u00e3o por \u00e1rea abaixo (que usa apenas o desempenho).'}`
       : '';
     const A4 = ['CN', 'CH', 'LC', 'MT', 'RED'];
-    const rows = muns.map((m) => ({
-      n: m.nome,
-      z: A4.map((k) => {
-        const val = m.a2024[k];
-        return val == null ? null : Math.round(val - MS_AREA_2024[k]);
-      }),
-    }));
+    const porArea = ED.getPopulationMode ? ED.getPopulationMode() === 'por_area' : false;
+    const rows = muns.map((m) => {
+      const munPaData = porArea ? (ctx.DATA.munPorArea?.[m.nome]?.a2024 || {}) : {};
+      return {
+        n: m.nome,
+        z: A4.map((k) => {
+          const val = porArea && munPaData[k] != null ? munPaData[k] : m.a2024[k];
+          return val == null ? null : Math.round(val - MS_AREA_2024[k]);
+        }),
+      };
+    });
     rows.sort((a, b) => a.z.reduce((s, v) => s + (v || 0), 0) - b.z.reduce((s, v) => s + (v || 0), 0));
     Plotly.react('g_munheat', [{
       z: rows.map((r) => r.z), x: A4, y: rows.map((r) => r.n), type: 'heatmap',
@@ -250,9 +264,24 @@
     }, CFG);
   }
 
+  function _getCreAreas(name) {
+    const { DATA } = _ctx;
+    const porArea = ED.getPopulationMode ? ED.getPopulationMode() === 'por_area' : false;
+    if (porArea && DATA.crePorArea?.[name]?.areas) {
+      return DATA.crePorArea[name].areas;
+    }
+    return DATA.cre[name].areas;
+  }
+
+  function _getRefArea2024() {
+    const { DATA, MS_AREA_2024 } = _ctx;
+    const porArea = ED.getPopulationMode ? ED.getPopulationMode() === 'por_area' : false;
+    return (porArea ? DATA.msArea2024PorArea : null) || MS_AREA_2024;
+  }
+
   function selectCre(name, opts = {}) {
     const ctx = _ctx;
-    const { DATA, LAST_YEAR, MS_AREA_2024 } = ctx;
+    const { DATA, LAST_YEAR } = ctx;
     const shouldScroll = opts.scroll !== false;
     SEL_CRE = name;
     SEL_MUN = null;
@@ -263,7 +292,7 @@
     document.getElementById('escCard').style.display = 'none';
     document.getElementById('creAreaCard').style.display = 'block';
     document.querySelector('#creAreaTitle span').textContent = `${name} \u00b7 ${ctx.ANOS[0]}\u2013${LAST_YEAR}`;
-    renderAreas('creAreas', DATA.cre[name].areas, MS_AREA_2024);
+    renderAreas('creAreas', _getCreAreas(name), _getRefArea2024());
     const muns = (DATA.creMuns[name] || [])
       .map((m) => (DATA.mun[m] ? { nome: m, ...DATA.mun[m] } : null))
       .filter(Boolean);
@@ -275,13 +304,22 @@
     }
   }
 
+  function _getMunAreas(name) {
+    const { DATA } = _ctx;
+    const porArea = ED.getPopulationMode ? ED.getPopulationMode() === 'por_area' : false;
+    if (porArea && DATA.munPorArea?.[name]?.areas) {
+      return DATA.munPorArea[name].areas;
+    }
+    return DATA.mun[name]?.areas || {};
+  }
+
   function selectMun(name) {
     const ctx = _ctx;
     const { DATA, LAST_YEAR, MS_AREA_2024, MS_GERAL_2024, MS_AREA_2024_SEM_ZERO, MS_GERAL_2024_SEM_ZERO } = ctx;
     SEL_MUN = name;
     bread();
     document.querySelector('#creAreaTitle span').textContent = `${name} \u00b7 ${ctx.ANOS[0]}\u2013${LAST_YEAR}`;
-    if (DATA.mun[name]) renderAreas('creAreas', DATA.mun[name].areas, MS_AREA_2024);
+    if (DATA.mun[name]) renderAreas('creAreas', _getMunAreas(name), _getRefArea2024());
     const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
     const refArea = zeroMode === 'no_zero' && Object.keys(MS_AREA_2024_SEM_ZERO || {}).length
       ? MS_AREA_2024_SEM_ZERO
@@ -358,6 +396,10 @@
     });
     document.addEventListener('enemdash:schoolZeroMode', () => {
       if (SEL_MUN) selectMun(SEL_MUN);
+    });
+    document.addEventListener('enemdash:populationMode', () => {
+      if (SEL_MUN) selectMun(SEL_MUN);
+      else if (SEL_CRE) selectCre(SEL_CRE, { scroll: false });
     });
     const row = document.getElementById('creRow');
     function creTrajData(o) {
