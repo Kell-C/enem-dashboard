@@ -130,6 +130,7 @@ function bootDashboard() {
   ED.lazySection(4, () => ED.initCv(ctx));
   ED.lazySection(5, () => ED.initInteg(ctx));
   ED.lazyDetails('details.more', () => ED.initSnapshot(ctx));
+  ED.lazyDetails('#aioSecAcc', () => ED.initAio(ctx));
 }
 
 function tryBootDashboard() {
