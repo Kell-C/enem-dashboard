@@ -158,6 +158,7 @@
   .attbl tbody tr:hover{background:var(--insight)}
   .attbl tbody tr.is-sel{background:var(--insight)}
   .attbl tbody tr.is-sel td:first-child{box-shadow:inset 3px 0 0 var(--azulEsc);font-weight:700}
+  .hidden{display:none!important}
   .scroll{max-height:330px;overflow:auto}
   .muted{color:var(--muted)} .b{font-weight:700}
 

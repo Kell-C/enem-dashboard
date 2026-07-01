@@ -605,7 +605,36 @@
     </div>
   </div>
 
-  <div class="footer">Dados: microdado INEP + concluintes SED (<code>Concluintes EM <span data-dyn="fileRange">2019 a 2025</span>.xlsx</code>) · eliminados: TP_PRESENCA/TP_STATUS_REDACAO = 2 · redação em branco incluída · paleta SED/MS</div>
+  <!-- ENEM por Escola (AIO) -->
+  <details class="secacc" id="aioSecAcc">
+    <summary>ENEM por Escola (AIO) · histórico 2013–2025 e ranking MS 2025 <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Metodologia por prova · dados aio.com.br</span><span class="chev">▶</span></summary>
+    <div class="secbody" id="aioSection">
+      <p class="aio-empty hidden" style="color:var(--muted);font-size:13px">Dados AIO indisponíveis. Execute <code>bash baixar_aio.sh</code> na raiz do projeto.</p>
+      <div class="card" style="margin-top:8px">
+        <h3 id="aioTrajTitle">Trajetória por área · AIO</h3>
+        <div class="coh"><span class="dot"></span> Linhas = LC, CH, CN, MT, Redação e média geral · 2013–2025 · metodologia AIO (por prova)</div>
+        <div class="chart-toolbar" style="margin:8px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label for="aioEscolaSelect" style="font-size:12px;color:var(--muted)">Escola:</label>
+          <select id="aioEscolaSelect" class="dash-select" aria-label="Escola AIO" style="min-width:280px;max-width:100%"></select>
+        </div>
+        <div id="g_aio_traj" class="plot"></div>
+        <div class="nota" id="aioTrajNota"></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Ranking ENEM 2025 · escolas estaduais MS (AIO)</h3>
+        <div class="coh"><span class="dot"></span> Ordenado pela média geral 2025 (AIO) · rankings publicados pela AIO quando disponíveis</div>
+        <div class="scroll">
+          <table class="attbl">
+            <thead><tr><th>#</th><th>Escola</th><th>Município</th><th>CRE</th><th>LC</th><th>CH</th><th>CN</th><th>MT</th><th>Red.</th><th>Geral</th><th>Rank mun.</th><th>Rank MS</th><th>Rank BR</th></tr></thead>
+            <tbody id="aioRankBody"></tbody>
+          </table>
+        </div>
+        <div class="nota" id="aioRankNota"></div>
+      </div>
+    </div>
+  </details>
+
+  <div class="footer">Dados: microdado INEP + concluintes SED (<code>Concluintes EM <span data-dyn="fileRange">2019 a 2025</span>.xlsx</code>) · eliminados: TP_PRESENCA/TP_STATUS_REDACAO = 2 · redação em branco incluída · paleta SED/MS · histórico AIO: <code>baixar_aio_escolas.py</code></div>
 </div>
 <script defer src="js/config.js?v=3" charset="utf-8"></script>
 <script defer src="js/data-utils.js?v=3" charset="utf-8"></script>
@@ -619,6 +648,7 @@
 <script defer src="js/stats-section.js?v=8" charset="utf-8"></script>
 <script defer src="js/cv-section.js?v=3" charset="utf-8"></script>
 <script defer src="js/drill-section.js?v=8" charset="utf-8"></script>
+<script defer src="js/aio-section.js?v=1" charset="utf-8"></script>
 <script defer src="js/snapshot-section.js?v=3" charset="utf-8"></script>
 <script defer src="data-loader.js?v=3" charset="utf-8"></script>
 <script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
