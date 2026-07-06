@@ -8,6 +8,15 @@
     function renderElim(dep) {
       const d = INT.rede[dep];
       if (!d) return;
+      const txMax = Math.max(...(d.txE || []).filter((v) => v != null), 0) + 1;
+      const elimMax = Math.max(
+        ...(d.areaElim?.CN || []),
+        ...(d.areaElim?.CH || []),
+        ...(d.areaElim?.LC || []),
+        ...(d.areaElim?.MT || []),
+        ...(d.er || []),
+        0,
+      ) + 5;
       const bars = [
         { x: AN, y: d.areaElim.CN, name: 'CN', type: 'bar', marker: { color: ICOL.CN }, hovertemplate: 'CN elim. %{x}: %{y}<extra></extra>' },
         { x: AN, y: d.areaElim.CH, name: 'CH', type: 'bar', marker: { color: ICOL.CH }, hovertemplate: 'CH elim. %{x}: %{y}<extra></extra>' },
@@ -20,17 +29,18 @@
         line: { color: C.critico, width: 2 }, marker: { size: 5 },
         hovertemplate: 'Taxa eliminacao %{x}: %{y:.2f}%<extra></extra>',
       };
-      Plotly.newPlot('g_integ_elim', bars.concat([line]), {
+      Plotly.newPlot('g_integ_elim', bars.concat([line]), ED.withPandemia({
         ...BL, height: 300, barmode: 'stack',
         xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
-        yaxis: { title: { text: 'eliminados', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)' },
+        yaxis: { title: { text: 'eliminados', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)', range: [0, elimMax] },
         yaxis2: {
           overlaying: 'y', side: 'right',
           title: { text: '% do compareceu', font: { size: 10 } },
           showgrid: false, tickfont: { size: 10 },
+          range: [0, Math.max(txMax, 5)],
         },
         legend: { orientation: 'h', y: -0.22, font: { size: 9 } },
-      }, CFG);
+      }, { y0: 0, y1: elimMax, annotate: false }), CFG);
     }
 
     const sel = document.createElement('select');

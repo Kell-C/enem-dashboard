@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Painel ENEM MS — 2019-2025</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A4D8C'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='14' font-family='Segoe UI,sans-serif' fill='white'%3EMS%3C/text%3E%3C/svg%3E" />
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 <div class="wrap">
@@ -17,26 +17,33 @@
         <h1>Painel ENEM · Mato Grosso do Sul</h1>
         <p class="page-sub">Rede estadual · <span data-dyn="range">2019–2025</span></p>
       </div>
-      <div class="page-filters">
-        <label class="filter-pill">Período
-          <select id="periodoSelect" name="periodo" aria-label="Período"><option data-dyn="range">2019–2025</option><option data-dyn="recentRange">2022–2025</option></select>
-        </label>
-      </div>
     </div>
   </header>
 
   <details class="ref-note">
-    <summary>Metodologia e população de referência</summary>
+    <summary>Metodologia e população de referência · escolas estaduais</summary>
     <div class="ref-body">
-      <p><strong>População de referência (médias, rankings e comparativos):</strong> participantes que concluíram a prova em ao menos uma área objetiva (CN, CH, LC ou MT), ou seja, <code>TP_PRESENCA = 1</code> na área, excluindo eliminados por fraude/fuga (<code>TP_PRESENCA = 2</code>) ou na redação (<code>TP_STATUS_REDACAO = 2</code>). A nota de cada área entra na média apenas quando o participante concluiu aquela prova; a média geral é a média das notas disponíveis.</p>
+      <p><strong>Escopo padrão:</strong> salvo indicação em contrário, todos os indicadores, médias, rankings e comparativos referem-se a <strong>estudantes de escolas estaduais</strong> de Mato Grosso do Sul (<code>TP_DEPENDENCIA_ADM = 2</code>). Comparações com o Brasil usam a média entre estudantes de escolas estaduais de todo o país.</p>
+      <p><strong>População de referência:</strong> concluintes do recorte que concluíram a prova em ao menos uma área objetiva (CN, CH, LC ou MT), ou seja, <code>TP_PRESENCA = 1</code> na área, excluindo eliminados por fraude/fuga (<code>TP_PRESENCA = 2</code>) ou na redação (<code>TP_STATUS_REDACAO = 2</code>). A nota de cada área entra na média apenas quando o participante concluiu aquela prova; a média geral é a média das notas disponíveis.</p>
       <p><strong>Recorte de concluintes:</strong> 2019–2023 = autodeclaração de conclusão do EM (<code>TP_ST_CONCLUSAO = 2</code>); 2024–2025 = vínculo com escola no microdado INEP (<code>CO_ESCOLA</code> preenchido).</p>
-      <p><strong>Participação efetiva</strong> = participantes na população de referência ÷ concluintes matriculados (Censo SED/MS). Mesma definição em MS, demais UFs e Brasil.</p>
+      <p><strong>Participação</strong> = participantes na população de referência ÷ concluintes matriculados (Censo SED/MS). Mesma definição em MS, demais UFs e Brasil (rede estadual).</p>
+      <p><strong>Exceção — comparação entre redes:</strong> as seções Redes, funil por rede e integridade entre redes incluem também escolas municipais, federais e privadas de MS, apenas para comparar redes entre si.</p>
     </div>
   </details>
 
-  <details class="secacc secacc-primary" id="rankEscSection" open>
-    <summary>Ranking das escolas estaduais · 2025<span class="chev">▶</span></summary>
-    <div class="secbody">
+  <div class="dash-tabs" id="dashTabs">
+    <div class="dash-tablist" role="tablist" aria-label="Seções do painel">
+      <button type="button" class="dash-tab is-active" role="tab" id="tabbtn-ranking" aria-selected="true" aria-controls="tab-ranking" data-tab="tab-ranking">Ranking das escolas</button>
+      <button type="button" class="dash-tab" role="tab" id="tabbtn-panorama" aria-selected="false" aria-controls="tab-panorama" data-tab="tab-panorama">Indicadores</button>
+      <button type="button" class="dash-tab" role="tab" id="tabbtn-territorio" aria-selected="false" aria-controls="tab-territorio" data-tab="tab-territorio">Território</button>
+      <button type="button" class="dash-tab" role="tab" id="tabbtn-distribuicao" aria-selected="false" aria-controls="tab-distribuicao" data-tab="tab-distribuicao">Distribuição</button>
+      <button type="button" class="dash-tab" role="tab" id="tabbtn-redes" aria-selected="false" aria-controls="tab-redes" data-tab="tab-redes">Redes</button>
+      <button type="button" class="dash-tab" role="tab" id="tabbtn-consistencia" aria-selected="false" aria-controls="tab-consistencia" data-tab="tab-consistencia">Consistência</button>
+      <button type="button" class="dash-tab" role="tab" id="tabbtn-integridade" aria-selected="false" aria-controls="tab-integridade" data-tab="tab-integridade">Integridade</button>
+    </div>
+
+    <div class="dash-tabpanel is-active" id="tab-ranking" role="tabpanel" aria-labelledby="tabbtn-ranking">
+      <div id="rankEscSection" class="tab-panel-inner">
       <div class="rank-panel-head">
         <h2>Desempenho e posição no ENEM</h2>
         <p id="rankEscMeta">Carregando…</p>
@@ -89,10 +96,11 @@
         <div id="rankEscHistPlot" class="rank-hist-plot plot-unified-hover"></div>
       </div>
       <div class="rank-empty">Dados não carregados. Execute <code>python scripts/gerar_ranking_aio_web.py</code>.</div>
+      </div>
     </div>
-  </details>
 
-  <!-- KPIs -->
+    <div class="dash-tabpanel" id="tab-panorama" role="tabpanel" aria-labelledby="tabbtn-panorama" hidden>
+      <div class="tab-panel-inner">
   <div class="kpis">
     <div class="kpi">
       <p class="lbl">Média geral · estadual <span class="help">i<span class="tip"><b>O que é:</b> média das notas disponíveis (CN, CH, LC, MT, Redação) dos participantes na população de referência. <b>Como ler:</b> o número mostra <span data-dyn="lastYear">2025</span>; a mini-linha acompanha a trajetória <span data-dyn="range">2019–2025</span>. Subir é melhor.</span></span></p>
@@ -100,7 +108,7 @@
       <div class="vsub" id="kpiMedSub">—</div>
     </div>
     <div class="kpi">
-      <p class="lbl">Participação efetiva <span class="help">i<span class="tip"><b>O que é:</b> participantes na população de referência ÷ <b>concluintes</b> do EM (matrícula SED). Inclui quem concluiu ao menos uma área objetiva, sem eliminação. <b>Como ler:</b> o vale de 2020–2021 é a pandemia.</span></span></p>
+      <p class="lbl">Participação <span class="help">i<span class="tip"><b>O que é:</b> participantes na população de referência ÷ <b>concluintes</b> do EM (matrícula SED). Inclui quem concluiu ao menos uma área objetiva, sem eliminação.</span></span></p>
       <div class="rowv"><div class="val" id="kpiPartVal">—</div><div id="s_part" class="spark"></div></div>
       <div class="vsub" id="kpiPartSub">—</div>
     </div>
@@ -110,7 +118,7 @@
       <div class="vsub" id="kpiRankSub">—</div>
     </div>
     <div class="kpi" id="kpiGapCard">
-      <p class="lbl">Defasagem vs Brasil <span class="help">i<span class="tip"><b>O que é:</b> média de MS menos média do Brasil <b>na mesma população</b> (rede estadual). <b>Como ler:</b> negativo = abaixo do Brasil; aproximar-se de zero é melhor.</span></span></p>
+      <p class="lbl">Defasagem vs Brasil (esc. estaduais) <span class="help">i<span class="tip"><b>O que é:</b> média de MS menos média do Brasil entre <b>estudantes de escolas estaduais</b> (mesma população de referência). <b>Como ler:</b> negativo = abaixo do Brasil; aproximar-se de zero é melhor.</span></span></p>
       <div class="rowv"><div class="val" id="kpiGapVal">—</div><div id="s_gap" class="spark"></div></div>
       <div class="vsub" id="kpiGapSub">—</div>
     </div>
@@ -120,6 +128,8 @@
       <div class="vsub" id="kpiElimSub"><span data-dyn="lastYear">2025</span> · <span class="trend up">▲ estável</span> vs <span data-dyn="startYear">2019</span></div>
     </div>
   </div>
+
+  <div class="kpis kpis-areas" id="kpiAreas" aria-label="Médias por área de conhecimento · rede estadual MS"></div>
 
   <!-- FUNIL DINÂMICO -->
   <div class="funil">
@@ -131,9 +141,8 @@
     <div class="fstages" id="fstages"></div>
   </div>
 
-  <!-- ÂNCORAS TEMPORAIS -->
-  <details class="secacc">
-    <summary>Trajetória <span data-dyn="range">2019–2025</span> <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Como desempenho e participação evoluíram juntos · rede estadual</span><span class="chev">▶</span></summary>
+  <details class="secacc" id="trajSection">
+    <summary>Trajetória <span data-dyn="range">2019–2025</span> <span class="hint">· como desempenho e participação evoluíram juntos · rede estadual</span><span class="chev">▶</span></summary>
     <div class="secbody">
   <div class="chart-toolbar" role="group" aria-label="Filtros da trajetória">
     <div class="chart-field">
@@ -153,8 +162,8 @@
       <div class="nota">O vale 2020–2021 derrubou a participação pela metade; <span data-dyn="lastYear">2025</span> mantém a recuperação da adesão com desempenho mais estável.</div>
     </div>
     <div class="card">
-      <h3>Evolução por área · índice 2019 = 100
-        <span class="help">i<span class="tip"><b>Por que indexar:</b> as áreas têm médias muito diferentes (Redação ~600, CN ~470). Pondo todas em 100 no ano-base, comparamos o <b>ritmo</b> de crescimento, não o nível. <b>Acima de 100</b> = cresceu desde 2019.</span></span></h3>
+      <h3>Evolução por área · índice <span data-dyn="startYear">2013</span> = 100
+        <span class="help">i<span class="tip"><b>Por que indexar:</b> as áreas têm médias muito diferentes (Redação ~600, CN ~470). Pondo todas em 100 no ano-base, comparamos o <b>ritmo</b> de crescimento, não o nível. <b>Acima de 100</b> = cresceu desde o ano-base.</span></span></h3>
       <div class="coh"><span class="dot"></span> Ritmo de cada componente em base comparável · <b>passe o mouse no ponto e clique</b> para detalhes</div>
       <div id="g_index" class="plot plot-controls-outside" style="cursor:pointer"></div>
       <div class="index-drill">
@@ -168,7 +177,7 @@
   </div>
   <div id="indexDetail" class="index-detail index-detail-wide"></div>
 
-  <div class="grid2" style="margin-top:16px">
+  <div class="grid2 grid2-spaced">
     <div class="card">
       <h3>Posição de MS entre as UFs ao longo do tempo
         <span class="help">i<span class="tip"><b>Bump chart:</b> mostra a posição relativa, não a nota. <b>Como ler:</b> a linha sobe quando MS ultrapassa estados; cai quando é ultrapassado. A média absoluta pode subir e a posição cair ao mesmo tempo.</span></span></h3>
@@ -177,8 +186,8 @@
       <div class="nota" id="notaBump">—</div>
     </div>
     <div class="card">
-      <h3>Média geral · MS × Brasil estadual
-        <span class="help">i<span class="tip"><b>Como ler:</b> linha cheia = MS, pontilhada = Brasil (mesma população). A distância vertical entre elas é a defasagem. A faixa cinza marca a pandemia — variações ali devem ser lidas com cautela.</span></span></h3>
+      <h3>Média geral · MS × Brasil (escolas estaduais)
+        <span class="help">i<span class="tip"><b>Como ler:</b> linha cheia = MS, pontilhada = média do Brasil entre estudantes de <b>escolas estaduais</b> (mesma população). A distância vertical entre elas é a defasagem. A faixa cinza marca a pandemia — variações ali devem ser lidas com cautela.</span></span></h3>
       <div class="coh"><span class="dot"></span> Faixa cinza = anos de pandemia (leitura cautelosa)</div>
       <div id="g_evol" class="plot plot-controls-outside"></div>
       <div class="nota" id="notaEvol">—</div>
@@ -186,11 +195,13 @@
   </div>
     </div>
   </details>
+      </div>
+    </div>
 
-  <!-- DRILL-DOWN TERRITORIAL -->
-  <details class="secacc">
-    <summary>Detalhamento territorial — clique para explorar <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Coordenadoria → Município → Escola (tabela <span data-dyn="lastYear">2025</span> + histórico da escola)</span><span class="chev">▶</span></summary>
-    <div class="secbody">
+    <div class="dash-tabpanel" id="tab-territorio" role="tabpanel" aria-labelledby="tabbtn-territorio" hidden>
+      <div class="tab-panel-inner">
+      <h2 class="tab-panel-title">Detalhamento territorial</h2>
+      <p class="tab-panel-sub">Coordenadoria → Município → Escola (tabela <span data-dyn="lastYear">2025</span> + histórico da escola)</p>
 
   <div class="bread" id="bread"></div>
 
@@ -277,19 +288,19 @@
       </select>
     </div>
     <div class="grid2" style="margin-top:14px">
-      <div class="card"><h3 id="snapDumbTitle">MS × Brasil por área · 2025 (dumbbell)</h3>
-        <div class="coh"><span class="dot"></span> Distância = diferença MS − Brasil</div><div id="g_areas" class="plot"></div></div>
+      <div class="card"><h3 id="snapDumbTitle">MS × Brasil (esc. estaduais) por área · 2025 (dumbbell)</h3>
+        <div class="coh"><span class="dot"></span> Distância = diferença MS − Brasil (rede estadual)</div><div id="g_areas" class="plot"></div></div>
       <div class="card"><h3 id="snapRankTitle">Ranking das UFs · 2025</h3>
         <div class="coh"><span class="dot"></span> MS destacado · linha = média nacional</div><div id="g_ufrank" class="plot"></div></div>
     </div>
   </details>
+      </div>
     </div>
-  </details>
 
-  <!-- DISTRIBUIÇÃO DO DESEMPENHO -->
-  <details class="secacc">
-    <summary>Distribuição do desempenho <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Boxplot, histograma e dispersão por área ao longo dos anos</span><span class="chev">▶</span></summary>
-    <div class="secbody">
+    <div class="dash-tabpanel" id="tab-distribuicao" role="tabpanel" aria-labelledby="tabbtn-distribuicao" hidden>
+      <div class="tab-panel-inner">
+      <h2 class="tab-panel-title">Distribuição do desempenho</h2>
+      <p class="tab-panel-sub">Boxplot, histograma e dispersão por área ao longo dos anos</p>
       <div class="chart-toolbar" role="group" aria-label="Filtros da distribuição">
         <div class="chart-field">
           <label for="distZeroMode">Notas zero</label>
@@ -355,13 +366,13 @@
         <div class="disp-legend" id="dispLegend" aria-label="Legenda por CRE"></div>
         <p class="disp-note">Participação &gt; 100%: o denominador SED pode incluir EJA e outras modalidades além do EM regular.</p>
       </div>
+      </div>
     </div>
-  </details>
 
-  <!-- COMPARAÇÃO ENTRE REDES (MS) -->
-  <details class="secacc">
-    <summary>Comparação entre redes de MS <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Mesma população de referência · redes do estado de MS</span><span class="chev">▶</span></summary>
-    <div class="secbody">
+    <div class="dash-tabpanel" id="tab-redes" role="tabpanel" aria-labelledby="tabbtn-redes" hidden>
+      <div class="tab-panel-inner">
+      <h2 class="tab-panel-title">Comparação entre redes de MS</h2>
+      <p class="tab-panel-sub">Mesma população de referência · redes do estado de MS</p>
   <div class="grid2" style="margin-top:4px">
     <div class="card">
       <h3>Média geral por rede de MS · <span data-dyn="range">2019–2025</span>
@@ -382,13 +393,13 @@
       <div class="nota">A maior distância está ante a rede privada de MS; ante a municipal a comparação é frágil pelo N pequeno.</div>
     </div>
   </div>
+      </div>
     </div>
-  </details>
 
-  <!-- CONSISTÊNCIA E VARIAÇÃO -->
-  <details class="secacc">
-    <summary>Consistência e variação <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Desvio padrão e coeficiente de variação por área ao longo do tempo</span><span class="chev">▶</span></summary>
-    <div class="secbody">
+    <div class="dash-tabpanel" id="tab-consistencia" role="tabpanel" aria-labelledby="tabbtn-consistencia" hidden>
+      <div class="tab-panel-inner">
+      <h2 class="tab-panel-title">Consistência e variação</h2>
+      <p class="tab-panel-sub">Desvio padrão e coeficiente de variação por área ao longo do tempo</p>
       <div class="grid2" style="margin-top:4px">
         <div class="card">
           <h3>Evolução do desvio padrão por área
@@ -403,13 +414,13 @@
           <div id="g_cv" class="plot"></div>
         </div>
       </div>
+      </div>
     </div>
-  </details>
 
-  <!-- INTEGRIDADE / QUALIDADE DA PARTICIPACAO -->
-  <details class="secacc">
-    <summary>Integridade &amp; qualidade da participação <span class="hint" style="margin-left:8px;font-size:12px;color:var(--muted);font-weight:400">Eliminados, notas zeradas e sem nota · por edição, área, rede e território</span><span class="chev">▶</span></summary>
-    <div class="secbody">
+    <div class="dash-tabpanel" id="tab-integridade" role="tabpanel" aria-labelledby="tabbtn-integridade" hidden>
+      <div class="tab-panel-inner">
+      <h2 class="tab-panel-title">Integridade &amp; qualidade da participação</h2>
+      <p class="tab-panel-sub">Eliminados, notas zeradas e sem nota · por edição, área, rede e território</p>
   <div class="grid2" style="margin-top:4px">
     <div class="card">
       <h3>Eliminados por edição
@@ -433,8 +444,9 @@
     <div class="coh"><span class="dot"></span> Ordenado por taxa de eliminação · clique CRE → municípios · clique município → escolas</div>
     <div id="g_integ_table" class="plot"></div>
   </div>
+      </div>
     </div>
-  </details>
+  </div>
 
   <!-- MODAL DRILL-DOWN EVOLUÇÃO POR ÁREA -->
   <div class="modal" id="areaModal" onclick="if(event.target===this)closeAreaModal()">
@@ -449,22 +461,22 @@
 
   <div class="footer">Dados: microdado INEP + concluintes SED (<code>Concluintes EM <span data-dyn="fileRange">2019 a 2025</span>.xlsx</code>) · população de referência: presentes em ≥1 área objetiva, sem eliminação · redação em branco incluída · paleta SED/MS</div>
 </div>
-<script defer src="js/config.js?v=4" charset="utf-8"></script>
+<script defer src="js/config.js?v=6" charset="utf-8"></script>
 <script defer src="js/data-utils.js?v=3" charset="utf-8"></script>
-<script defer src="js/chart-factory.js?v=3" charset="utf-8"></script>
+<script defer src="js/chart-factory.js?v=5" charset="utf-8"></script>
 <script defer src="js/app-context.js?v=3" charset="utf-8"></script>
-<script defer src="js/area-detail.js?v=8" charset="utf-8"></script>
-<script defer src="js/ranking-escolas-section.js?v=7" charset="utf-8"></script>
-<script defer src="js/kpi-section.js?v=4" charset="utf-8"></script>
-<script defer src="js/trajectory-section.js?v=3" charset="utf-8"></script>
-<script defer src="js/redes-section.js?v=4" charset="utf-8"></script>
-<script defer src="js/integridade-section.js?v=3" charset="utf-8"></script>
-<script defer src="js/stats-section.js?v=8" charset="utf-8"></script>
-<script defer src="js/cv-section.js?v=3" charset="utf-8"></script>
-<script defer src="js/drill-section.js?v=8" charset="utf-8"></script>
-<script defer src="js/snapshot-section.js?v=3" charset="utf-8"></script>
-<script defer src="data-loader.js?v=3" charset="utf-8"></script>
+<script defer src="js/area-detail.js?v=11" charset="utf-8"></script>
+<script defer src="js/ranking-escolas-section.js?v=8" charset="utf-8"></script>
+<script defer src="js/kpi-section.js?v=8" charset="utf-8"></script>
+<script defer src="js/trajectory-section.js?v=8" charset="utf-8"></script>
+<script defer src="js/redes-section.js?v=5" charset="utf-8"></script>
+<script defer src="js/integridade-section.js?v=4" charset="utf-8"></script>
+<script defer src="js/stats-section.js?v=10" charset="utf-8"></script>
+<script defer src="js/cv-section.js?v=4" charset="utf-8"></script>
+<script defer src="js/drill-section.js?v=10" charset="utf-8"></script>
+<script defer src="js/snapshot-section.js?v=4" charset="utf-8"></script>
+<script defer src="data-loader.js?v=4" charset="utf-8"></script>
 <script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-<script defer src="app.js?v=3" charset="utf-8"></script>
+<script defer src="app.js?v=5" charset="utf-8"></script>
 </body>
 </html>

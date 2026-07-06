@@ -29,7 +29,7 @@
           hoverinfo: 'skip', showlegend: false,
         });
       }
-      t.push({ x: br, y: AREAS, mode: 'markers', marker: { color: C.brasil, size: 12 }, hovertemplate: 'Brasil %{x:.0f}<extra></extra>' });
+      t.push({ x: br, y: AREAS, mode: 'markers', marker: { color: C.brasil, size: 12 }, hovertemplate: 'Brasil (esc. estaduais) %{x:.0f}<extra></extra>' });
       t.push({
         x: ms, y: AREAS, mode: 'markers+text', marker: { color: C.azul, size: 13 },
         text: ms.map((v, j) => { const d = v - br[j]; return `${d >= 0 ? '+' : ''}${d.toFixed(0)}`; }),
@@ -56,7 +56,7 @@
         shapes: [{ type: 'line', x0: -0.5, x1: 26.5, y0: med, y1: med, line: { color: C.critico, width: 1.5, dash: 'dash' } }],
       }, CFG);
 
-      document.getElementById('snapDumbTitle').childNodes[0].nodeValue = `MS \u00d7 Brasil por \u00e1rea \u00b7 ${ano} (dumbbell) `;
+      document.getElementById('snapDumbTitle').childNodes[0].nodeValue = `MS \u00d7 Brasil (esc. estaduais) por \u00e1rea \u00b7 ${ano} (dumbbell) `;
       document.getElementById('snapRankTitle').childNodes[0].nodeValue = `Ranking das UFs \u00b7 ${ano} `;
     }
 

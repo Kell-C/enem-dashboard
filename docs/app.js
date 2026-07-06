@@ -36,16 +36,6 @@ function applyDynamicStaticText(ctx) {
     }
   });
 
-  const periodoSelect = document.getElementById('periodoSelect');
-  if (periodoSelect) {
-    periodoSelect.innerHTML = '';
-    [values.range, values.recentRange].forEach((label) => {
-      const option = document.createElement('option');
-      option.textContent = label;
-      periodoSelect.appendChild(option);
-    });
-  }
-
   const snapAno = document.getElementById('snapAno');
   if (snapAno) {
     snapAno.innerHTML = '';
@@ -67,16 +57,18 @@ function bootDashboard() {
 
   applyDynamicStaticText(ctx);
 
+  if (ED.initDashTabs) ED.initDashTabs();
+
   if (ED.initRankingEscolas) ED.initRankingEscolas();
   ED.initAreaDetail(ctx);
   ED.initKpi(ctx);
-  ED.initTrajectory(ctx);
+  ED.lazyDetails('#trajSection', () => ED.initTrajectory(ctx));
 
-  ED.lazySection(1, () => ED.initDrill(ctx));
-  ED.lazySection(2, () => ED.initStats(ctx));
-  ED.lazySection(3, () => ED.initRedes(ctx));
-  ED.lazySection(4, () => ED.initCv(ctx));
-  ED.lazySection(5, () => ED.initInteg(ctx));
+  ED.lazyTabPanel('tab-territorio', () => ED.initDrill(ctx));
+  ED.lazyTabPanel('tab-distribuicao', () => ED.initStats(ctx));
+  ED.lazyTabPanel('tab-redes', () => ED.initRedes(ctx));
+  ED.lazyTabPanel('tab-consistencia', () => ED.initCv(ctx));
+  ED.lazyTabPanel('tab-integridade', () => ED.initInteg(ctx));
   ED.lazyDetails('details.more', () => ED.initSnapshot(ctx));
 }
 

@@ -78,9 +78,32 @@
     return n == null ? '\u2014' : Number(n).toLocaleString('pt-BR');
   }
 
+  function isAioDetail(detail) {
+    return detail?.fonte === 'aio_escolas';
+  }
+
+  function hasMicroDistrib(detail) {
+    return Array.isArray(detail?.histPct) && detail.histPct.some((v) => v != null && v > 0);
+  }
+
+  function detailSubtitle(n, detail) {
+    if (isAioDetail(detail)) {
+      const esc = detail.nEscolas != null ? Number(detail.nEscolas).toLocaleString('pt-BR') : '—';
+      if (n != null && n > 0) {
+        return `N = <b>${fmtN(n)}</b> participantes (AIO) · ${esc} escolas estaduais · médias por escola`;
+      }
+      return `<b>${esc}</b> escolas estaduais com média publicada (AIO) · faixas de nota só a partir de 2019 (microdados INEP)`;
+    }
+    return `N = <b>${fmtN(n)}</b> participantes efetivos \u00b7 rede estadual MS \u00b7 mesma base dos histogramas`;
+  }
+
   function pctCount(n, pct) {
     if (n == null || pct == null) return '\u2014';
     return fmtN(Math.round(n * pct / 100));
+  }
+
+  function boxplotDistrib(bp) {
+    return bp && bp.med != null && Number(bp.med) > 0;
   }
 
   function buildAreaDetailShell(ctx, areaKey, ano) {
@@ -93,52 +116,65 @@
     const msMed = scoped.msArea?.[areaKey]?.ms?.[i];
     const brMed = scoped.msArea?.[areaKey]?.br?.[i];
     const detail = getDetailData(ctx, areaKey, ano);
-    const n = detail.n ?? scoped.estadualN?.[i] ?? null;
+    const n = detail.n ?? (isAioDetail(detail) ? null : scoped.estadualN?.[i] ?? null);
     const brN = detail.brN ?? scoped.brEstadualN?.[i] ?? null;
+    const aio = isAioDetail(detail);
     const gap = msMed != null && brMed != null ? +(msMed - brMed).toFixed(1) : null;
     const gapCol = gap != null && gap < 0 ? C.critico : C.verde;
 
     const minLabel = detail.minPos != null
-      ? (detail.minPosExact ? FMT(detail.minPos) : `\u2265${FMT(detail.minPos)}`)
+      ? (detail.minPosExact ? FMT(detail.minPos) : FMT(detail.minPos))
       : '\u2014';
     const minHint = detail.minPosExact
       ? 'menor nota &gt; 0 (microdados)'
-      : (detail.minPos != null ? 'limite inferior da faixa' : '');
+      : (detail.minPos != null
+        ? (aio ? 'menor m\u00e9dia entre escolas (AIO)' : 'limite inferior da faixa')
+        : '');
 
     const modaVal = detail.moda != null ? FMT(detail.moda) : '\u2014';
     const modaHint = detail.modaTipo === 'nota'
       ? 'nota inteira mais frequente'
       : (detail.modaFaixa
         ? `faixa modal ${detail.modaFaixa} (centro ${modaVal})`
-        : 'faixa com maior % de alunos');
+        : (aio ? 'indispon\u00edvel (sem microdado individual)' : 'faixa com maior % de alunos'));
+
+    const medianaVal = boxplotDistrib(bp)
+      ? FMT(bp.med)
+      : (detail.medianaEscolas != null ? FMT(detail.medianaEscolas) : '\u2014');
+    const medianaHint = boxplotDistrib(bp)
+      ? 'Q2 da distribui\u00e7\u00e3o'
+      : (detail.medianaEscolas != null ? 'mediana entre escolas (AIO)' : '');
 
     const kpis = [
       kpiCard('MS estadual', FMT(msMed), areaCor, 'm\u00e9dia da \u00e1rea'),
-      kpiCard('Brasil estadual', FMT(brMed), C.brasil, 'refer\u00eancia nacional'),
+      kpiCard('Brasil (esc. estaduais)', FMT(brMed), C.brasil, aio ? 'refer\u00eancia nacional indispon\u00edvel via AIO' : 'refer\u00eancia nacional \u00b7 rede estadual'),
       kpiCard('Diferen\u00e7a', gap != null ? `${gap > 0 ? '+' : ''}${FMT(gap)}` : '\u2014', gapCol),
       kpiCard('Moda', modaVal, areaCor, modaHint),
       kpiCard('M\u00edn. &gt; 0', minLabel, null, minHint),
-      kpiCard('Mediana', bp.med != null ? FMT(bp.med) : '\u2014', null, 'Q2 da distribui\u00e7\u00e3o'),
+      kpiCard('Mediana', medianaVal, null, medianaHint),
       kpiCard('Zeros', detail.pctZero != null ? `${detail.pctZero.toFixed(1).replace('.', ',')}%` : '\u2014', C.muted,
-        `${pctCount(n, detail.pctZero)} alunos`),
+        aio ? 'microdado individual a partir de 2019' : `${pctCount(n, detail.pctZero)} alunos`),
       kpiCard('Sem nota', detail.pctSemNota != null ? `${detail.pctSemNota.toFixed(1).replace('.', ',')}%` : '\u2014', C.muted,
-        `${pctCount(n, detail.pctSemNota)} alunos`),
+        aio ? 'microdado individual a partir de 2019' : `${pctCount(n, detail.pctSemNota)} alunos`),
     ].join('');
 
     const uid = `idx_${areaKey}_${ano}`;
+    const chartBlock = aio && !hasMicroDistrib(detail)
+      ? `<div class="idx-aio-note"><p>Distribui\u00e7\u00e3o por faixa e compara\u00e7\u00e3o detalhada com o Brasil exigem microdados INEP (dispon\u00edveis a partir de <b>2019</b>). Para ${ano}, o painel usa m\u00e9dias agregadas por escola estadual extra\u00eddas da <b>AIO</b>.</p></div>`
+      : `<div class="idx-grid">`
+        + `<div class="idx-panel"><h5>Distribui\u00e7\u00e3o das notas \u00b7 MS</h5><div id="${uid}_hist" class="idx-plot"></div></div>`
+        + `<div class="idx-panel"><h5>MS \u00d7 Brasil \u00b7 faixas de nota</h5>`
+        + `<p class="idx-cmp-note">MS: N=${fmtN(n)} participantes efetivos \u00b7 Brasil: N=${fmtN(brN)} (rede estadual nacional, mesma regra de filtro)</p>`
+        + `<div id="${uid}_cmp" class="idx-plot"></div></div>`
+        + `</div>`;
     return {
       nome,
       n,
       html: `<div class="idx-head">`
         + `<h4><span class="idx-dot" style="background:${areaCor}"></span>${nome} \u00b7 ${ano}</h4>`
-        + `<span class="idx-sub">N = <b>${fmtN(n)}</b> participantes efetivos \u00b7 rede estadual MS \u00b7 mesma base dos histogramas</span></div>`
+        + `<span class="idx-sub">${detailSubtitle(n, detail)}</span></div>`
         + `<div class="idx-kpis">${kpis}</div>`
-        + `<div class="idx-grid">`
-        + `<div class="idx-panel"><h5>Distribui\u00e7\u00e3o das notas \u00b7 MS</h5><div id="${uid}_hist" class="idx-plot"></div></div>`
-        + `<div class="idx-panel"><h5>MS \u00d7 Brasil \u00b7 faixas de nota</h5>`
-        + `<p class="idx-cmp-note">MS: N=${fmtN(n)} participantes efetivos \u00b7 Brasil: N=${fmtN(brN)} (rede estadual nacional, mesma regra de filtro)</p>`
-        + `<div id="${uid}_cmp" class="idx-plot"></div></div>`
-        + `</div>`
+        + chartBlock
         + `<div class="idx-ranks">`
         + `<div class="idx-panel"><h5>Top 10 escolas \u00b7 m\u00e9dia da \u00e1rea</h5><div id="${uid}_top" class="idx-plot"></div></div>`
         + `<div class="idx-panel"><h5>Bottom 10 escolas \u00b7 m\u00e9dia da \u00e1rea</h5><div id="${uid}_bot" class="idx-plot"></div></div>`
@@ -171,6 +207,12 @@
     if (_lastDetailKey === key) return;
     _lastDetailKey = key;
 
+    if (isAioDetail(detail) && !hasMicroDistrib(detail)) {
+      [`${uid}_hist`, `${uid}_cmp`].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) Plotly.purge(el);
+      });
+    } else {
     const histPct = detail.histPct || [];
     const histCounts = detail.histCounts || histPct.map((p) => Math.round((n || 0) * p / 100));
     const histColors = HIST_COLORS.map((c, i) => (
@@ -212,10 +254,10 @@
         hovertemplate: 'MS %{x}<br>%{y:.1f}% \u00b7 %{customdata} alunos<extra></extra>',
       },
       {
-        x: CMP_LABELS, y: brPct6, name: `Brasil (N=${fmtN(brNVal)})`,
+        x: CMP_LABELS, y: brPct6, name: `Brasil esc. estaduais (N=${fmtN(brNVal)})`,
         type: 'bar', marker: { color: C.brasil, opacity: 0.88 },
         customdata: brCounts6,
-        hovertemplate: 'Brasil %{x}<br>%{y:.1f}% \u00b7 %{customdata} alunos<extra></extra>',
+        hovertemplate: 'Brasil (esc. estaduais) %{x}<br>%{y:.1f}% \u00b7 %{customdata} alunos<extra></extra>',
       },
     ], {
       ...BL,
@@ -229,6 +271,8 @@
         gridcolor: 'rgba(0,0,0,0)',
       },
     }, CFG);
+
+    }
 
     const escRank = (scoped.escRank && scoped.escRank[areaKey]) || [];
     const top = escRank.slice(0, 10);

@@ -21,12 +21,16 @@
       if (est) t.marker = { size: 6 };
       return t;
     });
-    Plotly.newPlot('g_redes', tr, {
+    const mergeP = ED.Config.mergePandemia;
+    const yVals = deps.flatMap((dep) => (DATA.redes[dep].med || []).filter((v) => v != null));
+    const yLo = yVals.length ? Math.min(...yVals) - 8 : 450;
+    const yHi = yVals.length ? Math.max(...yVals) + 8 : 540;
+    Plotly.newPlot('g_redes', tr, mergeP({
       ...BL, height: 300,
       legend: { orientation: 'h', y: -0.22, font: { size: 9 } },
       xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
-      yaxis: { title: { text: 'm\u00e9dia geral', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)' },
-    }, CFG);
+      yaxis: { title: { text: 'm\u00e9dia geral', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)', range: [yLo, yHi] },
+    }, { y0: yLo, y1: yHi }), CFG);
 
     const others = deps.filter((d) => d !== 'Estadual');
     const estA = DATA.redes.Estadual.areas;

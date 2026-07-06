@@ -32,12 +32,12 @@
       tile.innerHTML = `<div class="at"><span>${k}</span><span class="fl" style="color:${warn ? C.critico : C.verde}">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}</span></div><div id="${containerId}_${k}" style="height:74px"></div>`;
       host.appendChild(tile);
       Plotly.newPlot(`${containerId}_${k}`, [
-        { x: ANOS, y: DATA.msArea[k].ms, mode: 'lines', line: { color: C.brasil, width: 1.4, dash: 'dot' }, hovertemplate: `${AREANOME[k]} \u00b7 MS estadual<br><b>%{x}</b> \u00b7 %{y:.0f} pts<extra></extra>` },
+        { x: ANOS, y: DATA.msArea[k].ms, mode: 'lines', line: { color: C.brasil, width: 1.4, dash: 'dot' }, hovertemplate: `${AREANOME[k]} \u00b7 refer\u00eancia MS (esc. estaduais)<br><b>%{x}</b> \u00b7 %{y:.0f} pts<extra></extra>` },
         { x: ANOS, y: v, mode: 'lines+markers', line: { color: ACOR[k], width: 2 }, marker: { size: 3 }, hovertemplate: `${AREANOME[k]}<br><b>%{x}</b> \u00b7 %{y:.0f} pts<extra></extra>` },
-      ], {
+      ], ED.withPandemia({
         ...BL, height: 74, margin: { l: 4, r: 6, t: 4, b: 14 },
         showlegend: false, xaxis: { visible: false }, yaxis: { visible: false },
-      }, CFG);
+      }, { anos: ANOS, annotate: false }), CFG);
     });
   }
 
@@ -443,12 +443,12 @@
       const xaxis = rng.x
         ? { visible: false, range: rng.x }
         : { visible: false, type: 'category', categoryorder: 'array', categoryarray: ANOS.map(String) };
-      Plotly.newPlot(sid, traces, {
+      Plotly.newPlot(sid, traces, ED.withPandemia({
         ...BL, height: 78, margin: { l: 4, r: 6, t: 4, b: 4 },
         showlegend: false, hovermode: 'closest',
         xaxis,
         yaxis: { visible: false, range: rng.y },
-      }, CFG);
+      }, { anos: ANOS, annotate: false }), CFG);
     });
     bread();
     if (DATA.cre && DATA.cre['CRE SED']) {

@@ -12,7 +12,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from enem_config import ANOS, ANO_FINAL, AREA_KEYS, COLS_NOTAS, DEPENDENCIAS, NOTA_MAP, PARQUET, PASTA_AGREGADOS, PRES_COLS, WEB_DATA, configure_logging
+from enem_config import ANOS, ANOS_MICRODADOS, ANO_FINAL, AREA_KEYS, COLS_NOTAS, DEPENDENCIAS, NOTA_MAP, PARQUET, PASTA_AGREGADOS, PRES_COLS, BRASIL_REFERENCIA, REDE_REFERENCIA, WEB_DATA, configure_logging
 
 logger = configure_logging(__name__)
 from enem_helpers import (
@@ -24,6 +24,10 @@ from enem_helpers import (
     carregar_mapa_municipio_cre,
     cre_curto,
     enriquecer_ms,
+    filtrar_brasil_estadual_valido,
+    filtrar_ms,
+    filtrar_ms_estadual,
+    filtrar_ms_estadual_valido,
     limpar,
     nome_exibicao_escola,
     normalizar_texto,
@@ -128,10 +132,10 @@ def _area_detail_stats(val: pd.DataFrame, area: str, col: str) -> dict:
 
 
 def _integridade_row(base: pd.DataFrame, val: pd.DataFrame, extra: dict) -> dict:
-    comp = int(base["PRESENTE_AREA"].sum())
-    present = base[base["PRESENTE_AREA"]]
-    elim_red = int((base["PRESENTE_AREA"] & base["ELIM_RED"]).sum())
-    branco = int((base["PRESENTE_AREA"] & base["RED_BRANCO"]).sum())
+    comp = int(base["POP_REF"].sum())
+    present = base[base["POP_REF"]]
+    elim_red = int((base["POP_REF"] & base["ELIM_RED"]).sum())
+    branco = int((base["POP_REF"] & base["RED_BRANCO"]).sum())
     em = zm = sm = 0
     if len(present):
         em = int(((present[PRES_COLS] == 2).sum(axis=1) >= 2).sum())
@@ -210,7 +214,7 @@ def _agregar_escolas_ano(sub: pd.DataFrame, conc_esc: pd.DataFrame, ano: int) ->
             esc[f"media_{c.lower()}_sem_zero"] = pd.NA
 
     esc["ano"] = ano
-    esc["dependencia"] = "Estadual"
+    esc["dependencia"] = REDE_REFERENCIA
     esc["cre_curto"] = esc["CRE"].map(cre_curto)
     ce = conc_esc[conc_esc["NU_ANO"] == ano][["CO_ESCOLA", "Concluintes"]]
     esc = esc.merge(ce, on="CO_ESCOLA", how="left")
@@ -256,24 +260,28 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         "quantis_sem_zero": [],
     }
 
-    ms = df[df["SG_UF_ESC"] == "MS"]
+    ms = filtrar_ms(df)
     valido = df[df["VALIDO"]]
-    ms_valido = ms[ms["VALIDO"]]
+    ms_valido = filtrar_ms(valido)
 
     for dep in DEPENDENCIAS:
         base = ms[(ms["DEP_ADM"] == dep) & ms["CONCLUINTE"]]
         val = ms_valido[ms_valido["DEP_ADM"] == dep]
         val_sem_zero = val[(val[COLS_NOTAS] > 0).all(axis=1)] if len(val) else val
-        presentes = int(base["PRESENTE_AREA"].sum())
-        elim_red = int((base["PRESENTE_AREA"] & base["ELIM_RED"]).sum())
-        branco = int((base["PRESENTE_AREA"] & base["RED_BRANCO"]).sum())
-        conc = conc_ano if dep == "Estadual" else None
+        presentes = int(base["POP_REF"].sum())
+        presentes_area = int(base["PRESENTE_AREA"].sum())
+        presentes_2d = int((base["PRESENTE_2_DIAS"] & ~base["ELIM_OBJ"] & ~base["ELIM_RED"]).sum())
+        elim_red = int((base["POP_REF"] & base["ELIM_RED"]).sum())
+        branco = int((base["POP_REF"] & base["RED_BRANCO"]).sum())
+        conc = conc_ano if dep == REDE_REFERENCIA else None
 
         out["participacao_ano"].append({
             "ano": ano,
             "dependencia": dep,
             "inscritos": len(base),
             "presentes": presentes,
+            "presentes_area": presentes_area,
+            "presentes_2d": presentes_2d,
             "eliminados_redacao": elim_red,
             "eliminados_objetiva": int(base["ELIM_OBJ"].sum()),
             "redacao_branco": branco,
@@ -292,18 +300,22 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
 
         out["integridade"].append(_integridade_row(base, val, {"ano": ano, "escopo": dep}))
 
-    br_val = valido[valido["DEP_ADM"] == "Estadual"]
+    br_val = filtrar_brasil_estadual_valido(df)
     br_val_sem_zero = br_val[(br_val[COLS_NOTAS] > 0).all(axis=1)] if len(br_val) else br_val
-    br_base = df[(df["DEP_ADM"] == "Estadual") & df["CONCLUINTE"]]
+    br_base = df[(df["DEP_ADM"] == REDE_REFERENCIA) & df["CONCLUINTE"]]
     if len(br_base) or len(br_val):
-        comp_br = int(br_base["PRESENTE_AREA"].sum())
-        elim_br = int((br_base["PRESENTE_AREA"] & br_base["ELIM_RED"]).sum())
-        branco_br = int((br_base["PRESENTE_AREA"] & br_base["RED_BRANCO"]).sum())
+        comp_br = int(br_base["POP_REF"].sum())
+        comp_br_area = int(br_base["PRESENTE_AREA"].sum())
+        comp_br_2d = int((br_base["PRESENTE_2_DIAS"] & ~br_base["ELIM_OBJ"] & ~br_base["ELIM_RED"]).sum())
+        elim_br = int((br_base["POP_REF"] & br_base["ELIM_RED"]).sum())
+        branco_br = int((br_base["POP_REF"] & br_base["RED_BRANCO"]).sum())
         out["participacao_ano"].append({
             "ano": ano,
-            "dependencia": "Brasil-Estadual",
+            "dependencia": BRASIL_REFERENCIA,
             "inscritos": len(br_base),
             "presentes": comp_br,
+            "presentes_area": comp_br_area,
+            "presentes_2d": comp_br_2d,
             "eliminados_redacao": elim_br,
             "eliminados_objetiva": int(br_base["ELIM_OBJ"].sum()),
             "redacao_branco": branco_br,
@@ -334,65 +346,58 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
             for c in COLS_NOTAS:
                 uf[f"media_{c.lower()}_sem_zero"] = pd.NA
         uf["ano"] = ano
-        uf["dependencia"] = "Estadual"
+        uf["dependencia"] = REDE_REFERENCIA
         out["desempenho_uf"].extend(uf.rename(columns={"SG_UF_ESC": "UF"}).to_dict("records"))
 
-    ms_val = enriquecer_ms(ms_valido, cres, mapa_muni)
-    ms_val_est = enriquecer_ms(ms_valido[ms_valido["DEP_ADM"] == "Estadual"], cres, mapa_muni)
-    if not ms_val.empty and "CRE" in ms_val.columns:
-        for dep in DEPENDENCIAS:
-            sub = ms_val[ms_val["DEP_ADM"] == dep]
-            if sub.empty:
-                continue
-            cre_g = sub.groupby("CRE", observed=True).agg(
-                estudantes=("NU_INSCRICAO", "count"),
-                media_geral=("MEDIA_GERAL", "mean"),
-                **{f"media_{c.lower()}": (c, "mean") for c in COLS_NOTAS},
-            ).reset_index()
-            cre_g["ano"] = ano
-            cre_g["dependencia"] = dep
-            cre_g["cre_curto"] = cre_g["CRE"].map(cre_curto)
-            if dep == "Estadual":
-                conc_esc_ano = conc_esc[conc_esc["NU_ANO"] == ano].copy()
-                if not conc_esc_ano.empty:
-                    if not cres.empty and "CO_ESCOLA" in conc_esc_ano.columns:
-                        conc_esc_ano = conc_esc_ano.merge(
-                            cres[["CO_ESCOLA", "CRE"]].drop_duplicates(),
-                            on="CO_ESCOLA",
-                            how="left",
-                        )
-                    if mapa_muni and "CRE" in conc_esc_ano.columns and COL_MUNICIPIO in conc_esc_ano.columns:
-                        m = conc_esc_ano["CRE"].isna()
-                        if m.any():
-                            conc_esc_ano.loc[m, "CRE"] = conc_esc_ano.loc[m, COL_MUNICIPIO].map(
-                                lambda x: mapa_muni.get(normalizar_texto(x), pd.NA)
-                            )
-                    if "CRE" in conc_esc_ano.columns:
-                        cc = conc_esc_ano.groupby("CRE", observed=True)["Concluintes"].sum().reset_index()
-                        cre_g = cre_g.merge(cc, on="CRE", how="left")
-                        cre_g["Concluintes"] = cre_g["Concluintes"].fillna(0).astype(int)
-                        tx = cre_g["estudantes"] / cre_g["Concluintes"].replace(0, pd.NA) * 100
-                        cre_g["tx_part_efetiva"] = pd.to_numeric(tx, errors="coerce").round(1)
-            out["participacao_cre"].append(cre_g)
-            out["evolucao_cre"].append(cre_g)
+    ms_val_est = enriquecer_ms(filtrar_ms_estadual_valido(df), cres, mapa_muni)
+    if not ms_val_est.empty and "CRE" in ms_val_est.columns:
+        cre_g = ms_val_est.groupby("CRE", observed=True).agg(
+            estudantes=("NU_INSCRICAO", "count"),
+            media_geral=("MEDIA_GERAL", "mean"),
+            **{f"media_{c.lower()}": (c, "mean") for c in COLS_NOTAS},
+        ).reset_index()
+        cre_g["ano"] = ano
+        cre_g["dependencia"] = REDE_REFERENCIA
+        cre_g["cre_curto"] = cre_g["CRE"].map(cre_curto)
+        conc_esc_ano = conc_esc[conc_esc["NU_ANO"] == ano].copy()
+        if not conc_esc_ano.empty:
+            if not cres.empty and "CO_ESCOLA" in conc_esc_ano.columns:
+                conc_esc_ano = conc_esc_ano.merge(
+                    cres[["CO_ESCOLA", "CRE"]].drop_duplicates(),
+                    on="CO_ESCOLA",
+                    how="left",
+                )
+            if mapa_muni and "CRE" in conc_esc_ano.columns and COL_MUNICIPIO in conc_esc_ano.columns:
+                m = conc_esc_ano["CRE"].isna()
+                if m.any():
+                    conc_esc_ano.loc[m, "CRE"] = conc_esc_ano.loc[m, COL_MUNICIPIO].map(
+                        lambda x: mapa_muni.get(normalizar_texto(x), pd.NA)
+                    )
+            if "CRE" in conc_esc_ano.columns:
+                cc = conc_esc_ano.groupby("CRE", observed=True)["Concluintes"].sum().reset_index()
+                cre_g = cre_g.merge(cc, on="CRE", how="left")
+                cre_g["Concluintes"] = cre_g["Concluintes"].fillna(0).astype(int)
+                tx = cre_g["estudantes"] / cre_g["Concluintes"].replace(0, pd.NA) * 100
+                cre_g["tx_part_efetiva"] = pd.to_numeric(tx, errors="coerce").round(1)
+        out["participacao_cre"].append(cre_g)
+        out["evolucao_cre"].append(cre_g)
 
-        if not ms_val_est.empty and "CRE" in ms_val_est.columns:
-            muni_g = ms_val_est.groupby("NO_MUNICIPIO_ESC", observed=True).agg(
-                estudantes=("NU_INSCRICAO", "count"),
-                media_geral=("MEDIA_GERAL", "mean"),
-                **{f"media_{c.lower()}": (c, "mean") for c in COLS_NOTAS},
-            ).reset_index()
-            muni_g["ano"] = ano
-            muni_g["dependencia"] = "Estadual"
-            muni_g["CRE"] = ms_val_est.groupby("NO_MUNICIPIO_ESC")["CRE"].agg(
-                lambda s: s.mode().iloc[0] if len(s.mode()) else pd.NA
-            ).values
-            muni_g["cre_curto"] = muni_g["CRE"].map(cre_curto)
-            out["participacao_municipios"].append(muni_g)
-            out["evolucao_muni"].append(muni_g)
+        muni_g = ms_val_est.groupby("NO_MUNICIPIO_ESC", observed=True).agg(
+            estudantes=("NU_INSCRICAO", "count"),
+            media_geral=("MEDIA_GERAL", "mean"),
+            **{f"media_{c.lower()}": (c, "mean") for c in COLS_NOTAS},
+        ).reset_index()
+        muni_g["ano"] = ano
+        muni_g["dependencia"] = REDE_REFERENCIA
+        muni_g["CRE"] = ms_val_est.groupby("NO_MUNICIPIO_ESC")["CRE"].agg(
+            lambda s: s.mode().iloc[0] if len(s.mode()) else pd.NA
+        ).values
+        muni_g["cre_curto"] = muni_g["CRE"].map(cre_curto)
+        out["participacao_municipios"].append(muni_g)
+        out["evolucao_muni"].append(muni_g)
 
-    ms_base_est = ms[(ms["DEP_ADM"] == "Estadual") & ms["CONCLUINTE"]]
-    ms_val_est = ms_valido[ms_valido["DEP_ADM"] == "Estadual"]
+    ms_base_est = filtrar_ms_estadual(ms[ms["CONCLUINTE"]])
+    ms_val_est = filtrar_ms_estadual_valido(df)
     if not ms_base_est.empty:
         base_e = enriquecer_ms(ms_base_est, cres, mapa_muni)
         val_e = enriquecer_ms(ms_val_est, cres, mapa_muni)
@@ -417,9 +422,9 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
                     )
                 )
 
-    ms_est_val = ms_valido[ms_valido["DEP_ADM"] == "Estadual"]
+    ms_est_val = filtrar_ms_estadual_valido(df)
     ms_est_val_sem_zero = ms_est_val[(ms_est_val[COLS_NOTAS] > 0).all(axis=1)] if len(ms_est_val) else ms_est_val
-    ms_est_base = ms[(ms["DEP_ADM"] == "Estadual") & ms["CONCLUINTE"]]
+    ms_est_base = filtrar_ms_estadual(ms[ms["CONCLUINTE"]])
     esc_hist = pd.DataFrame()
     if len(ms_est_val):
         esc_hist = _agregar_escolas_ano(enriquecer_ms(ms_est_val, cres, mapa_muni), conc_esc, ano)
@@ -525,9 +530,12 @@ def main():
     }
 
     cols = _cols_parquet()
-    for ano in ANOS:
+    for ano in ANOS_MICRODADOS:
         logger.info("Processando %s...", ano)
         df_ano = _ler_ano(ano, cols)
+        if df_ano.empty:
+            logger.warning("Ano %s ausente no parquet — ignorado", ano)
+            continue
         res = processar_ano(df_ano, cres, mapa_muni, conc_totais, conc_esc)
         for k, v in res.items():
             if k in acumulado:

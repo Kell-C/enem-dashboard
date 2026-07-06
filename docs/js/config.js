@@ -74,8 +74,66 @@
   function hoverAreaTemplate(name) {
     return `${name}: %{y:.0f}<extra></extra>`;
   }
+  const PANDEMIA = {
+    x0: 2019.6,
+    x1: 2021.4,
+    fill: 'rgba(120,135,148,.10)',
+    label: 'pandemia',
+  };
+  function mergePandemia(layout, opts = {}) {
+    const {
+      y0, y1, anos, annotate = true, yPad = 1, x0, x1, yref = 'y', xref = 'x',
+    } = opts;
+    const shapes = [...(layout.shapes || [])];
+    const annotations = [...(layout.annotations || [])];
+    if (y0 != null && y1 != null) {
+      shapes.push({
+        type: 'rect',
+        x0: x0 ?? PANDEMIA.x0,
+        x1: x1 ?? PANDEMIA.x1,
+        y0,
+        y1,
+        xref,
+        yref,
+        fillcolor: PANDEMIA.fill,
+        line: { width: 0 },
+        layer: 'below',
+      });
+      if (annotate && yref === 'y') {
+        const ax = x0 != null && x1 != null ? (x0 + x1) / 2 : 2020.5;
+        annotations.push({
+          x: ax,
+          y: y1 - yPad,
+          text: PANDEMIA.label,
+          showarrow: false,
+          font: { size: 9, color: C.muted },
+        });
+      }
+    } else if (anos && anos.length > 1) {
+      const a0 = anos[0];
+      const a1 = anos[anos.length - 1];
+      const span = a1 - a0 || 1;
+      const px0 = Math.max(0, (2019.5 - a0) / span);
+      const px1 = Math.min(1, (2021.5 - a0) / span);
+      if (px1 > px0) {
+        shapes.push({
+          type: 'rect',
+          xref: 'paper',
+          yref: 'paper',
+          x0: px0,
+          x1: px1,
+          y0: 0,
+          y1: 1,
+          fillcolor: PANDEMIA.fill,
+          line: { width: 0 },
+          layer: 'below',
+        });
+      }
+    }
+    return { ...layout, shapes, annotations };
+  }
   ED.Config = {
     C, BL, CFG, CFG_INTERACTIVE, AREAKEYS, AREANOME, AREANOME_FULL, ACOR,
-    HOVER, XSPIKE, layoutLineChart, hoverAreaTemplate,
+    HOVER, XSPIKE, PANDEMIA, layoutLineChart, hoverAreaTemplate, mergePandemia,
   };
 })(window.EnemDash = window.EnemDash || {});

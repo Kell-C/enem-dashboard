@@ -122,7 +122,7 @@
             showlegend: false,
           });
         }
-        Plotly.react(`g_box_${k}`, traces, {
+        Plotly.react(`g_box_${k}`, traces, ED.withPandemia({
           ...boxLayoutBase,
           height: h,
           hovermode: 'closest',
@@ -138,10 +138,18 @@
           yaxis: {
             gridcolor: 'rgba(0,0,0,0)',
             dtick: 1,
+            tickfont: { size: 10.5 },
             automargin: true,
-            tickfont: { size: 10.5, color: '#334155' },
           },
-        }, CFG);
+        }, {
+          x0: 0,
+          x1: 1020,
+          y0: '2019',
+          y1: '2021',
+          xref: 'x',
+          yref: 'y',
+          annotate: false,
+        }), CFG);
       });
     }
     renderBoxplots();
@@ -189,7 +197,7 @@
         {
           x: faixas,
           y: d.br,
-          name: 'Brasil estadual',
+          name: 'Brasil (esc. estaduais)',
           type: 'bar',
           marker: { color: 'rgba(123,135,148,0.28)', line: { color: C.brasil, width: 1.5 }, opacity: 1 },
           hovertemplate: 'Brasil · %{x}<br>%{y:.1f}% dos alunos<extra></extra>',

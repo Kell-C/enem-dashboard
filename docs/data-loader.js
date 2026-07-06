@@ -7,7 +7,7 @@ if(location.protocol==='file:'){
     if (loaded >= 2 && window.bootDashboard && typeof Plotly !== 'undefined') window.bootDashboard();
   };
   const s1 = document.createElement('script');
-  s1.src = './data/painel_data.js?v=27';
+  s1.src = './data/painel_data.js?v=30';
   s1.onload = tryBoot;
   s1.onerror = () => {
     showFileWarning();
@@ -16,7 +16,7 @@ if(location.protocol==='file:'){
   };
   document.head.appendChild(s1);
   const s2 = document.createElement('script');
-  s2.src = './data/ranking_escolas_2025.js?v=4';
+  s2.src = './data/ranking_escolas_2025.js?v=5';
   s2.onload = tryBoot;
   s2.onerror = () => { window.RANKING_ESCOLAS_2025 = null; tryBoot(); };
   document.head.appendChild(s2);

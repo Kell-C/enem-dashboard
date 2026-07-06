@@ -74,6 +74,7 @@
     if (!el) return;
     const { DATA, ANOS, AREAKEYS, AREANOME, ACOR, BL, CFG, C } = ctx;
     const CFGI = ED.Config.CFG_INTERACTIVE || CFG;
+    const mergeP = ED.Config.mergePandemia;
     const zeroMode = currentZeroMode();
     const AS = zeroMode === 'no_zero'
       ? (DATA.indexAreasSemZero || DATA.indexAreas || { CN: [], CH: [], LC: [], MT: [], RED: [] })
@@ -95,23 +96,35 @@
         bindIndexChartClick(ctx, gd || el);
         Plotly.Plots.resize(gd || el);
       };
-      const p = Plotly.react(el, tr, {
+      const idxVals = tr.flatMap((t) => t.y).filter((v) => v != null);
+      const idxLo = idxVals.length ? Math.min(...idxVals) - 4 : 90;
+      const idxHi = idxVals.length ? Math.max(...idxVals) + 4 : 110;
+      const idxLayout = mergeP({
         ...BL, height: 300, dragmode: false, hovermode: 'closest',
         clickmode: 'event+select', uirevision: 'index',
         legend: { orientation: 'h', y: -0.22, font: { size: 9.5 } },
         xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
-        yaxis: { title: { text: '\u00edndice (2019=100)', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)' },
+        yaxis: { title: { text: `\u00edndice (${ANOS[0]}=100)`, font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)', range: [idxLo, idxHi] },
         shapes: [{ type: 'line', x0: ANOS[0], x1: ANOS[ANOS.length - 1], y0: 100, y1: 100, line: { color: C.borda, width: 1, dash: 'dot' } }],
-      }, CFGI);
+      }, { y0: idxLo, y1: idxHi });
+      const p = Plotly.react(el, tr, idxLayout, CFGI);
       if (p && typeof p.then === 'function') p.then(done);
       else done(el);
     };
     requestAnimationFrame(() => requestAnimationFrame(draw));
   }
 
+  function resizeTrajPlots() {
+    ['g_traj', 'g_index', 'g_bump', 'g_evol'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el && el.data) Plotly.Plots.resize(el);
+    });
+  }
+
   ED.initTrajectory = function (ctx) {
     const { DATA, ANOS, LAST_YEAR, C, BL, CFG, NF } = ctx;
     const CFGI = ED.Config.CFG_INTERACTIVE || CFG;
+    const mergeP = ED.Config.mergePandemia;
 
     document.querySelectorAll('[data-school-zero-mode]').forEach((el) => {
       if (el.dataset.zeroModeBound === '1') return;
@@ -133,6 +146,23 @@
       const grad = ANOS.map((_, idx) => gradBase[Math.min(idx, gradBase.length - 1)]);
       const txVals = TX_MS.filter((v) => v != null);
       const medVals = MED_MS.filter((v) => v != null);
+      const trajMedLo = Math.min(...medVals) - 4;
+      const trajMedHi = Math.max(...medVals) + 4;
+      const txLo = Math.max(0, Math.min(...txVals) - 3);
+      const txHi = Math.max(...txVals) + 5;
+      const pandemicTx = ANOS.map((a, idx) => (a >= 2020 && a <= 2021 ? TX_MS[idx] : null)).filter((v) => v != null);
+      const trajArrow = {
+        x: TX_MS[ANOS.length - 1], y: MED_MS[ANOS.length - 1], ax: TX_MS[ANOS.length - 2], ay: MED_MS[ANOS.length - 2],
+        xref: 'x', yref: 'y', axref: 'x', ayref: 'y',
+        showarrow: true, arrowhead: 3, arrowsize: 1.4, arrowwidth: 2, arrowcolor: C.azulEsc,
+      };
+      const trajPandAnn = pandemicTx.length ? [{
+        x: (Math.min(...pandemicTx) + Math.max(...pandemicTx)) / 2,
+        y: trajMedHi - 2,
+        text: ED.Config.PANDEMIA.label,
+        showarrow: false,
+        font: { size: 9, color: C.muted },
+      }] : [];
       const interactiveMargin = { ...BL.margin, t: 28 };
       Plotly.react('g_traj', [{
         x: TX_MS, y: MED_MS, mode: 'lines+markers+text',
@@ -141,24 +171,26 @@
         text: ANOS.map(String), textposition: 'bottom center', textfont: { size: 10, color: C.muted },
         customdata: estadualN.map((n) => NF(n)),
         hovertemplate: '<b>%{text}</b><br>Part.: %{x:.1f}% \u00b7 %{customdata} participantes efetivos<br>M\u00e9dia: %{y:.1f}<extra></extra>',
-      }], {
+      }], mergeP({
         ...BL, height: 300, showlegend: false, margin: interactiveMargin,
         xaxis: {
           title: { text: 'participa\u00e7\u00e3o efetiva (% dos concluintes)', font: { size: 10 } },
           gridcolor: 'rgba(0,0,0,0)',
-          range: [Math.max(0, Math.min(...txVals) - 3), Math.max(...txVals) + 5],
+          range: [txLo, txHi],
         },
         yaxis: {
           title: { text: 'm\u00e9dia geral', font: { size: 10 } },
           gridcolor: 'rgba(0,0,0,0)',
-          range: [Math.min(...medVals) - 4, Math.max(...medVals) + 4],
+          range: [trajMedLo, trajMedHi],
         },
-        annotations: [{
-          x: TX_MS[ANOS.length - 1], y: MED_MS[ANOS.length - 1], ax: TX_MS[ANOS.length - 2], ay: MED_MS[ANOS.length - 2],
-          xref: 'x', yref: 'y', axref: 'x', ayref: 'y',
-          showarrow: true, arrowhead: 3, arrowsize: 1.4, arrowwidth: 2, arrowcolor: C.azulEsc,
-        }],
-      }, CFGI);
+        annotations: [trajArrow, ...trajPandAnn],
+      }, pandemicTx.length ? {
+        x0: Math.min(...pandemicTx) - 2,
+        x1: Math.max(...pandemicTx) + 2,
+        y0: trajMedLo,
+        y1: trajMedHi,
+        annotate: false,
+      } : { annotate: false }), CFGI);
 
       ED.initIndexDrillUi(ctx);
       mountIndexChart(ctx);
@@ -175,7 +207,7 @@
         text: RANK_MS.map((r) => (r != null ? `${r}\u00ba` : '')),
         textposition: 'middle center', textfont: { size: 8.5, color: '#fff' },
         hovertemplate: '%{x}: %{y}\u00ba de 27<extra></extra>',
-      }], {
+      }], mergeP({
         ...BL, height: 280, showlegend: false, margin: interactiveMargin,
         xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
         yaxis: {
@@ -183,24 +215,22 @@
           title: { text: 'posi\u00e7\u00e3o (1=melhor)', font: { size: 10 } },
           range: [yMax, yMin],
         },
-      }, CFGI);
+      }, { y0: yMin, y1: yMax, annotate: false }), CFGI);
 
       Plotly.react('g_evol', [
-        { x: ANOS, y: MED_BR, mode: 'lines+markers', name: 'Brasil estadual', line: { color: C.brasil, width: 2, dash: 'dot' }, marker: { size: 6 } },
+        { x: ANOS, y: MED_BR, mode: 'lines+markers', name: 'Brasil (esc. estaduais)', line: { color: C.brasil, width: 2, dash: 'dot' }, marker: { size: 6 } },
         {
           x: ANOS, y: MED_MS, mode: 'lines+markers+text', name: 'MS estadual',
           line: { color: C.azul, width: 2.6 }, marker: { size: 7 },
           text: MED_MS.map((v) => (v != null ? v.toFixed(0) : '')),
           textposition: 'bottom center', textfont: { size: 9, color: C.azulEsc },
         },
-      ], {
+      ], mergeP({
         ...BL, height: 280, margin: interactiveMargin,
         legend: { orientation: 'h', y: -0.2, font: { size: 10 } },
         xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
         yaxis: { range: [medLo, medHi], gridcolor: 'rgba(0,0,0,0)' },
-        shapes: [{ type: 'rect', x0: 2019.6, x1: 2021.4, y0: medLo, y1: medHi, fillcolor: 'rgba(120,135,148,.10)', line: { width: 0 } }],
-        annotations: [{ x: 2020.5, y: medHi - 1, text: 'pandemia', showarrow: false, font: { size: 9, color: C.muted } }],
-      }, CFGI);
+      }, { y0: medLo, y1: medHi }), CFGI);
 
       const bumpEl = document.getElementById('notaBump');
       if (bumpEl && ufRank[String(LAST_YEAR)]?.length) {
@@ -218,13 +248,27 @@
 
     renderTrajectoryCharts();
 
-    const trajSec = document.querySelector('.secacc');
     const indexEl = document.getElementById('g_index');
-    if (trajSec) {
+    const trajSec = document.getElementById('trajSection');
+    if (trajSec && !trajSec.dataset.trajBound) {
+      trajSec.dataset.trajBound = '1';
       trajSec.addEventListener('toggle', () => {
-        if (trajSec.open) requestAnimationFrame(() => refreshIndexChart(ctx));
+        if (trajSec.open) requestAnimationFrame(() => {
+          resizeTrajPlots();
+          refreshIndexChart(ctx);
+        });
       });
     }
+    document.addEventListener('dash-tab-show', (e) => {
+      if (e.detail && e.detail.id === 'tab-panorama') {
+        requestAnimationFrame(() => {
+          if (trajSec?.open) {
+            resizeTrajPlots();
+            refreshIndexChart(ctx);
+          }
+        });
+      }
+    });
     window.addEventListener('load', () => requestAnimationFrame(() => refreshIndexChart(ctx)));
     if (indexEl && typeof IntersectionObserver !== 'undefined') {
       const io = new IntersectionObserver((entries) => {

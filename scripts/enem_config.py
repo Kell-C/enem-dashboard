@@ -29,9 +29,12 @@ PIPELINE_ROOT = Path(__file__).resolve().parents[1]
 PIPELINE_DASHBOARD = PIPELINE_ROOT.parent
 REPO_ROOT = PIPELINE_DASHBOARD.parent
 
-ANOS = list(range(2019, 2026))
+ANOS = list(range(2013, 2026))
 ANO_INICIAL = ANOS[0]
 ANO_FINAL = ANOS[-1]
+# Anos com microdado INEP consolidado (parquet). 2013-2018 usam extensao AIO no painel.
+ANOS_MICRODADOS = list(range(2019, 2026))
+ANO_MICRO_INICIAL = ANOS_MICRODADOS[0]
 
 # Paths com valores default, podem ser sobrescritos por variáveis de ambiente
 # Prioriza a pasta `dados/` do próprio repositório, onde estão os microdados 2025.
@@ -39,7 +42,7 @@ _dados_default = PIPELINE_ROOT / "dados"
 _brutos_legacy = REPO_ROOT / "dados_brutos"
 PASTA_DADOS = Path(os.getenv('PASTA_DADOS', _dados_default))
 PASTA_BRUTOS = Path(os.getenv('PASTA_BRUTOS', _dados_default if _dados_default.exists() else _brutos_legacy))
-PARQUET = PASTA_DADOS / f"enem_completo_{ANO_INICIAL}_{ANO_FINAL}_.parquet"
+PARQUET = PASTA_DADOS / f"enem_completo_{ANO_MICRO_INICIAL}_{ANO_FINAL}_.parquet"
 PASTA_AGREGADOS = Path(os.getenv('PASTA_AGREGADOS', PASTA_DADOS / "agregados"))
 # WEB_DATA: onde os assets do frontend são escritos (docs/data)
 WEB_DATA = Path(os.getenv('WEB_DATA', PIPELINE_ROOT / "docs" / "data"))
@@ -49,29 +52,35 @@ CRES_XLSX = AUX / "cres.xlsx"
 CONCLUINTES_XLSX = Path(
     os.getenv(
         'CONCLUINTES_XLSX',
-        PASTA_DADOS / f"Concluintes EM {ANO_INICIAL} a {ANO_FINAL}.xlsx",
+        PASTA_DADOS / f"Concluintes EM {ANO_MICRO_INICIAL} a {ANO_FINAL}.xlsx",
     )
 )
 CONCLUINTES_CSV = Path(
     os.getenv(
         'CONCLUINTES_CSV',
-        REPO_ROOT / "dados_processados" / f"concluintes_3ano_ms_{ANO_INICIAL}_{ANO_FINAL}.csv",
+        REPO_ROOT / "dados_processados" / f"concluintes_3ano_ms_{ANO_MICRO_INICIAL}_{ANO_FINAL}.csv",
     )
 )
 COLS_NOTAS = ["NU_NOTA_CN", "NU_NOTA_CH", "NU_NOTA_LC", "NU_NOTA_MT", "NU_NOTA_REDACAO"]
 PRES_COLS = ["TP_PRESENCA_CN", "TP_PRESENCA_CH", "TP_PRESENCA_LC", "TP_PRESENCA_MT"]
 
 # População de referência do painel (textos exibidos no frontend)
+# Escopo padrão: estudantes de escolas estaduais (TP_DEPENDENCIA_ADM_ESC = 2).
+# Exceção: abas/seções de comparação entre redes (Estadual, Municipal, Federal, Privada).
+REDE_REFERENCIA = "Estadual"
+BRASIL_REFERENCIA = "Brasil-Estadual"
+REDES_COMPARACAO_MS = ["Estadual", "Municipal", "Federal", "Privada"]
 POP_REF_RESUMO = (
-    "Participantes que concluíram a prova em ao menos uma área objetiva "
+    "Participantes de escolas estaduais que concluíram a prova em ao menos uma área objetiva "
     "(TP_PRESENCA = 1 em CN, CH, LC ou MT), excluindo eliminados."
 )
 POP_REF_PARTICIPANTES = (
-    "Concluintes do recorte + presentes em ≥1 área objetiva, "
+    "Estudantes de escolas estaduais (TP_DEPENDENCIA_ADM = 2) na população de referência: "
+    "concluintes do recorte + presentes em ≥1 área objetiva, "
     "sem eliminação objetiva (TP_PRESENCA = 2) nem na redação (TP_STATUS = 2)."
 )
 DEP_MAP = {1: "Federal", 2: "Estadual", 3: "Municipal", 4: "Privada"}
-DEPENDENCIAS = ["Federal", "Estadual", "Municipal", "Privada"]
+DEPENDENCIAS = list(REDES_COMPARACAO_MS)
 AREA_KEYS = ["CN", "CH", "LC", "MT", "RED"]
 NOTA_MAP = {
     "CN": "NU_NOTA_CN",

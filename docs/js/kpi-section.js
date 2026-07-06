@@ -2,6 +2,7 @@
   ED.initKpi = function (ctx) {
     const {
       ANOS, LAST_YEAR, PREV_YEAR, MED_MS, TX_MS, RANK_MS, GAP, DATA, FMT, NF, trendTag,
+      AREAKEYS, AREANOME, ACOR,
     } = ctx;
     const i = ANOS.length - 1;
     const i0 = 0;
@@ -21,10 +22,8 @@
     document.getElementById('kpiPartVal').textContent = tx != null ? `${FMT(tx)}%` : '\u2014';
     const N = DATA.estadualN[i];
     const Cc = DATA.estadualConcl[i];
-    const vale = TX_MS.reduce((b, v) => (v != null && (b == null || v < b) ? v : b), null);
-    const valeYear = vale != null ? ANOS[TX_MS.indexOf(vale)] : '\u2014';
     document.getElementById('kpiPartSub').innerHTML =
-      `${LAST_YEAR} \u00b7 <b>${NF(N)}</b> participantes efetivos de <b>${NF(Cc)}</b> concluintes \u00b7 vale ${FMT(vale)}% em ${valeYear}`;
+      `${LAST_YEAR} \u00b7 <b>${NF(N)}</b> participantes de <b>${NF(Cc)}</b> concluintes`;
     document.getElementById('kpiRankVal').innerHTML =
       rk != null ? `${rk}\u00ba<span style="font-size:14px;color:var(--muted)">/27</span>` : '\u2014';
     const rkDelta = rkPrev != null && rk != null ? rkPrev - rk : null;
@@ -72,6 +71,50 @@
       `${LAST_YEAR} \u00b7 <span class="${trendCls[trend]}">${trendTxt[trend]}</span> vs ${ANOS[i0]}`;
     ED.spark(ctx, 's_elim', txElim, '#9B59B6');
 
+    const areaHost = document.getElementById('kpiAreas');
+    const msArea = DATA.msArea || {};
+    if (areaHost && AREAKEYS) {
+      const rangeLabel = `${ANOS[0]}\u2013${LAST_YEAR}`;
+      areaHost.innerHTML = AREAKEYS.map((k) =>
+        `<div class="kpi kpi-area">
+          <p class="lbl">${AREANOME[k]} <span class="help">i<span class="tip"><b>O que é:</b> média de ${AREANOME[k]} na população de referência (rede estadual MS). Comparação com Brasil = média entre estudantes de <b>escolas estaduais</b>. <b>Como ler:</b> valor de ${LAST_YEAR}; a linha acompanha ${rangeLabel}.</span></span></p>
+          <div class="rowv"><div class="val" id="kpiAreaVal_${k}">\u2014</div><div id="s_area_${k}" class="spark"></div></div>
+          <div class="vsub" id="kpiAreaSub_${k}">\u2014</div>
+        </div>`
+      ).join('');
+
+      AREAKEYS.forEach((k) => {
+        const series = msArea[k]?.ms || [];
+        const brSeries = msArea[k]?.br || [];
+        const val = series[i];
+        const firstIdx = series.findIndex((v) => v != null);
+        const baseYear = firstIdx >= 0 ? ANOS[firstIdx] : ANOS[0];
+        const val0 = firstIdx >= 0 ? series[firstIdx] : null;
+        let peak = null;
+        let peakYear = '\u2014';
+        series.forEach((v, j) => {
+          if (v != null && (peak == null || v > peak)) { peak = v; peakYear = ANOS[j]; }
+        });
+        const delta = val != null && val0 != null ? val - val0 : null;
+        const t = trendTag(delta, false);
+        const gapBr = val != null && brSeries[i] != null ? val - brSeries[i] : null;
+
+        const valEl = document.getElementById(`kpiAreaVal_${k}`);
+        const subEl = document.getElementById(`kpiAreaSub_${k}`);
+        if (valEl) {
+          valEl.textContent = val != null ? FMT(val) : '\u2014';
+          valEl.style.color = ACOR[k];
+        }
+        if (subEl) {
+          let sub = `${LAST_YEAR} \u00b7 <span class="${t.cls}">${t.txt}</span> vs ${baseYear}`;
+          if (peak != null) sub += ` \u00b7 pico ${FMT(peak)} em ${peakYear}`;
+          if (gapBr != null) sub += ` \u00b7 ${gapBr >= 0 ? '+' : ''}${FMT(gapBr)} vs Brasil (esc. estaduais)`;
+          subEl.innerHTML = sub;
+        }
+        ED.spark(ctx, `s_area_${k}`, series, ACOR[k]);
+      });
+    }
+
     const f = DATA.funil2024 && DATA.funil2024.Estadual;
     if (f) {
       const nf = (n) => n.toLocaleString('pt-BR');
@@ -80,7 +123,7 @@
         { k: 'Concluintes do EM', v: f.concluintes, p: 'universo da rede (matr\u00edcula)', hl: false },
         { k: 'Inscritos no ENEM', v: f.inscritos, p: `${pc(f.inscritos)} dos concluintes`, hl: false },
         { k: 'Presentes em ao menos uma \u00e1rea', v: f.presentes, p: `${pc(f.presentes)} dos concluintes`, hl: false },
-        { k: 'Participantes na popula\u00e7\u00e3o de refer\u00eancia', v: f.presfilt, p: `${pc(f.presfilt)} = participa\u00e7\u00e3o efetiva`, hl: true },
+        { k: 'Participantes presentes nos 2 dias', v: f.presentes_2d, p: `${pc(f.presentes_2d)} dos concluintes \u00b7 sem elimina\u00e7\u00e3o`, hl: true },
       ];
       document.getElementById('fstages').innerHTML = st.map((s) =>
         `<div class="fstage${s.hl ? ' hl' : ''}"><div class="fk">${s.k}</div><div class="fv">${nf(s.v)}</div><div class="fp">${s.p}</div></div>`

@@ -17,7 +17,7 @@ import pyarrow.parquet as pq
 sys.path.insert(0, os.path.dirname(__file__))
 
 from aio_participantes_parquet import mascara_participante_aio, resolver_parquet, resolver_pasta_dados
-from enem_config import ANO_FINAL, COLS_NOTAS, PIPELINE_ROOT, PRES_COLS, WEB_DATA, configure_logging
+from enem_config import ANO_FINAL, ANOS_MICRODADOS, COLS_NOTAS, PIPELINE_ROOT, PRES_COLS, WEB_DATA, configure_logging
 
 logger = configure_logging(__name__)
 
@@ -25,7 +25,7 @@ AIO_DIR = resolver_pasta_dados() / "aio"
 RESUMO_CSV = AIO_DIR / "enem_escolas_resumo.csv"
 HISTORICO_CSV = AIO_DIR / "enem_escolas_historico.csv"
 ANO = ANO_FINAL
-ANOS_PARQUET_HIST = (2024, 2025)
+ANOS_PARQUET_HIST = tuple(a for a in ANOS_MICRODADOS if a >= 2024)
 
 NOTA_JS = {
     "NU_NOTA_LC": "LC",
@@ -78,7 +78,10 @@ def _agregar_escolas_parquet(
     uf: str | None = None,
     dependencia: int = 2,
 ) -> pd.DataFrame:
-    """Medias e participantes por CO_ESCOLA a partir do microdado INEP."""
+    """Medias e participantes por CO_ESCOLA a partir do microdado INEP.
+
+    dependencia=2 (Estadual): população de referência padrão do painel — escolas estaduais.
+    """
     parquet = resolver_parquet()
     if not parquet.exists():
         raise FileNotFoundError(f"Parquet nao encontrado: {parquet}")

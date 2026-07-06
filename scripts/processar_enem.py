@@ -1,8 +1,8 @@
 """
-Processamento dos microdados ENEM 2019-2025 para parquet consolidado.
+Processamento dos microdados ENEM para parquet consolidado.
 
 Regimes:
-  2019-2023: PARTICIPANTES (NU_INSCRICAO, TP_ST_CONCLUSAO, sem CO_ESCOLA)
+  2013-2023: PARTICIPANTES (NU_INSCRICAO, TP_ST_CONCLUSAO)
   2024+:     RESULTADOS (NU_SEQUENCIAL, CO_ESCOLA, sem TP_ST_CONCLUSAO)
 
 Saida em pipeline_dashboard/dados/ (nao altera dados_processados/ legado).
@@ -18,7 +18,7 @@ import datetime
 
 import pandas as pd
 
-from enem_config import ANOS, ANO_FINAL, PASTA_BRUTOS, PASTA_DADOS, PARQUET, WEB_DATA, configure_logging
+from enem_config import ANOS, ANO_FINAL, ANO_INICIAL, ANOS_MICRODADOS, PASTA_BRUTOS, PASTA_DADOS, PARQUET, WEB_DATA, configure_logging
 
 logger = configure_logging(__name__)
 
@@ -130,15 +130,16 @@ def _buscar_csv_ano(ano: int, nomes: tuple[str, ...]) -> Path | None:
     return None
 
 
-def processar_2019_2023() -> pd.DataFrame | None:
+def processar_participantes_historico() -> pd.DataFrame | None:
+    ano_fim = 2023
     logger.info("%s", "=" * 70)
-    logger.info("2019-2023 - PARTICIPANTES (todos os estados)")
+    logger.info("%s-%s - PARTICIPANTES (todos os estados)", ANO_INICIAL, ano_fim)
     logger.info("%s", "=" * 70)
 
-    cache = PASTA_DADOS / "2019_2023" / "enem_completo_2019_2023_.parquet"
+    cache = PASTA_DADOS / f"{ANO_INICIAL}_{ano_fim}" / f"enem_completo_{ANO_INICIAL}_{ano_fim}_.parquet"
 
     arquivos: list[tuple[int, str]] = []
-    for ano in range(2019, 2024):
+    for ano in range(ANO_INICIAL, ano_fim + 1):
         caminho = _buscar_csv_ano(ano, (f"MICRODADOS_ENEM_{ano}.csv", f"PARTICIPANTES_{ano}.csv"))
         if caminho is None:
             logger.warning("%s: CSV nao encontrado nos brutos", ano)
@@ -147,7 +148,7 @@ def processar_2019_2023() -> pd.DataFrame | None:
         logger.info("[ok] %s: %s", ano, os.path.basename(caminho))
 
     if not arquivos:
-        return _ler_cache(cache, "historico 2019-2023")
+        return _ler_cache(cache, f"historico {ANO_INICIAL}-{ano_fim}")
 
     partes: list[pd.DataFrame] = []
     for ano, caminho in arquivos:
@@ -268,8 +269,8 @@ def main():
     logger.info("ETL ENEM -> pipeline_dashboard/dados/")
     logger.info("%s", "=" * 70)
 
-    df_hist = processar_2019_2023()
-    resultados = [processar_resultados_ano(ano) for ano in ANOS if ano >= 2024]
+    df_hist = processar_participantes_historico()
+    resultados = [processar_resultados_ano(ano) for ano in ANOS_MICRODADOS if ano >= 2024]
     consolidar(df_hist, *resultados)
 
     logger.info("Tempo: %.1f min", (time.time() - t0) / 60)

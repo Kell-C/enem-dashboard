@@ -74,7 +74,7 @@
     const mediaEl = document.getElementById('rankEscDetailMedia');
     if (!plotEl || !escola?.historico?.anos?.length) return;
 
-    const { C, CFG, AREANOME_FULL, ACOR, layoutLineChart, hoverAreaTemplate } = ED.Config;
+    const { C, CFG, AREANOME_FULL, ACOR, layoutLineChart, hoverAreaTemplate, mergePandemia } = ED.Config;
     const h = escola.historico;
     const anoMin = Math.min(...h.anos);
     const anoMax = Math.max(...h.anos);
@@ -113,7 +113,7 @@
     Plotly.newPlot(
       plotEl,
       traces,
-      layoutLineChart({
+      mergePandemia(layoutLineChart({
         height: 340,
         margin: { l: 48, r: 20, t: 16, b: 44 },
         xaxis: {
@@ -136,7 +136,7 @@
         legend: { orientation: 'h', y: 1.18, x: 0, font: { size: 11, color: '#6B7280' } },
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: '#FFFFFF',
-      }),
+      }), { y0: yMin, y1: yMax }),
       CFG,
     );
   }

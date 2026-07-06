@@ -17,6 +17,7 @@ from enem_config import (
     DEP_MAP,
     NOTA_MAP,
     PRES_COLS,
+    REDE_REFERENCIA,
 )
 
 COL_MUNICIPIO = "Munic\u00edpio"
@@ -337,6 +338,27 @@ def mascara_populacao_referencia(df: pd.DataFrame) -> pd.Series:
     return presente_area & ~eliminado_obj & ~elim_red
 
 
+def filtrar_rede_estadual(df: pd.DataFrame) -> pd.DataFrame:
+    """Estudantes de escolas estaduais (TP_DEPENDENCIA_ADM_ESC = 2)."""
+    return df[df["DEP_ADM"] == REDE_REFERENCIA]
+
+
+def filtrar_ms(df: pd.DataFrame) -> pd.DataFrame:
+    return df[df["SG_UF_ESC"] == "MS"]
+
+
+def filtrar_ms_estadual(df: pd.DataFrame) -> pd.DataFrame:
+    return df[(df["SG_UF_ESC"] == "MS") & (df["DEP_ADM"] == REDE_REFERENCIA)]
+
+
+def filtrar_ms_estadual_valido(df: pd.DataFrame) -> pd.DataFrame:
+    return filtrar_ms_estadual(df[df["VALIDO"]])
+
+
+def filtrar_brasil_estadual_valido(df: pd.DataFrame) -> pd.DataFrame:
+    return filtrar_rede_estadual(df[df["VALIDO"]])
+
+
 def aplicar_flags(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df["DEP_ADM"] = df["TP_DEPENDENCIA_ADM_ESC"].map(DEP_MAP)
@@ -357,16 +379,14 @@ def aplicar_flags(df: pd.DataFrame) -> pd.DataFrame:
     m_novo = df["NU_ANO"] >= 2024
     df.loc[m_novo, "CONCLUINTE"] = df.loc[m_novo, "COM_ESCOLA"]
 
-    df["VALIDO"] = (
-        df["CONCLUINTE"]
-        & df["PRESENTE_AREA"]
-        & ~df["ELIM_OBJ"]
-        & ~df["ELIM_RED"]
-    )
+    df["POP_REF"] = mascara_populacao_referencia(df)
+    df["VALIDO"] = df["CONCLUINTE"] & df["POP_REF"]
     for c in COLS_NOTAS:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
-    df["MEDIA_GERAL"] = df[COLS_NOTAS].mean(axis=1)
+    # Media geral = media das notas disponiveis (areas concluidas; notas ja anuladas no ETL)
+    notas_cols = [c for c in COLS_NOTAS if c in df.columns]
+    df["MEDIA_GERAL"] = df[notas_cols].mean(axis=1, skipna=True)
     return df
 
 
