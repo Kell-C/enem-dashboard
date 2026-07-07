@@ -4,8 +4,8 @@
     const DP = DATA.desvio_padrao || {};
     const CV = DATA.cv || {};
     const dpTr = AREAKEYS.map((k) => ({
-      x: ANOS, y: DP[k] || [], mode: 'lines+markers', name: AREANOME[k],
-      line: { color: ACOR[k], width: 2 }, marker: { size: 5 },
+      x: ANOS, y: DP[k] || [], mode: 'lines', name: AREANOME[k],
+      line: { color: ACOR[k], width: 2 },
       hovertemplate: `${AREANOME[k]} %{x}<br>DP: %{y:.1f} pts<extra></extra>`,
     }));
     const mergeP = ED.Config.mergePandemia;
@@ -19,8 +19,8 @@
       yaxis: { title: { text: 'desvio padr\u00e3o (pts)', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)', range: [dpLo, dpHi] },
     }, { y0: dpLo, y1: dpHi }), CFG);
     const cvTr = AREAKEYS.map((k) => ({
-      x: ANOS, y: CV[k] || [], mode: 'lines+markers', name: AREANOME[k],
-      line: { color: ACOR[k], width: 2 }, marker: { size: 5 },
+      x: ANOS, y: CV[k] || [], mode: 'lines', name: AREANOME[k],
+      line: { color: ACOR[k], width: 2 },
       hovertemplate: `${AREANOME[k]} %{x}<br>CV: %{y:.1f}%<extra></extra>`,
     }));
     const cvVals = AREAKEYS.flatMap((k) => (CV[k] || []).filter((v) => v != null));

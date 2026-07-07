@@ -19,17 +19,23 @@
     document.getElementById('kpiMedVal').textContent = FMT(med);
     document.getElementById('kpiMedSub').innerHTML =
       `${LAST_YEAR} \u00b7 <span class="${tMed.cls}">${tMed.txt}</span> vs ${ANOS[i0]} \u00b7 pico ${FMT(peak)} em ${peakYear}`;
+    const hdrMed = document.getElementById('hdrMedBadge');
+    if (hdrMed) hdrMed.textContent = med != null ? FMT(med) : '\u2014';
     document.getElementById('kpiPartVal').textContent = tx != null ? `${FMT(tx)}%` : '\u2014';
     const N = DATA.estadualN[i];
     const Cc = DATA.estadualConcl[i];
     document.getElementById('kpiPartSub').innerHTML =
       `${LAST_YEAR} \u00b7 <b>${NF(N)}</b> participantes de <b>${NF(Cc)}</b> concluintes`;
+    const hdrPart = document.getElementById('hdrPartBadge');
+    if (hdrPart) hdrPart.textContent = tx != null ? `${FMT(tx)}%` : '\u2014';
     document.getElementById('kpiRankVal').innerHTML =
       rk != null ? `${rk}\u00ba<span style="font-size:14px;color:var(--muted)">/27</span>` : '\u2014';
     const rkDelta = rkPrev != null && rk != null ? rkPrev - rk : null;
     const tRk = trendTag(rkDelta, false);
     document.getElementById('kpiRankSub').innerHTML =
       `${LAST_YEAR} \u00b7 <span class="${tRk.cls}">${tRk.txt}</span> desde ${PREV_YEAR} (${rkPrev != null ? `${rkPrev}\u00ba` : '\u2014'})`;
+    const hdrRank = document.getElementById('hdrRankBadge');
+    if (hdrRank) hdrRank.textContent = rk != null ? `${rk}\u00ba/27` : '\u2014';
     const gapCard = document.getElementById('kpiGapCard');
     const gapVal = document.getElementById('kpiGapVal');
     gapCard.classList.toggle('neg', gap != null && gap < 0);
@@ -76,7 +82,8 @@
     if (areaHost && AREAKEYS) {
       const rangeLabel = `${ANOS[0]}\u2013${LAST_YEAR}`;
       areaHost.innerHTML = AREAKEYS.map((k) =>
-        `<div class="kpi kpi-area">
+        `<div class="kpi kpi-area" data-area="${k}" style="--area-accent:${ACOR[k]}">
+          <div class="kpi-area-bar" aria-hidden="true"></div>
           <p class="lbl">${AREANOME[k]} <span class="help">i<span class="tip"><b>O que é:</b> média de ${AREANOME[k]} na população de referência (rede estadual MS). Comparação com Brasil = média entre estudantes de <b>escolas estaduais</b>. <b>Como ler:</b> valor de ${LAST_YEAR}; a linha acompanha ${rangeLabel}.</span></span></p>
           <div class="rowv"><div class="val" id="kpiAreaVal_${k}">\u2014</div><div id="s_area_${k}" class="spark"></div></div>
           <div class="vsub" id="kpiAreaSub_${k}">\u2014</div>

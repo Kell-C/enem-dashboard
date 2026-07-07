@@ -1,0 +1,283 @@
+{
+  "gaps": {
+    "timestamp": "2026-07-06T19:17:10.920189Z",
+    "csv_individual_faltando": [],
+    "csv_corrompido_ou_parcial": [],
+    "parquet_path": "C:\\painel-em-sedms\\enem-dashboard-backup\\dados\\enem_completo_2019_2025_.parquet",
+    "parquet_anos": [
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "parquet_anos_faltando": [
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018
+    ],
+    "integridade_anos": [
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "integridade_anos_faltando": [],
+    "agregados_faltando": [],
+    "escola_historico_parquet": true,
+    "web_data_desatualizado": false,
+    "prioridade_download": []
+  },
+  "revisao": {
+    "timestamp": "2026-07-06T19:17:10.920189Z",
+    "ok": true,
+    "checks": [
+      {
+        "nome": "agregado_participacao_ano",
+        "ok": true,
+        "detalhe": "C:\\painel-em-sedms\\enem-dashboard-backup\\dados\\agregados\\participacao_ano.parquet"
+      },
+      {
+        "nome": "agregado_desempenho",
+        "ok": true,
+        "detalhe": "C:\\painel-em-sedms\\enem-dashboard-backup\\dados\\agregados\\desempenho.parquet"
+      },
+      {
+        "nome": "agregado_integridade",
+        "ok": true,
+        "detalhe": "C:\\painel-em-sedms\\enem-dashboard-backup\\dados\\agregados\\integridade.parquet"
+      },
+      {
+        "nome": "agregado_quantis",
+        "ok": true,
+        "detalhe": "C:\\painel-em-sedms\\enem-dashboard-backup\\dados\\agregados\\quantis.parquet"
+      },
+      {
+        "nome": "agregado_histograma",
+        "ok": true,
+        "detalhe": "C:\\painel-em-sedms\\enem-dashboard-backup\\dados\\agregados\\histograma.parquet"
+      },
+      {
+        "nome": "agregado_sumario",
+        "ok": true,
+        "detalhe": "C:\\painel-em-sedms\\enem-dashboard-backup\\dados\\agregados\\sumario.parquet"
+      },
+      {
+        "nome": "participacao_anos_completos",
+        "ok": true,
+        "detalhe": "anos=[np.int64(2013), np.int64(2014), np.int64(2015), np.int64(2016), np.int64(2017), np.int64(2018), np.int64(2019), np.int64(2020), np.int64(2021), np.int64(2022), np.int64(2023), np.int64(2024), np.int64(2025)]"
+      },
+      {
+        "nome": "integridade_anos_completos",
+        "ok": true,
+        "detalhe": "anos=[np.int64(2013), np.int64(2014), np.int64(2015), np.int64(2016), np.int64(2017), np.int64(2018), np.int64(2019), np.int64(2020), np.int64(2021), np.int64(2022), np.int64(2023), np.int64(2024), np.int64(2025)]; faltando=[]"
+      },
+      {
+        "nome": "web_data_anos",
+        "ok": true,
+        "detalhe": "anos=[2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]"
+      },
+      {
+        "nome": "web_integridade_historico",
+        "ok": true,
+        "detalhe": "ok"
+      }
+    ],
+    "warnings": [],
+    "errors": [],
+    "stats": {
+      "participacao_ms": [
+        {
+          "ano": 2013,
+          "presentes_filt": 11894,
+          "concluintes": 17649.0,
+          "taxa": 67.39192022210891
+        },
+        {
+          "ano": 2014,
+          "presentes_filt": 11621,
+          "concluintes": 17386.0,
+          "taxa": 66.84113654664672
+        },
+        {
+          "ano": 2015,
+          "presentes_filt": 11801,
+          "concluintes": 17145.0,
+          "taxa": 68.83056284631088
+        },
+        {
+          "ano": 2016,
+          "presentes_filt": 18204,
+          "concluintes": 0.0,
+          "taxa": null
+        },
+        {
+          "ano": 2017,
+          "presentes_filt": 13610,
+          "concluintes": 18788.0,
+          "taxa": 72.43985522674048
+        },
+        {
+          "ano": 2018,
+          "presentes_filt": 11653,
+          "concluintes": 20402.0,
+          "taxa": 57.116949318694246
+        },
+        {
+          "ano": 2019,
+          "presentes_filt": 11116,
+          "concluintes": 21869.0,
+          "taxa": 50.82994192692853
+        },
+        {
+          "ano": 2020,
+          "presentes_filt": 4503,
+          "concluintes": 21847.0,
+          "taxa": 20.61152560992356
+        },
+        {
+          "ano": 2021,
+          "presentes_filt": 5442,
+          "concluintes": 24090.0,
+          "taxa": 22.590286425902864
+        },
+        {
+          "ano": 2022,
+          "presentes_filt": 6367,
+          "concluintes": 24451.0,
+          "taxa": 26.039834771583983
+        },
+        {
+          "ano": 2023,
+          "presentes_filt": 6028,
+          "concluintes": 22130.0,
+          "taxa": 27.239042024401265
+        },
+        {
+          "ano": 2024,
+          "presentes_filt": 11155,
+          "concluintes": 21103.0,
+          "taxa": 52.859782969246076
+        },
+        {
+          "ano": 2025,
+          "presentes_filt": 13367,
+          "concluintes": 22689.0,
+          "taxa": 58.91401119485213
+        }
+      ],
+      "integridade_ms": [
+        {
+          "ano": 2013,
+          "filt": 16713,
+          "eliminados_total": 13,
+          "elim_redacao": 5,
+          "tx_elim": 0.08
+        },
+        {
+          "ano": 2014,
+          "filt": 15353,
+          "eliminados_total": 12,
+          "elim_redacao": 1,
+          "tx_elim": 0.08
+        },
+        {
+          "ano": 2015,
+          "filt": 16233,
+          "eliminados_total": 11,
+          "elim_redacao": 4,
+          "tx_elim": 0.07
+        },
+        {
+          "ano": 2016,
+          "filt": 18204,
+          "eliminados_total": 19,
+          "elim_redacao": 3,
+          "tx_elim": 0.1
+        },
+        {
+          "ano": 2017,
+          "filt": 13610,
+          "eliminados_total": 10,
+          "elim_redacao": 5,
+          "tx_elim": 0.07
+        },
+        {
+          "ano": 2018,
+          "filt": 11653,
+          "eliminados_total": 13,
+          "elim_redacao": 8,
+          "tx_elim": 0.11
+        },
+        {
+          "ano": 2019,
+          "filt": 11116,
+          "eliminados_total": 21,
+          "elim_redacao": 11,
+          "tx_elim": 0.19
+        },
+        {
+          "ano": 2020,
+          "filt": 4503,
+          "eliminados_total": 11,
+          "elim_redacao": 6,
+          "tx_elim": 0.24
+        },
+        {
+          "ano": 2021,
+          "filt": 5442,
+          "eliminados_total": 14,
+          "elim_redacao": 10,
+          "tx_elim": 0.26
+        },
+        {
+          "ano": 2022,
+          "filt": 6367,
+          "eliminados_total": 12,
+          "elim_redacao": 4,
+          "tx_elim": 0.19
+        },
+        {
+          "ano": 2023,
+          "filt": 6028,
+          "eliminados_total": 13,
+          "elim_redacao": 3,
+          "tx_elim": 0.22
+        },
+        {
+          "ano": 2024,
+          "filt": 11155,
+          "eliminados_total": 25,
+          "elim_redacao": 6,
+          "tx_elim": 0.22
+        },
+        {
+          "ano": 2025,
+          "filt": 13367,
+          "eliminados_total": 26,
+          "elim_redacao": 7,
+          "tx_elim": 0.19
+        }
+      ]
+    },
+    "summary": {
+      "status": "OK",
+      "errors": 0,
+      "warnings": 0
+    }
+  }
+}

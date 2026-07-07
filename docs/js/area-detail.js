@@ -78,7 +78,7 @@
     return n == null ? '\u2014' : Number(n).toLocaleString('pt-BR');
   }
 
-  function isAioDetail(detail) {
+  function isAgregadoEscola(detail) {
     return detail?.fonte === 'aio_escolas';
   }
 
@@ -87,12 +87,12 @@
   }
 
   function detailSubtitle(n, detail) {
-    if (isAioDetail(detail)) {
+    if (isAgregadoEscola(detail)) {
       const esc = detail.nEscolas != null ? Number(detail.nEscolas).toLocaleString('pt-BR') : '—';
       if (n != null && n > 0) {
-        return `N = <b>${fmtN(n)}</b> participantes (AIO) · ${esc} escolas estaduais · médias por escola`;
+        return `N = <b>${fmtN(n)}</b> participantes · ${esc} escolas estaduais · médias por escola`;
       }
-      return `<b>${esc}</b> escolas estaduais com média publicada (AIO) · faixas de nota só a partir de 2019 (microdados INEP)`;
+      return `<b>${esc}</b> escolas estaduais com média publicada · faixas de nota só a partir de 2019 (microdados INEP)`;
     }
     return `N = <b>${fmtN(n)}</b> participantes efetivos \u00b7 rede estadual MS \u00b7 mesma base dos histogramas`;
   }
@@ -116,9 +116,9 @@
     const msMed = scoped.msArea?.[areaKey]?.ms?.[i];
     const brMed = scoped.msArea?.[areaKey]?.br?.[i];
     const detail = getDetailData(ctx, areaKey, ano);
-    const n = detail.n ?? (isAioDetail(detail) ? null : scoped.estadualN?.[i] ?? null);
+    const n = detail.n ?? (isAgregadoEscola(detail) ? null : scoped.estadualN?.[i] ?? null);
     const brN = detail.brN ?? scoped.brEstadualN?.[i] ?? null;
-    const aio = isAioDetail(detail);
+    const agregEsc = isAgregadoEscola(detail);
     const gap = msMed != null && brMed != null ? +(msMed - brMed).toFixed(1) : null;
     const gapCol = gap != null && gap < 0 ? C.critico : C.verde;
 
@@ -128,7 +128,7 @@
     const minHint = detail.minPosExact
       ? 'menor nota &gt; 0 (microdados)'
       : (detail.minPos != null
-        ? (aio ? 'menor m\u00e9dia entre escolas (AIO)' : 'limite inferior da faixa')
+        ? (agregEsc ? 'menor média entre escolas (agregado)' : 'limite inferior da faixa')
         : '');
 
     const modaVal = detail.moda != null ? FMT(detail.moda) : '\u2014';
@@ -136,31 +136,31 @@
       ? 'nota inteira mais frequente'
       : (detail.modaFaixa
         ? `faixa modal ${detail.modaFaixa} (centro ${modaVal})`
-        : (aio ? 'indispon\u00edvel (sem microdado individual)' : 'faixa com maior % de alunos'));
+        : (agregEsc ? 'indisponível (sem microdado individual)' : 'faixa com maior % de alunos'));
 
     const medianaVal = boxplotDistrib(bp)
       ? FMT(bp.med)
       : (detail.medianaEscolas != null ? FMT(detail.medianaEscolas) : '\u2014');
     const medianaHint = boxplotDistrib(bp)
       ? 'Q2 da distribui\u00e7\u00e3o'
-      : (detail.medianaEscolas != null ? 'mediana entre escolas (AIO)' : '');
+      : (detail.medianaEscolas != null ? 'mediana entre escolas (agregado)' : '');
 
     const kpis = [
       kpiCard('MS estadual', FMT(msMed), areaCor, 'm\u00e9dia da \u00e1rea'),
-      kpiCard('Brasil (esc. estaduais)', FMT(brMed), C.brasil, aio ? 'refer\u00eancia nacional indispon\u00edvel via AIO' : 'refer\u00eancia nacional \u00b7 rede estadual'),
+      kpiCard('Brasil (esc. estaduais)', FMT(brMed), C.brasil, agregEsc ? 'referência nacional indisponível neste recorte' : 'referência nacional · rede estadual'),
       kpiCard('Diferen\u00e7a', gap != null ? `${gap > 0 ? '+' : ''}${FMT(gap)}` : '\u2014', gapCol),
       kpiCard('Moda', modaVal, areaCor, modaHint),
       kpiCard('M\u00edn. &gt; 0', minLabel, null, minHint),
       kpiCard('Mediana', medianaVal, null, medianaHint),
       kpiCard('Zeros', detail.pctZero != null ? `${detail.pctZero.toFixed(1).replace('.', ',')}%` : '\u2014', C.muted,
-        aio ? 'microdado individual a partir de 2019' : `${pctCount(n, detail.pctZero)} alunos`),
+        agregEsc ? 'microdado individual a partir de 2019' : `${pctCount(n, detail.pctZero)} alunos`),
       kpiCard('Sem nota', detail.pctSemNota != null ? `${detail.pctSemNota.toFixed(1).replace('.', ',')}%` : '\u2014', C.muted,
-        aio ? 'microdado individual a partir de 2019' : `${pctCount(n, detail.pctSemNota)} alunos`),
+        agregEsc ? 'microdado individual a partir de 2019' : `${pctCount(n, detail.pctSemNota)} alunos`),
     ].join('');
 
     const uid = `idx_${areaKey}_${ano}`;
-    const chartBlock = aio && !hasMicroDistrib(detail)
-      ? `<div class="idx-aio-note"><p>Distribui\u00e7\u00e3o por faixa e compara\u00e7\u00e3o detalhada com o Brasil exigem microdados INEP (dispon\u00edveis a partir de <b>2019</b>). Para ${ano}, o painel usa m\u00e9dias agregadas por escola estadual extra\u00eddas da <b>AIO</b>.</p></div>`
+    const chartBlock = agregEsc && !hasMicroDistrib(detail)
+      ? `<div class="idx-aio-note"><p>Distribuição por faixa e comparação detalhada com o Brasil exigem microdados INEP (disponíveis a partir de <b>2019</b>). Para ${ano}, o painel usa médias agregadas por escola estadual.</p></div>`
       : `<div class="idx-grid">`
         + `<div class="idx-panel"><h5>Distribui\u00e7\u00e3o das notas \u00b7 MS</h5><div id="${uid}_hist" class="idx-plot"></div></div>`
         + `<div class="idx-panel"><h5>MS \u00d7 Brasil \u00b7 faixas de nota</h5>`
@@ -207,7 +207,7 @@
     if (_lastDetailKey === key) return;
     _lastDetailKey = key;
 
-    if (isAioDetail(detail) && !hasMicroDistrib(detail)) {
+    if (isAgregadoEscola(detail) && !hasMicroDistrib(detail)) {
       [`${uid}_hist`, `${uid}_cmp`].forEach((id) => {
         const el = document.getElementById(id);
         if (el) Plotly.purge(el);

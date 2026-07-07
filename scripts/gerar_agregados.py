@@ -12,7 +12,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from enem_config import ANOS, ANOS_MICRODADOS, ANO_FINAL, AREA_KEYS, COLS_NOTAS, DEPENDENCIAS, NOTA_MAP, PARQUET, PASTA_AGREGADOS, PRES_COLS, BRASIL_REFERENCIA, REDE_REFERENCIA, WEB_DATA, configure_logging
+from enem_config import ANOS, ANOS_ESCOLA_PAINEL, ANOS_MICRODADOS, ANO_FINAL, AREA_KEYS, COLS_NOTAS, DEPENDENCIAS, NOTA_MAP, PASTA_AGREGADOS, PRES_COLS, BRASIL_REFERENCIA, REDE_REFERENCIA, WEB_DATA, configure_logging, resolver_parquet
 
 logger = configure_logging(__name__)
 from enem_helpers import (
@@ -34,6 +34,8 @@ from enem_helpers import (
     preparar_ano,
     quantis_serie,
 )
+from enem_escola_historico import carregar_escola_historico, processar_ano_escola
+from enem_inep_csv import ANOS_INEP_CSV, csv_disponivel, ler_ano_inep_csv
 
 HIST_EDGES = [0, 200, 400, 500, 600, 800, 1000.0001]
 HIST_POS_EDGES = [1, 200, 400, 500, 600, 800, 1000.0001]
@@ -132,10 +134,11 @@ def _area_detail_stats(val: pd.DataFrame, area: str, col: str) -> dict:
 
 
 def _integridade_row(base: pd.DataFrame, val: pd.DataFrame, extra: dict) -> dict:
-    comp = int(base["POP_REF"].sum())
-    present = base[base["POP_REF"]]
-    elim_red = int((base["POP_REF"] & base["ELIM_RED"]).sum())
-    branco = int((base["POP_REF"] & base["RED_BRANCO"]).sum())
+    comp = int(base["PRESENTE_AREA"].sum())
+    present = base[base["PRESENTE_AREA"]]
+    elim_red = int((base["PRESENTE_AREA"] & base["ELIM_RED"]).sum())
+    branco = int((base["PRESENTE_AREA"] & base["RED_BRANCO"]).sum())
+    eliminados_total = int((base["PRESENTE_AREA"] & (base["ELIM_OBJ"] | base["ELIM_RED"])).sum())
     em = zm = sm = 0
     if len(present):
         em = int(((present[PRES_COLS] == 2).sum(axis=1) >= 2).sum())
@@ -146,6 +149,7 @@ def _integridade_row(base: pd.DataFrame, val: pd.DataFrame, extra: dict) -> dict
         "compareceu_2d": comp,
         "filt": len(val),
         "elim_redacao": elim_red,
+        "eliminados_total": eliminados_total,
         "elim_cn": int((base["TP_PRESENCA_CN"] == 2).sum()),
         "elim_ch": int((base["TP_PRESENCA_CH"] == 2).sum()),
         "elim_lc": int((base["TP_PRESENCA_LC"] == 2).sum()),
@@ -154,11 +158,24 @@ def _integridade_row(base: pd.DataFrame, val: pd.DataFrame, extra: dict) -> dict
         "zm": zm,
         "sm": sm,
         "red_branco": branco,
-        "tx_elim": round(100 * elim_red / comp, 2) if comp else 0,
+        "tx_elim": round(100 * eliminados_total / comp, 2) if comp else 0,
         "tx_sem_nota": round(100 * branco / comp, 2) if comp else 0,
     }
     row.update(extra)
     return row
+
+
+def _strip_integridade_ano(acumulado: dict[str, list], ano: int) -> None:
+    for key in ("integridade", "integridade_cre", "integridade_muni"):
+        acumulado[key] = [
+            r for r in acumulado[key]
+            if not (isinstance(r, dict) and r.get("ano") == ano)
+        ]
+
+
+def _append_integridade(acumulado: dict[str, list], res: dict) -> None:
+    for key in ("integridade", "integridade_cre", "integridade_muni"):
+        acumulado[key].extend(res.get(key, []))
 
 
 def _cols_parquet() -> list[str]:
@@ -180,9 +197,12 @@ def _cols_parquet() -> list[str]:
 def _ler_ano(ano: int, cols: list[str]) -> pd.DataFrame:
     import pyarrow.parquet as pq
 
-    schema = pq.read_schema(PARQUET).names
+    parquet = resolver_parquet()
+    schema = pq.read_schema(parquet).names
     cols_ok = [c for c in cols if c in schema]
-    df = pd.read_parquet(PARQUET, columns=cols_ok, filters=[("NU_ANO", "==", ano)])
+    df = pd.read_parquet(parquet, columns=cols_ok, filters=[("NU_ANO", "==", ano)])
+    if df.empty:
+        return df
     return preparar_ano(df)
 
 
@@ -271,8 +291,9 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         presentes = int(base["POP_REF"].sum())
         presentes_area = int(base["PRESENTE_AREA"].sum())
         presentes_2d = int((base["PRESENTE_2_DIAS"] & ~base["ELIM_OBJ"] & ~base["ELIM_RED"]).sum())
-        elim_red = int((base["POP_REF"] & base["ELIM_RED"]).sum())
-        branco = int((base["POP_REF"] & base["RED_BRANCO"]).sum())
+        elim_red = int((base["PRESENTE_AREA"] & base["ELIM_RED"]).sum())
+        branco = int((base["PRESENTE_AREA"] & base["RED_BRANCO"]).sum())
+        eliminados_total = int((base["PRESENTE_AREA"] & (base["ELIM_OBJ"] | base["ELIM_RED"])).sum())
         conc = conc_ano if dep == REDE_REFERENCIA else None
 
         out["participacao_ano"].append({
@@ -284,6 +305,7 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
             "presentes_2d": presentes_2d,
             "eliminados_redacao": elim_red,
             "eliminados_objetiva": int(base["ELIM_OBJ"].sum()),
+            "eliminados_total": eliminados_total,
             "redacao_branco": branco,
             "concluintes": conc,
             "presentes_filt": len(val),
@@ -307,8 +329,9 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
         comp_br = int(br_base["POP_REF"].sum())
         comp_br_area = int(br_base["PRESENTE_AREA"].sum())
         comp_br_2d = int((br_base["PRESENTE_2_DIAS"] & ~br_base["ELIM_OBJ"] & ~br_base["ELIM_RED"]).sum())
-        elim_br = int((br_base["POP_REF"] & br_base["ELIM_RED"]).sum())
-        branco_br = int((br_base["POP_REF"] & br_base["RED_BRANCO"]).sum())
+        elim_br = int((br_base["PRESENTE_AREA"] & br_base["ELIM_RED"]).sum())
+        branco_br = int((br_base["PRESENTE_AREA"] & br_base["RED_BRANCO"]).sum())
+        eliminados_total_br = int((br_base["PRESENTE_AREA"] & (br_base["ELIM_OBJ"] | br_base["ELIM_RED"])).sum())
         out["participacao_ano"].append({
             "ano": ano,
             "dependencia": BRASIL_REFERENCIA,
@@ -318,6 +341,7 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
             "presentes_2d": comp_br_2d,
             "eliminados_redacao": elim_br,
             "eliminados_objetiva": int(br_base["ELIM_OBJ"].sum()),
+            "eliminados_total": eliminados_total_br,
             "redacao_branco": branco_br,
             "concluintes": None,
             "presentes_filt": len(br_val),
@@ -505,8 +529,12 @@ def processar_ano(df_ano: pd.DataFrame, cres, mapa_muni, conc_totais, conc_esc) 
 
 def main():
     t0 = time.time()
-    if not PARQUET.exists():
-        raise SystemExit(f"Parquet nao encontrado. Rode: python processar_enem.py\n  {PARQUET}")
+    parquet = resolver_parquet()
+    escola_hist = carregar_escola_historico()
+    if not parquet.exists() and escola_hist.empty:
+        raise SystemExit(
+            f"Nenhuma fonte encontrada. Rode processar_enem.py ou coloque o CSV escola em enem_config.CSV_ESCOLA_HISTORICO\n  {parquet}"
+        )
 
     logger.info("%s", "=" * 60)
     logger.info("GERADOR DE AGREGADOS - pipeline_dashboard")
@@ -530,9 +558,57 @@ def main():
     }
 
     cols = _cols_parquet()
+    anos_escola_ok: set[int] = set()
+
+    if not escola_hist.empty:
+        for ano in ANOS_ESCOLA_PAINEL:
+            sub = escola_hist[escola_hist["NU_ANO"] == ano]
+            if sub.empty:
+                continue
+            logger.info("Processando %s (INEP escola 2013-2015)...", ano)
+            res = processar_ano_escola(sub, cres, mapa_muni, conc_totais, conc_esc)
+            for k, v in res.items():
+                if k in acumulado:
+                    acumulado[k].extend(v)
+            anos_escola_ok.add(ano)
+            limpar()
+
+    for ano in ANOS_ESCOLA_PAINEL:
+        if ano not in anos_escola_ok:
+            continue
+        df_integ = None
+        if csv_disponivel(ano):
+            logger.info("Integridade %s: microdado individual INEP", ano)
+            df_integ = ler_ano_inep_csv(ano)
+        elif parquet.exists():
+            df_integ = _ler_ano(ano, cols)
+        if df_integ is None or df_integ.empty:
+            logger.warning(
+                "%s: eliminados indisponiveis — baixe MICRODADOS/PARTICIPANTES em dados/%s/",
+                ano, ano,
+            )
+            continue
+        res = processar_ano(df_integ, cres, mapa_muni, conc_totais, conc_esc)
+        _strip_integridade_ano(acumulado, ano)
+        _append_integridade(acumulado, res)
+        del df_integ
+        limpar()
+
     for ano in ANOS_MICRODADOS:
+        if ano in anos_escola_ok:
+            continue
         logger.info("Processando %s...", ano)
-        df_ano = _ler_ano(ano, cols)
+        if ano in ANOS_INEP_CSV:
+            if not csv_disponivel(ano):
+                logger.warning("Ano %s: CSV INEP ainda nao baixado (fetch_microdados_inep.py)", ano)
+                continue
+            logger.info("  fonte: INEP individual (CSV %s)", ano)
+            df_ano = ler_ano_inep_csv(ano)
+        elif parquet.exists():
+            df_ano = _ler_ano(ano, cols)
+        else:
+            logger.warning("Ano %s: parquet ausente e CSV INEP indisponivel", ano)
+            continue
         if df_ano.empty:
             logger.warning("Ano %s ausente no parquet — ignorado", ano)
             continue
@@ -546,22 +622,31 @@ def main():
     for nome, rows in acumulado.items():
         if not rows:
             continue
-        if isinstance(rows[0], pd.DataFrame):
-            df_out = pd.concat(rows, ignore_index=True)
-        else:
-            df_out = pd.DataFrame(rows)
+        frames: list[pd.DataFrame] = []
+        for r in rows:
+            if isinstance(r, pd.DataFrame):
+                frames.append(r)
+            elif isinstance(r, dict):
+                frames.append(pd.DataFrame([r]))
+            else:
+                frames.append(pd.DataFrame(r))
+        df_out = pd.concat(frames, ignore_index=True)
         path = PASTA_AGREGADOS / f"{nome}.parquet"
         df_out.to_parquet(path, index=False)
         logger.info("%s: %s linhas", path.name, len(df_out))
 
-    pa = pd.read_parquet(PASTA_AGREGADOS / "participacao_ano.parquet")
-    ms = pa[(pa["dependencia"] == "Estadual") & (pa["ano"] == ANO_FINAL)].iloc[0]
-    logger.info("MS Estadual %s:", ANO_FINAL)
-    logger.info("  concluintes SED: %s", int(ms['concluintes']))
-    logger.info("  potenciais concluintes (CO_ESCOLA): %s", int(ms['inscritos']))
-    logger.info("  validos (filtro): %s", int(ms['presentes_filt']))
-    if ms["concluintes"]:
-        logger.info("  taxa efetiva: %.1f%%", 100 * ms['presentes_filt'] / ms['concluintes'])
+    pa_path = PASTA_AGREGADOS / "participacao_ano.parquet"
+    if pa_path.exists():
+        pa = pd.read_parquet(pa_path)
+        ms_rows = pa[(pa["dependencia"] == "Estadual") & (pa["ano"] == ANO_FINAL)]
+        if not ms_rows.empty:
+            ms = ms_rows.iloc[0]
+            logger.info("MS Estadual %s:", ANO_FINAL)
+            logger.info("  concluintes SED: %s", int(ms['concluintes']) if pd.notna(ms.get('concluintes')) else 0)
+            logger.info("  potenciais concluintes (CO_ESCOLA): %s", int(ms['inscritos']))
+            logger.info("  validos (filtro): %s", int(ms['presentes_filt']))
+            if ms.get("concluintes"):
+                logger.info("  taxa efetiva: %.1f%%", 100 * ms['presentes_filt'] / ms['concluintes'])
 
     # Escrever metadados do gerador
     try:

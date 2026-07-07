@@ -7,7 +7,7 @@ if(location.protocol==='file:'){
     if (loaded >= 2 && window.bootDashboard && typeof Plotly !== 'undefined') window.bootDashboard();
   };
   const s1 = document.createElement('script');
-  s1.src = './data/painel_data.js?v=30';
+  s1.src = './data/painel_data.js?v=31';
   s1.onload = tryBoot;
   s1.onerror = () => {
     showFileWarning();

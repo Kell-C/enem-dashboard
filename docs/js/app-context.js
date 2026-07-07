@@ -6,7 +6,8 @@
     const ANOS = DATA.anos || [2019, 2020, 2021, 2022, 2023, 2024, 2025];
     const LAST_INDEX = ANOS.length - 1;
     const LAST_YEAR = ANOS[LAST_INDEX];
-    const PREV_YEAR = ANOS[Math.max(0, LAST_INDEX - 1)];
+    const PREV_INDEX = Math.max(0, LAST_INDEX - 1);
+    const PREV_YEAR = ANOS[PREV_INDEX];
     const MED_MS = DATA.medMs || [];
     const MED_BR = DATA.medBr || [];
     const MED_MS_SEM_ZERO = DATA.medMsSemZero || [];
@@ -31,7 +32,7 @@
       }));
     };
     return {
-      DATA, ANOS, LAST_INDEX, LAST_YEAR, PREV_YEAR, MED_MS, MED_BR, MED_MS_SEM_ZERO, MED_BR_SEM_ZERO,
+      DATA, ANOS, LAST_INDEX, LAST_YEAR, PREV_INDEX, PREV_YEAR, MED_MS, MED_BR, MED_MS_SEM_ZERO, MED_BR_SEM_ZERO,
       TX_MS, TX_MS_SEM_ZERO, RANK_MS, RANK_MS_SEM_ZERO, GAP,
       MS_AREA_2024: DATA.msArea2024 || {},
       MS_GERAL_2024: DATA.msGeral2024 ?? null,

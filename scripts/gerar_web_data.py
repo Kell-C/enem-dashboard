@@ -16,12 +16,19 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(__file__))
 
 from enem_config import (
-    ANOS, ANO_FINAL, ANO_MICRO_INICIAL, AREA_KEYS, NOTA_MAP, PASTA_AGREGADOS,
+    ANOS, ANO_FINAL, ANOS_ESCOLA_PAINEL, ANOS_EXTENSAO_AIO, ANOS_MICRODADOS, AREA_KEYS, NOTA_MAP, PASTA_AGREGADOS,
     BRASIL_REFERENCIA, POP_REF_PARTICIPANTES, POP_REF_RESUMO, REDE_REFERENCIA, REDES_COMPARACAO_MS,
     WEB_DATA, configure_logging,
 )
 from enem_aio_extensao import area_detail_web_extensao, participantes_estadual_por_ano, referencias_rows
-from enem_helpers import COL_MUNICIPIO, carregar_concluintes_sed, cre_curto, normalizar_texto, quantis_serie
+from enem_helpers import (
+    COL_MUNICIPIO,
+    carregar_concluintes_sed,
+    carregar_mapa_municipio_cre,
+    cre_curto,
+    normalizar_texto,
+    quantis_serie,
+)
 
 logger = configure_logging(__name__)
 
@@ -201,7 +208,8 @@ def _school_history_by_municipality(evol_esc: pd.DataFrame) -> dict:
                     continue
                 r = row.iloc[0]
                 item["part"].append(int(r.get("estudantes", 0) or 0))
-                item["concl"].append(int(r.get("Concluintes", 0) or 0))
+                conc = r.get("Concluintes", 0)
+                item["concl"].append(int(conc) if pd.notna(conc) else 0)
                 item["tx"].append(round(float(r["tx_part"]), 1) if pd.notna(r.get("tx_part")) else None)
                 item["geral"].append(round(float(r["media_geral"]), 1) if pd.notna(r.get("media_geral")) else None)
                 item["semZero"]["part"].append(int(r.get("estudantes_sem_zero", 0) or 0))
@@ -247,6 +255,37 @@ def _rank_ms_por_ano(des_uf: pd.DataFrame, col: str = "media_geral") -> list:
             continue
         ranks.append(int(sub.index[sub["UF"] == "MS"].tolist()[0]) + 1)
     return ranks
+
+
+def _resolve_cre_municipio(mname: str, grp: pd.DataFrame, mapa_muni: dict[str, str]) -> str:
+    """CRE do municipio: planilha CREs > ultimo ano com CRE no agregado (nao iloc[0] de 2013)."""
+    raw = mapa_muni.get(normalizar_texto(mname))
+    if raw:
+        return cre_curto(raw)
+    if "CRE" in grp.columns:
+        sub = grp.dropna(subset=["CRE"]).sort_values("ano")
+        if not sub.empty:
+            return cre_curto(sub.iloc[-1]["CRE"])
+    return cre_curto(raw) if raw else "—"
+
+
+def _build_cre_muns(mun: dict, mapa_muni: dict[str, str]) -> dict[str, list[str]]:
+    """Lista oficial municipio -> CRE (aba CREs) restrita aos municipios do painel."""
+    out: dict[str, list[str]] = {}
+    for mname in mun:
+        raw = mapa_muni.get(normalizar_texto(mname))
+        if not raw:
+            cre_name = mun[mname].get("cre")
+            if not cre_name or cre_name == "—":
+                continue
+            out.setdefault(cre_name, []).append(mname)
+            continue
+        cre_name = cre_curto(raw)
+        mun[mname]["cre"] = cre_name
+        out.setdefault(cre_name, []).append(mname)
+    for c in out:
+        out[c] = sorted(out[c])
+    return out
 
 
 def _muni_areas(grp: pd.DataFrame) -> dict:
@@ -314,7 +353,7 @@ def _area_detail_web(df_detail, area: str, br_n_by_ano: dict[int, int], hist_df)
             "minPos": float(r["min_pos"]) if pd.notna(r.get("min_pos")) else None,
             "minPosExact": True,
             "histPct": [float(r[c]) for c in hist_cols],
-            "histCounts": [int(r[c]) for c in count_cols],
+            "histCounts": [int(r[c]) if c in r.index and pd.notna(r.get(c)) else 0 for c in count_cols],
             "brHistPct6": [float(p) for p in br6],
             "brHistCounts6": br_counts6,
         }
@@ -363,7 +402,7 @@ def _integ_territorial(df: pd.DataFrame, key_col: str, cre_col: str | None = Non
             else:
                 r = row.iloc[0]
                 item["filt"].append(int(r["filt"]))
-                item["et"].append(int(r["elim_redacao"]))
+                item["et"].append(int(r.get("eliminados_total", r["elim_redacao"])))
                 item["em"].append(int(r.get("em", 0)))
                 item["zm"].append(int(r.get("zm", 0)))
                 item["sm"].append(int(r.get("sm", 0)))
@@ -379,6 +418,7 @@ def build_painel_data() -> dict:
     des_uf = _ler("desempenho_uf")
     evol_cre = _ler("evolucao_cre")
     evol_muni = _ler("evolucao_muni")
+    part_muni = _ler("participacao_municipios")
     evol_esc = _ler("evolucao_escolas")
     esc24 = _ler("escolas_2024")
     refs = _ler("referencias")
@@ -399,7 +439,7 @@ def build_painel_data() -> dict:
     detail_df = _ler("area_detail")
     detail_sem_zero_df = _ler("area_detail_sem_zero")
     desvio_df = _ler("desvio_cv")
-    _, conc_esc = carregar_concluintes_sed()
+    conc_totais, conc_esc = carregar_concluintes_sed()
 
     ms_part = part[part["dependencia"] == REDE_REFERENCIA].sort_values("ano")
     br_part = part[part["dependencia"] == BRASIL_REFERENCIA].sort_values("ano")
@@ -410,20 +450,7 @@ def build_painel_data() -> dict:
     br_n_by_ano = {int(r["ano"]): int(r["presentes_filt"]) for _, r in br_part.iterrows()}
     br_n_sem_zero_by_ano = {int(r["ano"]): int(r.get("presentes_filt_sem_zero", 0)) for _, r in br_part.iterrows()}
     estadual_concl = [_valor_por_ano(ms_part, a, "concluintes") for a in ANOS]
-    tx_ms = [
-        round(100 * n / c, 1) if n is not None and c else None
-        for n, c in zip(
-            [_valor_por_ano(ms_part, a, "presentes_filt") for a in ANOS],
-            estadual_concl,
-        )
-    ]
-    tx_ms_sem_zero = [
-        round(100 * n / c, 1) if n and c else None
-        for n, c in zip(
-            [_valor_por_ano(ms_part, a, "presentes_filt_sem_zero") for a in ANOS],
-            estadual_concl,
-        )
-    ]
+    estadual_matric = [_valor_por_ano(ms_part, a, "matriculados") for a in ANOS]
 
     med_ms = _serie_refs(refs, "MEDIA_GERAL", "media_ms")
     if not any(v is not None for v in med_ms):
@@ -465,7 +492,7 @@ def build_painel_data() -> dict:
             "inscritos": int(r["inscritos"]),
             "presentes": int(r.get("presentes_area", r["presentes"])),
             "presentes_2d": int(r.get("presentes_2d", 0)),
-            "eliminados": int(r.get("eliminados_redacao", 0)),
+            "eliminados": int(r.get("eliminados_total", r.get("eliminados_redacao", 0))),
             "redacao_branco": int(r.get("redacao_branco", 0)),
             "concluintes": int(r["concluintes"]) if pd.notna(r.get("concluintes")) else None,
             "presfilt": int(r["presentes_filt"]),
@@ -503,6 +530,7 @@ def build_painel_data() -> dict:
                 )
         cre[name] = {"med": med, "tx": tx, "n": n, "areas": _areas_serie(evol_cre, name)}
 
+    mapa_muni_cre = carregar_mapa_municipio_cre()
     mun = {}
     if not evol_muni.empty:
         for mname, grp in evol_muni[evol_muni["dependencia"] == REDE_REFERENCIA].groupby("NO_MUNICIPIO_ESC"):
@@ -521,6 +549,14 @@ def build_painel_data() -> dict:
                         (conc_esc["NU_ANO"] == a)
                         & (conc_esc[COL_MUNICIPIO].map(normalizar_texto) == normalizar_texto(mname))
                     ]["Concluintes"].sum()
+                    if (not conc or conc <= 0) and not part_muni.empty:
+                        pm = part_muni[
+                            (part_muni["ano"] == a)
+                            & (part_muni["NO_MUNICIPIO_ESC"] == mname)
+                            & (part_muni["dependencia"] == REDE_REFERENCIA)
+                        ]
+                        if not pm.empty and pd.notna(pm.iloc[0].get("concluintes")):
+                            conc = int(pm.iloc[0]["concluintes"])
                     tx.append(round(100 * row.iloc[0]["estudantes"] / conc, 1) if conc else None)
                     if a == ANO_FINAL:
                         for k in AREA_KEYS:
@@ -533,7 +569,7 @@ def build_painel_data() -> dict:
             ]["Concluintes"].sum()
             part24 = int(grp[grp["ano"] == ANO_FINAL]["estudantes"].sum()) if ANO_FINAL in grp["ano"].values else 0
             mun[str(mname)] = {
-                "cre": cre_curto(grp["CRE"].iloc[0]) if "CRE" in grp.columns else "SED",
+                "cre": _resolve_cre_municipio(str(mname), grp, mapa_muni_cre),
                 "med": med,
                 "tx": tx,
                 "n": n,
@@ -606,7 +642,7 @@ def build_painel_data() -> dict:
         integ["rede"][escopo] = {
             "comp": [int(sub[sub["ano"] == a].iloc[0]["compareceu_2d"]) if not sub[sub["ano"] == a].empty else 0 for a in ANOS],
             "filt": [int(sub[sub["ano"] == a].iloc[0]["filt"]) if not sub[sub["ano"] == a].empty else 0 for a in ANOS],
-            "et": [int(sub[sub["ano"] == a].iloc[0]["elim_redacao"]) if not sub[sub["ano"] == a].empty else 0 for a in ANOS],
+            "et": [int(sub[sub["ano"] == a].iloc[0].get("eliminados_total", sub[sub["ano"] == a].iloc[0]["elim_redacao"])) if not sub[sub["ano"] == a].empty else 0 for a in ANOS],
             "er": [int(sub[sub["ano"] == a].iloc[0]["elim_redacao"]) if not sub[sub["ano"] == a].empty else 0 for a in ANOS],
             "txE": [float(sub[sub["ano"] == a].iloc[0]["tx_elim"]) if not sub[sub["ano"] == a].empty else None for a in ANOS],
             "txS": [float(sub[sub["ano"] == a].iloc[0]["tx_sem_nota"]) if not sub[sub["ano"] == a].empty else None for a in ANOS],
@@ -640,10 +676,31 @@ def build_painel_data() -> dict:
 
     aio_part = participantes_estadual_por_ano()
     for i, a in enumerate(ANOS):
-        if a < ANO_MICRO_INICIAL and not estadual_n[i] and aio_part.get(a):
+        if a in ANOS_EXTENSAO_AIO and not estadual_n[i] and aio_part.get(a):
             estadual_n[i] = int(aio_part[a])
             if not estadual_n_sem_zero[i]:
                 estadual_n_sem_zero[i] = int(aio_part[a])
+
+    if not conc_totais.empty:
+        conc_by_ano = {
+            int(r["NU_ANO"]): int(r["Concluintes"])
+            for _, r in conc_totais.iterrows()
+            if pd.notna(r.get("Concluintes")) and int(r["Concluintes"]) > 0
+        }
+        for i, a in enumerate(ANOS):
+            cur = estadual_concl[i]
+            if cur is None or (isinstance(cur, (int, float)) and cur <= 0):
+                if a in conc_by_ano:
+                    estadual_concl[i] = conc_by_ano[a]
+
+    tx_ms = [
+        round(100 * n / c, 1) if n and c else None
+        for n, c in zip(estadual_n, estadual_concl)
+    ]
+    tx_ms_sem_zero = [
+        round(100 * n / c, 1) if n and c else None
+        for n, c in zip(estadual_n_sem_zero, estadual_concl)
+    ]
     desvio_padrao = {}
     cv = {}
     for k in AREA_KEYS:
@@ -741,11 +798,10 @@ def build_painel_data() -> dict:
         for k in AREA_KEYS
     }
 
+    ms_integ = integ_df[integ_df["escopo"] == REDE_REFERENCIA] if not integ_df.empty and "escopo" in integ_df.columns else pd.DataFrame()
     tx_elim = [
-        float(ms_part[ms_part["ano"] == a].iloc[0]["eliminados_redacao"])
-        / float(ms_part[ms_part["ano"] == a].iloc[0]["presentes"])
-        * 100
-        if not ms_part[ms_part["ano"] == a].empty and ms_part[ms_part["ano"] == a].iloc[0]["presentes"]
+        float(ms_integ[ms_integ["ano"] == a].iloc[0]["tx_elim"])
+        if not ms_integ[ms_integ["ano"] == a].empty and pd.notna(ms_integ[ms_integ["ano"] == a].iloc[0]["tx_elim"])
         else None
         for a in ANOS
     ]
@@ -760,14 +816,22 @@ def build_painel_data() -> dict:
             "concluintes_2019_2023": "TP_ST_CONCLUSAO = 2",
             "concluintes_2024": "CO_ESCOLA preenchido (RESULTADOS; pode incluir EJA/outras modalidades)",
             "presentes": "TP_PRESENCA = 1 em ao menos uma area objetiva (CN, CH, LC ou MT)",
-            "eliminados": "TP_PRESENCA = 2 ou TP_STATUS_REDACAO = 2",
-            "redacao_branco": "incluidos (TP_STATUS_REDACAO = 4)",
-            "concluintes_denominador": "Concluintes 3o ano EM regular (SED)",
+            "eliminados": "TP_PRESENCA = 2 (objetiva) ou TP_STATUS_REDACAO = 2 (redacao anulada)",
+            "redacao_branco": "TP_STATUS_REDACAO = 4 (em branco); incluidos na populacao de referencia",
+            "concluintes_denominador": (
+                "2017+: Concluintes 3o ano EM regular (SED). "
+                "2013-2015: matriculados Censo (NU_MATRICULAS, INEP por escola)."
+            ),
+            "anos_escola_inep": f"{ANOS_ESCOLA_PAINEL} (matriculados, participantes, taxa por escola)",
             "aviso_2024": "Sem merge PARTICIPANTES+RESULTADOS; taxa vs SED nao homogenea com 2019-2023",
             "concluintes_pos_2024": "Para 2024+ o painel usa RESULTADOS com CO_ESCOLA preenchido como proxy de concluintes vinculados a escola.",
             "media_por_area": "Nota da area considerada apenas se TP_PRESENCA = 1 na area; media geral = media das notas disponiveis.",
-            "anos_microdados": f"{ANO_MICRO_INICIAL}-{ANO_FINAL}",
-            "anos_extensao_aio": f"{ANOS[0]}-{ANO_MICRO_INICIAL - 1} (medias MS estadual por escola, fonte AIO)",
+            "anos_microdados": ", ".join(str(a) for a in ANOS_MICRODADOS),
+            "anos_extensao_historica": (
+                f"{ANOS_EXTENSAO_AIO} (médias agregadas por escola; vazio se microdados INEP 2016-2018 carregados)"
+                if ANOS_EXTENSAO_AIO
+                else "Nenhum (microdados INEP 2013-2018 + 2019+ no parquet/cache)"
+            ),
         },
         "gerado_em": pd.Timestamp.now().isoformat(),
         "pipeline": "pipeline_dashboard",
@@ -793,10 +857,7 @@ def build_painel_data() -> dict:
         "indexAreas": index_areas,
         "indexAreasSemZero": index_areas_sem_zero,
         "cre": cre,
-        "creMuns": {
-            c: sorted(m for m, v in mun.items() if v.get("cre") == c)
-            for c in {v.get("cre") for v in mun.values() if v.get("cre")}
-        },
+        "creMuns": _build_cre_muns(mun, mapa_muni_cre),
         "mun": mun,
         "esc": esc,
         "escHist": esc_hist,
@@ -808,6 +869,7 @@ def build_painel_data() -> dict:
         "estadualNSemZero": estadual_n_sem_zero,
         "brEstadualNSemZero": br_estadual_n_sem_zero,
         "estadualConcl": estadual_concl,
+        "estadualMatric": estadual_matric,
         "integ": integ,
         "escRank": esc_rank,
         "escRankSemZero": esc_rank_sem_zero,
@@ -862,12 +924,17 @@ def main():
     logger.info("Gerado: %s (%s KB)", json_path, json_path.stat().st_size // 1024)
     logger.info("Gerado: %s", js_path)
     f24 = painel["funil2024"][REDE_REFERENCIA]
+    tx_log = (
+        100 * f24["presfilt"] / f24["concluintes"]
+        if f24.get("concluintes")
+        else None
+    )
     logger.info(
-        "MS %s: %s validos / %s concluintes SED = %.1f%%",
+        "MS %s: %s validos / %s concluintes SED%s",
         ANO_FINAL,
         f24["presfilt"],
         f24["concluintes"],
-        100 * f24["presfilt"] / f24["concluintes"],
+        f" = {tx_log:.1f}%" if tx_log is not None else "",
     )
 
     try:

@@ -12,9 +12,53 @@
     return Plotly.newPlot(id, traces, lay, cfg);
   };
 
+  ED.segmentDirectionArrows = function (xs, ys, opts) {
+    if (!xs || xs.length < 2) return [];
+    const color = opts?.color || 'rgba(10,77,140,.6)';
+    const arrowsize = opts?.arrowsize ?? 0.55;
+    const arrowwidth = opts?.arrowwidth ?? 1.2;
+    const standoff = opts?.standoff ?? 2;
+    const startstandoff = opts?.startstandoff ?? 2;
+    const out = [];
+    for (let i = 0; i < xs.length - 1; i += 1) {
+      out.push({
+        x: xs[i + 1],
+        y: ys[i + 1],
+        ax: xs[i],
+        ay: ys[i],
+        xref: 'x',
+        yref: 'y',
+        axref: 'x',
+        ayref: 'y',
+        showarrow: true,
+        arrowhead: 2,
+        arrowsize,
+        arrowwidth,
+        arrowcolor: color,
+        standoff,
+        startstandoff,
+        text: '',
+        captureevents: false,
+      });
+    }
+    return out;
+  };
+
+  ED.segmentArrowsFromSeries = function (anos, vals, opts) {
+    const xs = [];
+    const ys = [];
+    (anos || []).forEach((a, i) => {
+      const v = vals[i];
+      if (v != null && !Number.isNaN(v)) {
+        xs.push(a);
+        ys.push(v);
+      }
+    });
+    return ED.segmentDirectionArrows(xs, ys, opts);
+  };
+
   ED.spark = function (ctx, id, vals, col, inv) {
     const { ANOS } = ctx;
-    const lastIdx = ANOS.length - 1;
     const sparkCfg = { ...CFG, displayModeBar: false, staticPlot: true, responsive: false };
     const baseLayout = {
       ...BL,
@@ -27,9 +71,15 @@
     const layout = ED.Config.mergePandemia
       ? ED.Config.mergePandemia(baseLayout, { anos: ANOS, annotate: false })
       : baseLayout;
+    layout.annotations = ED.segmentArrowsFromSeries(ANOS, vals, {
+      color: col,
+      arrowsize: 0.42,
+      arrowwidth: 1,
+      standoff: 1.5,
+      startstandoff: 1.5,
+    });
     return Plotly.newPlot(id, [
       { x: ANOS, y: vals, mode: 'lines', line: { color: col, width: 2 }, hoverinfo: 'skip' },
-      { x: [ANOS[lastIdx]], y: [vals[lastIdx]], mode: 'markers', marker: { color: col, size: 5 }, hoverinfo: 'skip' },
     ], layout, sparkCfg);
   };
 
@@ -49,7 +99,9 @@
     const panel = document.getElementById(panelId);
     if (!panel) return;
     const go = () => { if (panel.dataset.lz) return; panel.dataset.lz = '1'; fn(); };
-    if (panel.classList.contains('is-active')) requestAnimationFrame(go);
+    const tabBtn = document.querySelector(`[data-tab="${panelId}"]`);
+    if (tabBtn) tabBtn.addEventListener('click', () => requestAnimationFrame(go));
+    if (panel.classList.contains('is-active') && !panel.hidden) requestAnimationFrame(go);
     document.addEventListener('dash-tab-show', (e) => {
       if (e.detail && e.detail.id === panelId) requestAnimationFrame(go);
     });

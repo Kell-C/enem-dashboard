@@ -1,12 +1,13 @@
 (function (ED) {
   const C = {
-    azul: '#0A4D8C', azulEsc: '#053B71', brasil: '#7B8794', verde: '#2EAD6E',
+    azul: '#0A4D8C', azulEsc: '#053B71', brasil: '#8A9BB0', verde: '#2EAD6E',
     laranja: '#F07A28', dourado: '#F2C230', critico: '#D6453D', roxo: '#6B4A9F',
-    azulC: '#3BA4E8', muted: '#475569', borda: '#B8C4D4', subtle: '#E8EDF3',
+    azulC: '#3BA4E8', muted: '#5A718A', borda: '#CDD8E8', subtle: '#F2F6FB',
+    txt: '#0A2540', txt2: '#2A4562',
   };
   const BL = {
     paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: '#FFFFFF',
-    font: { family: 'Segoe UI, system-ui, sans-serif', size: 12, color: C.muted },
+    font: { family: 'Segoe UI, system-ui, sans-serif', size: 12, color: C.txt2 },
     margin: { l: 46, r: 14, t: 8, b: 34 },
   };
   const CFG = {
@@ -46,8 +47,8 @@
   };
   const HOVER = {
     bgcolor: '#FFFFFF',
-    bordercolor: '#E5E7EF',
-    font: { family: 'Segoe UI, system-ui, sans-serif', size: 13, color: '#1A1D26' },
+    bordercolor: '#CDD8E8',
+    font: { family: 'Segoe UI, system-ui, sans-serif', size: 13, color: '#0A2540' },
     align: 'left',
   };
   const XSPIKE = {
@@ -58,9 +59,12 @@
     spikethickness: 1,
     spikedash: 'dot',
   };
+  const YSPIKE = { ...XSPIKE };
   function layoutLineChart(extra = {}) {
-    const xaxis = { ...XSPIKE, ...(extra.xaxis || {}) };
-    const { xaxis: _xa, ...rest } = extra;
+    const noGrid = { gridcolor: 'rgba(0,0,0,0)', showgrid: false, zeroline: false };
+    const xaxis = { ...noGrid, ...XSPIKE, ...(extra.xaxis || {}) };
+    const yaxis = { ...noGrid, ...(extra.yaxis || {}) };
+    const { xaxis: _xa, yaxis: _ya, ...rest } = extra;
     return {
       ...BL,
       hovermode: 'x unified',
@@ -68,11 +72,25 @@
       spikedistance: -1,
       hoverlabel: { ...HOVER, ...(rest.hoverlabel || {}) },
       xaxis,
+      yaxis,
       ...rest,
     };
   }
-  function hoverAreaTemplate(name) {
-    return `${name}: %{y:.0f}<extra></extra>`;
+  function layoutUnifiedY(extra = {}) {
+    const yaxis = { ...YSPIKE, ...(extra.yaxis || {}) };
+    const { yaxis: _ya, ...rest } = extra;
+    return {
+      ...BL,
+      hovermode: 'y unified',
+      hoverdistance: 24,
+      spikedistance: -1,
+      hoverlabel: { ...HOVER, ...(rest.hoverlabel || {}) },
+      yaxis,
+      ...rest,
+    };
+  }
+  function hoverAreaTemplate(name, val = '%{y:.0f}') {
+    return `${name}: ${val}<extra></extra>`;
   }
   const PANDEMIA = {
     x0: 2019.6,
@@ -134,6 +152,6 @@
   }
   ED.Config = {
     C, BL, CFG, CFG_INTERACTIVE, AREAKEYS, AREANOME, AREANOME_FULL, ACOR,
-    HOVER, XSPIKE, PANDEMIA, layoutLineChart, hoverAreaTemplate, mergePandemia,
+    HOVER, XSPIKE, YSPIKE, PANDEMIA, layoutLineChart, layoutUnifiedY, hoverAreaTemplate, mergePandemia,
   };
 })(window.EnemDash = window.EnemDash || {});
