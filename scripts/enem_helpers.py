@@ -2,13 +2,16 @@
 from __future__ import annotations
 
 import gc
+import logging
 import re
 import unicodedata
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from enem_config import (
+    ANO_FINAL,
     COLS_NOTAS,
     CONCLUINTES_CSV,
     CONCLUINTES_XLSX,
@@ -327,7 +330,10 @@ def preparar_ano(df_ano: pd.DataFrame) -> pd.DataFrame:
 
 
 def mascara_populacao_referencia(df: pd.DataFrame) -> pd.Series:
-    """Presente em >=1 area objetiva e nao eliminado (objetiva ou redacao)."""
+    """Presente em >=1 area objetiva e nao eliminado (objetiva ou redacao).
+
+    TP_STATUS_REDACAO (microdado INEP): 2 = anulada (eliminacao); 4 = em branco (sem nota).
+    """
     pres = df[PRES_COLS]
     presente_area = pres.eq(1).any(axis=1)
     eliminado_obj = pres.eq(2).any(axis=1)
@@ -365,8 +371,8 @@ def aplicar_flags(df: pd.DataFrame) -> pd.DataFrame:
     df["PRESENTE_AREA"] = df[PRES_COLS].eq(1).any(axis=1)
     df["PRESENTE_2_DIAS"] = df[PRES_COLS].eq(1).all(axis=1)
     df["ELIM_OBJ"] = df[PRES_COLS].eq(2).any(axis=1)
-    df["ELIM_RED"] = df["TP_STATUS_REDACAO"] == 2
-    df["RED_BRANCO"] = df["TP_STATUS_REDACAO"] == 4
+    df["ELIM_RED"] = df["TP_STATUS_REDACAO"] == 2  # anulada
+    df["RED_BRANCO"] = df["TP_STATUS_REDACAO"] == 4  # em branco (sem nota)
 
     if "CO_ESCOLA" in df.columns:
         df["COM_ESCOLA"] = df["CO_ESCOLA"].notna()
@@ -471,20 +477,25 @@ def _concluintes_de_csv() -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def _sheet_concluintes_consolidada(xls: pd.ExcelFile) -> str:
+    preferidas = [f"2025-2013", "2025-2019", f"{ANO_FINAL}-2013", f"{ANO_FINAL}-2019"]
+    for nome in preferidas:
+        if nome in xls.sheet_names:
+            return nome
     candidatos = []
     for name in xls.sheet_names:
-        m = re.fullmatch(r"(\d{4})-2019", str(name).strip())
+        m = re.fullmatch(r"(\d{4})-(\d{4})", str(name).strip())
         if m:
-            candidatos.append((int(m.group(1)), name))
+            candidatos.append((int(m.group(1)), int(m.group(2)), name))
     if candidatos:
-        return max(candidatos)[1]
+        return max(candidatos, key=lambda t: (t[1], t[0]))[2]
     return xls.sheet_names[0]
 
 
-def _concluintes_de_xlsx() -> tuple[pd.DataFrame, pd.DataFrame]:
-    xl = pd.ExcelFile(CONCLUINTES_XLSX)
+def _concluintes_de_xlsx(xlsx: Path | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+    path = xlsx or CONCLUINTES_XLSX
+    xl = pd.ExcelFile(path)
     sheet_name = _sheet_concluintes_consolidada(xl)
-    raw = pd.read_excel(CONCLUINTES_XLSX, sheet_name=sheet_name)
+    raw = pd.read_excel(path, sheet_name=sheet_name)
     raw["NU_ANO"] = pd.to_numeric(raw["NU_ANO"], errors="coerce").astype("Int64")
     raw["Concluintes"] = pd.to_numeric(raw["Concluintes"], errors="coerce").fillna(0).astype(int)
     if "CO_ESCOLA" in raw.columns:
@@ -564,13 +575,22 @@ def _concluintes_de_xlsx() -> tuple[pd.DataFrame, pd.DataFrame]:
 
 def carregar_concluintes_sed() -> tuple[pd.DataFrame, pd.DataFrame]:
     """Retorna (totais por ano, por escola). Usa XLSX SED ou CSV local."""
-    if CONCLUINTES_XLSX.exists():
-        return _concluintes_de_xlsx()
+    from enem_config import resolver_concluintes_xlsx
+
+    xlsx = resolver_concluintes_xlsx()
+    if xlsx.exists():
+        return _concluintes_de_xlsx(xlsx)
     if CONCLUINTES_CSV.exists():
         return _concluintes_de_csv()
-    raise FileNotFoundError(
-        f"Planilha de concluintes nao encontrada. Coloque em {CONCLUINTES_XLSX} "
-        f"ou use {CONCLUINTES_CSV}"
+    logger = logging.getLogger(__name__)
+    logger.warning(
+        "Concluintes SED nao encontrados (%s / %s) — taxas de participacao ficarao vazias",
+        CONCLUINTES_XLSX,
+        CONCLUINTES_CSV,
+    )
+    return (
+        pd.DataFrame(columns=["NU_ANO", "Concluintes"]),
+        pd.DataFrame(columns=["NU_ANO", "CO_ESCOLA", "Concluintes", COL_MUNICIPIO]),
     )
 
 

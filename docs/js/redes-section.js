@@ -12,13 +12,12 @@
       const mun = dep === 'Municipal';
       const t = {
         x: ANOS, y: DATA.redes[dep].med,
-        mode: `lines${est ? '+markers' : ''}`,
+        mode: 'lines',
         name: `${RN[dep]}${mun ? ' \u00b7 N pequeno' : ''}`,
         line: { color: RC[dep], width: est ? 3.4 : 1.8, dash: mun ? 'dot' : 'solid' },
         hovertemplate: `${RN[dep]} %{x}<br>M\u00e9dia: %{y:.0f}<br>Participantes efetivos: %{customdata}<extra></extra>`,
         customdata: DATA.redes[dep].n.map((n) => NF(n)),
       };
-      if (est) t.marker = { size: 6 };
       return t;
     });
     const mergeP = ED.Config.mergePandemia;

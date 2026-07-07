@@ -31,6 +31,24 @@
     return '';
   }
 
+  function panelRefMedias() {
+    const pd = window.PAINEL_DATA || {};
+    const anos = pd.anos || [];
+    const i = anos.length - 1;
+    if (i < 0) return { refMs: null, refBr: null };
+    return {
+      refMs: pd.medMs?.[i] ?? null,
+      refBr: pd.medBr?.[i] ?? null,
+    };
+  }
+
+  function scoreCellClass(v, refMs, refBr) {
+    if (v == null || refMs == null) return '';
+    if (refBr != null && v >= refBr) return 'br-ok';
+    if (v >= refMs) return 'ms-ok';
+    return 'bad';
+  }
+
   function renderPosicoes(escola) {
     const el = document.getElementById('rankEscPosicoes');
     if (!el || !escola) return;
@@ -67,32 +85,71 @@
     return [Math.floor(lo - pad), Math.ceil(hi + pad)];
   }
 
-  function renderHistChart(escola) {
+  function renderAreaKpis(escola) {
+    const host = document.getElementById('rankEscAreaKpis');
+    if (!host || !escola) return;
+    const { AREANOME_FULL, ACOR } = ED.Config;
+    const h = escola.historico || {};
+    const notas2025 = escola.notas || {};
+    const idx25 = h.anos?.indexOf(2025);
+    const idx24 = h.anos?.indexOf(2024);
+
+    host.innerHTML = AREA_KEYS.map((k) => {
+      const name = AREANOME_FULL[k] || k;
+      const v25 = notas2025[k] ?? (idx25 >= 0 ? h[k]?.[idx25] : null);
+      const v24 = idx24 >= 0 ? h[k]?.[idx24] : null;
+      let trendHtml = '<span class="trend">— vs 2024</span>';
+      if (v25 != null && v24 != null) {
+        const d = v25 - v24;
+        if (d > 0.05) {
+          trendHtml = `<span class="trend up">\u25B2 +${fmtNum(d)} vs 2024</span>`;
+        } else if (d < -0.05) {
+          trendHtml = `<span class="trend down">\u25BC ${fmtNum(d)} vs 2024</span>`;
+        } else {
+          trendHtml = '<span class="trend up">\u25B2 est\u00e1vel vs 2024</span>';
+        }
+      }
+      return `<div class="kpi kpi-area rank-area-kpi" data-area="${k}" style="--area-accent:${ACOR[k]}">
+        <div class="kpi-area-bar" aria-hidden="true"></div>
+        <p class="lbl">${name}</p>
+        <div class="val" style="color:${ACOR[k]}">${v25 != null ? fmtNum(v25) : '—'}</div>
+        <div class="vsub">${trendHtml}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderHistChart(escola, refs) {
     const plotEl = document.getElementById('rankEscHistPlot');
     const title = document.getElementById('rankEscHistTitle');
     const sub = document.getElementById('rankEscHistSub');
     const mediaEl = document.getElementById('rankEscDetailMedia');
     if (!plotEl || !escola?.historico?.anos?.length) return;
 
+    const { refMs, refBr } = refs || panelRefMedias();
+
     const { C, CFG, AREANOME_FULL, ACOR, layoutLineChart, hoverAreaTemplate, mergePandemia } = ED.Config;
+    const axisMuted = C.txt2 || C.muted;
     const h = escola.historico;
     const anoMin = Math.min(...h.anos);
     const anoMax = Math.max(...h.anos);
 
     if (title) title.textContent = escola.nome;
     if (sub) sub.textContent = `${escola.municipio} · INEP ${escola.coInep}`;
-    if (mediaEl) mediaEl.textContent = fmtNum(escola.mediaGeral);
+    if (mediaEl) {
+      mediaEl.textContent = fmtNum(escola.mediaGeral);
+      mediaEl.className = scoreCellClass(escola.mediaGeral, refMs, refBr);
+    }
     renderPosicoes(escola);
+    renderAreaKpis(escola);
 
     const traces = AREA_KEYS.map((k) => {
       const name = AREANOME_FULL[k] || k;
       return {
         x: h.anos,
         y: h[k],
-        mode: 'lines+markers',
+        mode: 'lines',
         name,
         line: { color: ACOR[k], width: 2.5 },
-        marker: { size: 6, line: { width: 0 } },
         connectgaps: false,
         hovertemplate: hoverAreaTemplate(name),
       };
@@ -115,25 +172,27 @@
       traces,
       mergePandemia(layoutLineChart({
         height: 340,
-        margin: { l: 48, r: 20, t: 16, b: 44 },
+        margin: { l: 36, r: 20, t: 16, b: 44 },
         xaxis: {
           title: '',
           dtick: 2,
           tickmode: 'linear',
           range: [anoMin - 0.5, anoMax + 0.5],
-          gridcolor: '#F0F1F6',
+          gridcolor: 'rgba(0,0,0,0)',
+          showgrid: false,
           linecolor: '#E5E7EF',
-          tickfont: { size: 12, color: '#6B7280' },
+          tickfont: { size: 12, color: axisMuted },
         },
         yaxis: {
-          title: 'Nota TRI',
+          title: { text: 'Nota TRI', font: { size: 9, color: axisMuted } },
           range: [yMin, yMax],
           dtick: 20,
-          gridcolor: '#F0F1F6',
+          gridcolor: 'rgba(0,0,0,0)',
+          showgrid: false,
           linecolor: '#E5E7EF',
-          tickfont: { size: 12, color: '#6B7280' },
+          tickfont: { size: 8, color: axisMuted },
         },
-        legend: { orientation: 'h', y: 1.18, x: 0, font: { size: 11, color: '#6B7280' } },
+        legend: { orientation: 'h', y: 1.18, x: 0, font: { size: 11, color: axisMuted } },
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: '#FFFFFF',
       }), { y0: yMin, y1: yMax }),
@@ -162,13 +221,24 @@
 
     const escolaMap = new Map(data.escolas.map((e) => [String(e.coInep), e]));
     let selectedInep = null;
+    const refs = panelRefMedias();
 
     const meta = host.querySelector('#rankEscMeta');
+    const yearBadge = host.querySelector('#rankEscYearBadge');
+    if (yearBadge) yearBadge.textContent = `ENEM ${data.ano}`;
+    const scopeNote = host.querySelector('.rank-scope-note');
+    if (scopeNote) {
+      scopeNote.innerHTML = `Ranking com base no <strong class="rank-enem-ref">ENEM ${data.ano}</strong> · `
+        + 'posições entre <strong>escolas estaduais</strong> (município, MS e Brasil). '
+        + `Fonte: microdados INEP / ENEM.`;
+    }
     if (meta) {
       const anos = data.anosHistorico?.length
         ? `${data.anosHistorico[0]}–${data.anosHistorico[data.anosHistorico.length - 1]}`
         : '2013–2025';
-      meta.textContent = `${data.totalEscolas} escolas estaduais · ENEM ${data.ano} · histórico ${anos} · ${FONTE}`;
+      meta.innerHTML = `${data.totalEscolas} escolas estaduais · `
+        + `<span class="rank-enem-badge rank-enem-badge--inline">ENEM ${data.ano}</span> · `
+        + `histórico ${anos} · ${FONTE}`;
     }
 
     const munSel = host.querySelector('#rankEscMunicipio');
@@ -214,7 +284,7 @@
       });
       if (escola?.historico?.anos?.length) {
         showDetailView(true);
-        renderHistChart(escola);
+        renderHistChart(escola, refs);
         document.getElementById('rankEscDetailView')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       } else {
         closeDetailView();
@@ -240,10 +310,11 @@
         const msMun = e.estaduaisMs?.municipio;
         const msUf = e.estaduaisMs?.uf;
         const brEst = e.estaduaisBr?.brasil;
+        const medCls = scoreCellClass(e.mediaGeral, refs.refMs, refs.refBr);
         return `<tr class="rk-row${tr}${sel}" data-inep="${e.coInep}" tabindex="0" role="button" aria-label="Ver detalhes de ${escHtml(e.nome)}">
         <td class="rk-pos">${i + 1}</td>
         <td class="rk-nome"><span class="b">${escHtml(e.nome)}</span><span class="rk-sub">${escHtml(e.municipio)} · INEP ${e.coInep}</span></td>
-        <td class="rk-num">${fmtNum(e.mediaGeral)}</td>
+        <td class="rk-num ${medCls}">${fmtNum(e.mediaGeral)}</td>
         <td class="rk-rank ${badgeClass(msMun, e.estaduaisMs?.totalMunicipio)}">${fmtRank(msMun, e.estaduaisMs?.totalMunicipio)}</td>
         <td class="rk-rank ${badgeClass(msUf, e.estaduaisMs?.totalUf)}">${fmtRank(msUf, e.estaduaisMs?.totalUf)}</td>
         <td class="rk-rank ${badgeClass(brEst, e.estaduaisBr?.totalBrasil)}">${fmtRank(brEst, e.estaduaisBr?.totalBrasil)}</td>

@@ -84,10 +84,9 @@
       return {
         x: ANOS,
         y: AS[k].map((v) => (v != null && b ? +(v / b * 100).toFixed(1) : null)),
-        mode: 'lines+markers',
+        mode: 'lines',
         name: AREANOME[k],
         line: { color: ACOR[k], width: 2.2 },
-        marker: { size: 10, symbol: 'circle', line: { width: 1, color: '#fff' } },
         hovertemplate: `${AREANOME[k]} %{x}<br>\u00edndice %{y:.1f}<extra>Clique para detalhes</extra>`,
       };
     });
@@ -114,8 +113,54 @@
     requestAnimationFrame(() => requestAnimationFrame(draw));
   }
 
+  function mountAreaMediasChart(ctx) {
+    const el = document.getElementById('g_traj_areas');
+    if (!el) return;
+    const { DATA, ANOS, AREAKEYS, AREANOME, ACOR, BL, CFG } = ctx;
+    const CFGI = ED.Config.CFG_INTERACTIVE || CFG;
+    const mergeP = ED.Config.mergePandemia;
+    const zeroMode = currentZeroMode();
+    const msArea = zeroMode === 'no_zero' ? (DATA.msAreaSemZero || DATA.msArea) : DATA.msArea;
+    const tr = AREAKEYS.map((k) => {
+      const ys = msArea?.[k]?.ms || [];
+      const arrows = ED.segmentArrowsFromSeries(ANOS, ys, {
+        color: ACOR[k],
+        arrowsize: 0.55,
+        arrowwidth: 1.1,
+        standoff: 2,
+        startstandoff: 2,
+      });
+      return {
+        x: ANOS,
+        y: ys,
+        mode: 'lines',
+        name: AREANOME[k],
+        line: { color: ACOR[k], width: 2.2 },
+        hovertemplate: `${AREANOME[k]} %{x}<br>m\u00e9dia %{y:.1f} pts<extra></extra>`,
+        _arrows: arrows,
+      };
+    });
+    const allVals = tr.flatMap((t) => t.y).filter((v) => v != null);
+    const yLo = allVals.length ? Math.floor(Math.min(...allVals) - 8) : 450;
+    const yHi = allVals.length ? Math.ceil(Math.max(...allVals) + 8) : 650;
+    const areaArrows = tr.flatMap((t) => t._arrows || []);
+    const areaLayout = mergeP({
+      ...BL, height: 300, dragmode: false, hovermode: 'x unified', uirevision: 'traj-areas',
+      legend: { orientation: 'h', y: -0.22, font: { size: 9.5 } },
+      xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
+      yaxis: {
+        title: { text: 'm\u00e9dia (pontos)', font: { size: 10 } },
+        gridcolor: 'rgba(0,0,0,0)',
+        range: [yLo, yHi],
+      },
+      annotations: areaArrows,
+    }, { y0: yLo, y1: yHi });
+    tr.forEach((t) => { delete t._arrows; });
+    Plotly.react(el, tr, areaLayout, CFGI);
+  }
+
   function resizeTrajPlots() {
-    ['g_traj', 'g_index', 'g_bump', 'g_evol'].forEach((id) => {
+    ['g_traj', 'g_traj_areas', 'g_index', 'g_bump', 'g_evol'].forEach((id) => {
       const el = document.getElementById(id);
       if (el && el.data) Plotly.Plots.resize(el);
     });
@@ -134,7 +179,6 @@
       };
     });
 
-    const gradBase = ['#9DC3E6', '#6BA6DC', '#3BA4E8', '#1A6FB5', '#0A4D8C', '#053B71', '#032C55'];
     function renderTrajectoryCharts() {
       const zeroMode = currentZeroMode();
       const TX_MS = zeroMode === 'no_zero' ? (ctx.TX_MS_SEM_ZERO || ctx.TX_MS) : ctx.TX_MS;
@@ -143,7 +187,6 @@
       const RANK_MS = zeroMode === 'no_zero' ? (ctx.RANK_MS_SEM_ZERO || ctx.RANK_MS) : ctx.RANK_MS;
       const estadualN = zeroMode === 'no_zero' ? (DATA.estadualNSemZero || DATA.estadualN) : DATA.estadualN;
       const ufRank = zeroMode === 'no_zero' ? (DATA.ufRankByYearSemZero || DATA.ufRankByYear) : DATA.ufRankByYear;
-      const grad = ANOS.map((_, idx) => gradBase[Math.min(idx, gradBase.length - 1)]);
       const txVals = TX_MS.filter((v) => v != null);
       const medVals = MED_MS.filter((v) => v != null);
       const trajMedLo = Math.min(...medVals) - 4;
@@ -151,11 +194,21 @@
       const txLo = Math.max(0, Math.min(...txVals) - 3);
       const txHi = Math.max(...txVals) + 5;
       const pandemicTx = ANOS.map((a, idx) => (a >= 2020 && a <= 2021 ? TX_MS[idx] : null)).filter((v) => v != null);
-      const trajArrow = {
-        x: TX_MS[ANOS.length - 1], y: MED_MS[ANOS.length - 1], ax: TX_MS[ANOS.length - 2], ay: MED_MS[ANOS.length - 2],
-        xref: 'x', yref: 'y', axref: 'x', ayref: 'y',
-        showarrow: true, arrowhead: 3, arrowsize: 1.4, arrowwidth: 2, arrowcolor: C.azulEsc,
-      };
+      const trajXs = [];
+      const trajYs = [];
+      ANOS.forEach((_, idx) => {
+        if (TX_MS[idx] != null && MED_MS[idx] != null) {
+          trajXs.push(TX_MS[idx]);
+          trajYs.push(MED_MS[idx]);
+        }
+      });
+      const trajArrows = ED.segmentDirectionArrows(trajXs, trajYs, {
+        color: C.azulEsc,
+        arrowsize: 0.9,
+        arrowwidth: 1.6,
+        standoff: 3,
+        startstandoff: 3,
+      });
       const trajPandAnn = pandemicTx.length ? [{
         x: (Math.min(...pandemicTx) + Math.max(...pandemicTx)) / 2,
         y: trajMedHi - 2,
@@ -165,9 +218,9 @@
       }] : [];
       const interactiveMargin = { ...BL.margin, t: 28 };
       Plotly.react('g_traj', [{
-        x: TX_MS, y: MED_MS, mode: 'lines+markers+text',
+        x: TX_MS, y: MED_MS, mode: 'lines+text',
         line: { color: 'rgba(10,77,140,.45)', width: 2 },
-        marker: { size: ANOS.map((a) => (a === LAST_YEAR ? 16 : 11)), color: grad, line: { color: '#fff', width: 1.5 } },
+        marker: { size: 0 },
         text: ANOS.map(String), textposition: 'bottom center', textfont: { size: 10, color: C.muted },
         customdata: estadualN.map((n) => NF(n)),
         hovertemplate: '<b>%{text}</b><br>Part.: %{x:.1f}% \u00b7 %{customdata} participantes efetivos<br>M\u00e9dia: %{y:.1f}<extra></extra>',
@@ -183,7 +236,7 @@
           gridcolor: 'rgba(0,0,0,0)',
           range: [trajMedLo, trajMedHi],
         },
-        annotations: [trajArrow, ...trajPandAnn],
+        annotations: [...trajArrows, ...trajPandAnn],
       }, pandemicTx.length ? {
         x0: Math.min(...pandemicTx) - 2,
         x1: Math.max(...pandemicTx) + 2,
@@ -192,6 +245,7 @@
         annotate: false,
       } : { annotate: false }), CFGI);
 
+      mountAreaMediasChart(ctx);
       ED.initIndexDrillUi(ctx);
       mountIndexChart(ctx);
 
@@ -201,11 +255,11 @@
       const medHi = Math.max(...MED_MS.concat(MED_BR).filter(v => v != null)) + 3;
 
       Plotly.react('g_bump', [{
-        x: ANOS, y: RANK_MS, mode: 'lines+markers+text',
+        x: ANOS, y: RANK_MS, mode: 'lines+text',
         line: { color: C.laranja, width: 3 },
-        marker: { size: 15, color: C.laranja, line: { color: '#fff', width: 1.5 } },
+        marker: { size: 0 },
         text: RANK_MS.map((r) => (r != null ? `${r}\u00ba` : '')),
-        textposition: 'middle center', textfont: { size: 8.5, color: '#fff' },
+        textposition: 'middle center', textfont: { size: 8.5, color: C.laranja },
         hovertemplate: '%{x}: %{y}\u00ba de 27<extra></extra>',
       }], mergeP({
         ...BL, height: 280, showlegend: false, margin: interactiveMargin,
@@ -218,10 +272,11 @@
       }, { y0: yMin, y1: yMax, annotate: false }), CFGI);
 
       Plotly.react('g_evol', [
-        { x: ANOS, y: MED_BR, mode: 'lines+markers', name: 'Brasil (esc. estaduais)', line: { color: C.brasil, width: 2, dash: 'dot' }, marker: { size: 6 } },
+        { x: ANOS, y: MED_BR, mode: 'lines', name: 'Brasil (esc. estaduais)', line: { color: C.brasil, width: 2, dash: 'dot' } },
         {
-          x: ANOS, y: MED_MS, mode: 'lines+markers+text', name: 'MS estadual',
-          line: { color: C.azul, width: 2.6 }, marker: { size: 7 },
+          x: ANOS, y: MED_MS, mode: 'lines+text', name: 'MS estadual',
+          line: { color: C.azul, width: 2.6 },
+          marker: { size: 0 },
           text: MED_MS.map((v) => (v != null ? v.toFixed(0) : '')),
           textposition: 'bottom center', textfont: { size: 9, color: C.azulEsc },
         },

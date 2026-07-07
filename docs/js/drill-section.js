@@ -16,6 +16,123 @@
     b.innerHTML = h;
   }
 
+  function fmtAreaNum(v) {
+    return v == null || Number.isNaN(v) ? '—' : v.toFixed(1).replace('.', ',');
+  }
+
+  function areaTrendHtml(vLast, vPrev, prevYear) {
+    if (vLast == null || vPrev == null || Number.isNaN(vLast) || Number.isNaN(vPrev)) {
+      return `<span class="trend">— vs ${prevYear}</span>`;
+    }
+    const d = vLast - vPrev;
+    if (d > 0.05) {
+      return `<span class="trend up">\u25B2 +${fmtAreaNum(d)} vs ${prevYear}</span>`;
+    }
+    if (d < -0.05) {
+      return `<span class="trend down">\u25BC ${fmtAreaNum(d)} vs ${prevYear}</span>`;
+    }
+    return `<span class="trend up">\u25B2 est\u00e1vel vs ${prevYear}</span>`;
+  }
+
+  function renderAreaKpis(areas, refMap) {
+    const ctx = _ctx;
+    const { LAST_INDEX, PREV_INDEX, PREV_YEAR, ACOR, C } = ctx;
+    const { AREANOME_FULL } = ED.Config;
+    const host = document.getElementById('creAreaKpis');
+    if (!host) return;
+    if (!areas) {
+      host.innerHTML = '';
+      return;
+    }
+    host.innerHTML = ctx.AREAKEYS.map((k) => {
+      const name = AREANOME_FULL[k] || k;
+      const v25 = areas[k]?.[LAST_INDEX];
+      const v24 = areas[k]?.[PREV_INDEX];
+      const refMs = refMap?.[k];
+      const warn = v25 != null && refMs != null && v25 < refMs;
+      const deltaMs = v25 != null && refMs != null ? v25 - refMs : null;
+      const deltaMsHtml = deltaMs == null
+        ? '<span class="kpi-delta">— vs MS</span>'
+        : `<span class="kpi-delta" style="color:${warn ? C.critico : C.verde}">${deltaMs >= 0 ? '+' : ''}${Math.round(deltaMs)} vs MS</span>`;
+      return `<div class="kpi kpi-area rank-area-kpi${warn ? ' warn' : ''}" data-area="${k}" style="--area-accent:${ACOR[k]}">
+        <div class="kpi-area-bar" aria-hidden="true"></div>
+        <div class="kpi-area-head">
+          <p class="lbl">${name}</p>
+          ${deltaMsHtml}
+        </div>
+        <div class="val" style="color:${ACOR[k]}">${fmtAreaNum(v25)}</div>
+        <div class="vsub">${areaTrendHtml(v25, v24, PREV_YEAR)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderCombinedAreaChart(areas, label, opts = {}) {
+    const ctx = _ctx;
+    const { ANOS, AREAKEYS, AREANOME, ACOR, BL, CFG, LAST_YEAR } = ctx;
+    const plotId = opts.plotId || 'g_drill_areas';
+    const wrapId = opts.wrapId || 'drillAreasWrap';
+    const titleId = opts.titleId || 'drillAreasTitle';
+    const uirevision = opts.uirevision || 'drill-areas';
+    const wrap = document.getElementById(wrapId);
+    const title = document.getElementById(titleId);
+    const el = document.getElementById(plotId);
+    if (!el || !areas) return;
+    if (wrap && opts.showWrap !== false) wrap.style.display = 'block';
+    if (title) {
+      if (title.tagName === 'H3' && title.querySelector('span')) {
+        title.querySelector('span').textContent = `${label} \u00b7 ${ANOS[0]}\u2013${LAST_YEAR}`;
+      } else {
+        title.textContent = `Trajet\u00f3ria das m\u00e9dias por \u00e1rea \u00b7 ${label} \u00b7 ${ANOS[0]}\u2013${LAST_YEAR}`;
+      }
+    }
+    const mergeP = ED.Config.mergePandemia;
+    const tr = AREAKEYS.map((k) => {
+      const ys = areas[k] || [];
+      const arrows = ED.segmentArrowsFromSeries(ANOS, ys, {
+        color: ACOR[k],
+        arrowsize: 0.55,
+        arrowwidth: 1.1,
+        standoff: 2,
+        startstandoff: 2,
+      });
+      return {
+        x: ANOS,
+        y: ys,
+        mode: 'lines',
+        name: AREANOME[k],
+        line: { color: ACOR[k], width: 2.2 },
+        hovertemplate: `${AREANOME[k]} %{x}<br>m\u00e9dia %{y:.1f} pts<extra></extra>`,
+        _arrows: arrows,
+      };
+    });
+    const allVals = tr.flatMap((t) => t.y).filter((v) => v != null && !Number.isNaN(v));
+    const yLo = allVals.length ? Math.floor(Math.min(...allVals) - 8) : 450;
+    const yHi = allVals.length ? Math.ceil(Math.max(...allVals) + 8) : 650;
+    const areaArrows = tr.flatMap((t) => t._arrows || []);
+    tr.forEach((t) => { delete t._arrows; });
+    Plotly.react(el, tr, mergeP({
+      ...BL, height: 300, dragmode: false, hovermode: 'x unified', uirevision,
+      legend: { orientation: 'h', y: -0.22, font: { size: 9.5 } },
+      xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
+      yaxis: {
+        title: { text: 'm\u00e9dia (pontos)', font: { size: 10 } },
+        gridcolor: 'rgba(0,0,0,0)',
+        range: [yLo, yHi],
+      },
+      annotations: areaArrows,
+    }, { y0: yLo, y1: yHi }), CFG);
+  }
+
+  function hideCombinedAreaChart() {
+    const wrap = document.getElementById('drillAreasWrap');
+    if (wrap) wrap.style.display = 'none';
+  }
+
+  function hideCreTrajAreasChart() {
+    const card = document.getElementById('creTrajAreasCard');
+    if (card) card.style.display = 'none';
+  }
+
   function renderAreas(containerId, areas, refMap) {
     const ctx = _ctx;
     const { ANOS, DATA, AREANOME, ACOR, C, BL, CFG } = ctx;
@@ -33,12 +150,31 @@
       host.appendChild(tile);
       Plotly.newPlot(`${containerId}_${k}`, [
         { x: ANOS, y: DATA.msArea[k].ms, mode: 'lines', line: { color: C.brasil, width: 1.4, dash: 'dot' }, hovertemplate: `${AREANOME[k]} \u00b7 refer\u00eancia MS (esc. estaduais)<br><b>%{x}</b> \u00b7 %{y:.0f} pts<extra></extra>` },
-        { x: ANOS, y: v, mode: 'lines+markers', line: { color: ACOR[k], width: 2 }, marker: { size: 3 }, hovertemplate: `${AREANOME[k]}<br><b>%{x}</b> \u00b7 %{y:.0f} pts<extra></extra>` },
+        { x: ANOS, y: v, mode: 'lines', line: { color: ACOR[k], width: 2 }, hovertemplate: `${AREANOME[k]}<br><b>%{x}</b> \u00b7 %{y:.0f} pts<extra></extra>` },
       ], ED.withPandemia({
         ...BL, height: 74, margin: { l: 4, r: 6, t: 4, b: 14 },
         showlegend: false, xaxis: { visible: false }, yaxis: { visible: false },
       }, { anos: ANOS, annotate: false }), CFG);
     });
+  }
+
+  function brAreaRefs(ctx, zeroMode) {
+    const { DATA, AREAKEYS, LAST_INDEX, MED_BR, MED_BR_SEM_ZERO } = ctx;
+    const src = zeroMode === 'no_zero' ? (DATA.msAreaSemZero || DATA.msArea) : DATA.msArea;
+    const areas = {};
+    AREAKEYS.forEach((k) => {
+      const br = src?.[k]?.br;
+      areas[k] = br?.[LAST_INDEX] ?? null;
+    });
+    const brGeral = zeroMode === 'no_zero' ? MED_BR_SEM_ZERO[LAST_INDEX] : MED_BR[LAST_INDEX];
+    return { areas, geral: brGeral ?? null };
+  }
+
+  function scoreCellClass(v, refMs, refBr) {
+    if (v == null || refMs == null) return '';
+    if (refBr != null && v >= refBr) return 'br-ok';
+    if (v >= refMs) return 'ms-ok';
+    return 'bad';
   }
 
   function setSelectedSchoolRow(schoolId) {
@@ -47,9 +183,29 @@
     });
   }
 
+  function rankingHistorico(schoolId) {
+    const list = window.RANKING_ESCOLAS_2025?.escolas;
+    if (!list) return null;
+    const esc = list.find((e) => String(e.coInep) === String(schoolId));
+    const h = esc?.historico;
+    return h?.anos?.length ? h : null;
+  }
+
+  function escHistYearsWithData(anos, school, series, areaKeys) {
+    return anos.filter((ano) => {
+      const idx = anos.indexOf(ano);
+      if ((series.geral || school.geral || [])[idx] != null) return true;
+      return areaKeys.some((k) => (series.areas?.[k] || [])[idx] != null);
+    });
+  }
+
   function renderSchoolHistory(munName, schoolId) {
     const ctx = _ctx;
     const { DATA, ANOS, LAST_YEAR, AREANOME, ACOR, BL, CFG, NF } = ctx;
+    const {
+      C, layoutLineChart, hoverAreaTemplate, mergePandemia, AREANOME_FULL,
+    } = ED.Config;
+    const axisMuted = C.txt2 || C.muted;
     const host = document.getElementById('g_esc_hist');
     const title = document.getElementById('escHistTitle');
     const note = document.getElementById('escHistNota');
@@ -64,14 +220,32 @@
     }
 
     const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
-    const series = zeroMode === 'no_zero' ? (school.semZero || {}) : school;
-    const histYears = ANOS.filter((ano) => ano >= 2024);
-    const histIdx = histYears.map((ano) => ANOS.indexOf(ano)).filter((idx) => idx >= 0);
-    const geral = histIdx.map((idx) => (series.geral || school.geral || [])[idx] ?? null);
+    const rankHist = zeroMode === 'all' ? rankingHistorico(schoolId) : null;
+    let histYears;
+    let geral;
+    let areasByYear;
+    let histIdx = null;
+
+    if (rankHist) {
+      histYears = rankHist.anos.slice();
+      geral = rankHist.media.slice();
+      areasByYear = {};
+      ctx.AREAKEYS.forEach((k) => {
+        areasByYear[k] = rankHist[k] ? rankHist[k].slice() : histYears.map(() => null);
+      });
+    } else {
+      const series = zeroMode === 'no_zero' ? (school.semZero || {}) : school;
+      histYears = escHistYearsWithData(ANOS, school, series, ctx.AREAKEYS);
+      histIdx = histYears.map((ano) => ANOS.indexOf(ano)).filter((idx) => idx >= 0);
+      geral = histIdx.map((idx) => (series.geral || school.geral || [])[idx] ?? null);
+      areasByYear = {};
+      ctx.AREAKEYS.forEach((k) => {
+        areasByYear[k] = histIdx.map((idx) => (series.areas?.[k] || [])[idx] ?? null);
+      });
+    }
+
     const vals = [];
-    const areasByYear = {};
     ctx.AREAKEYS.forEach((k) => {
-      areasByYear[k] = histIdx.map((idx) => (series.areas?.[k] || [])[idx] ?? null);
       areasByYear[k].forEach((v) => { if (v != null) vals.push(v); });
     });
     geral.forEach((v) => { if (v != null) vals.push(v); });
@@ -82,77 +256,82 @@
       return;
     }
 
-    const custom = histYears.map((ano, pos) => {
-      const idx = histIdx[pos];
-      return [
-      ano,
-      NF(series.part?.[idx] || 0),
-      NF(school.concl?.[idx] || 0),
-      series.tx?.[idx] != null ? `${series.tx[idx].toFixed(1)}%` : '—',
-      geral[pos] != null ? geral[pos].toFixed(1) : '—',
-      school.mun || munName,
-      school.cre || '—',
-      ];
+    const seriesMeta = zeroMode === 'no_zero' ? (school.semZero || {}) : school;
+    const legendKeys = ['LC', 'CH', 'CN', 'MT', 'RED'].filter((k) => ctx.AREAKEYS.includes(k));
+
+    const traces = legendKeys.map((k) => {
+      const name = AREANOME_FULL[k] || AREANOME[k];
+      return {
+        x: histYears,
+        y: areasByYear[k],
+        mode: 'lines',
+        name,
+        line: { color: ACOR[k], width: 2.5 },
+        connectgaps: false,
+        hovertemplate: hoverAreaTemplate(name),
+      };
     });
-    const traces = ctx.AREAKEYS.map((k) => ({
-      x: histYears,
-      y: areasByYear[k],
-      customdata: custom,
-      mode: 'lines+markers',
-      name: AREANOME[k],
-      line: { color: ACOR[k], width: 2 },
-      marker: { size: 6 },
-      hovertemplate: `<b>${school.nome}</b><br>%{customdata[0]} · ${AREANOME[k]}: %{y:.1f}<br>`
-        + 'Município: %{customdata[5]}<br>'
-        + 'CRE: %{customdata[6]}<br>'
-        + 'Part. efetivos: %{customdata[1]}<br>'
-        + 'Concluintes: %{customdata[2]}<br>'
-        + 'Tx: %{customdata[3]}<br>'
-        + 'Média geral: %{customdata[4]}<extra></extra>',
-    }));
     traces.push({
       x: histYears,
       y: geral,
-      customdata: custom,
-      mode: 'lines+markers',
+      mode: 'lines',
       name: 'Média geral',
-      line: { color: '#E67E22', width: 3 },
-      marker: { size: 7, symbol: 'diamond', line: { color: '#fff', width: 1 } },
-      hovertemplate: `<b>${school.nome}</b><br>%{customdata[0]} · Média geral: %{y:.1f}<br>`
-        + 'Município: %{customdata[5]}<br>'
-        + 'CRE: %{customdata[6]}<br>'
-        + 'Part. efetivos: %{customdata[1]}<br>'
-        + 'Concluintes: %{customdata[2]}<br>'
-        + 'Tx: %{customdata[3]}<extra></extra>',
+      line: { color: C.brasil, width: 2, dash: 'dot' },
+      connectgaps: false,
+      hovertemplate: hoverAreaTemplate('Média geral'),
     });
 
-    Plotly.react('g_esc_hist', traces, {
-      ...BL,
-      height: 300,
+    const lo = Math.min(...vals);
+    const hi = Math.max(...vals);
+    const pad = Math.max(8, (hi - lo) * 0.08);
+    const yMin = Math.floor(lo - pad);
+    const yMax = Math.ceil(hi + pad);
+    const anoMin = Math.min(...histYears);
+    const anoMax = Math.max(...histYears);
+
+    Plotly.react('g_esc_hist', traces, mergePandemia(layoutLineChart({
+      height: 340,
+      margin: { l: 36, r: 20, t: 16, b: 44 },
       showlegend: true,
-      hovermode: 'closest',
-      legend: { orientation: 'h', y: -0.22, font: { size: 10 } },
-      margin: { l: 42, r: 12, t: 10, b: 44 },
-      xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)', range: [2023.9, 2025.1] },
-      yaxis: {
-        title: { text: 'nota', font: { size: 10 } },
+      legend: { orientation: 'h', y: 1.18, x: 0, font: { size: 11, color: axisMuted } },
+      xaxis: {
+        title: '',
+        dtick: histYears.length > 8 ? 2 : 1,
+        tickmode: 'linear',
+        range: [anoMin - 0.5, anoMax + 0.5],
         gridcolor: 'rgba(0,0,0,0)',
-        range: [Math.min(...vals) - 6, Math.max(...vals) + 6],
+        showgrid: false,
+        linecolor: '#E5E7EF',
+        tickfont: { size: 12, color: axisMuted },
       },
-    }, CFG);
+      yaxis: {
+        title: { text: 'Nota TRI', font: { size: 9, color: axisMuted } },
+        range: [yMin, yMax],
+        dtick: 20,
+        gridcolor: 'rgba(0,0,0,0)',
+        showgrid: false,
+        linecolor: '#E5E7EF',
+        tickfont: { size: 8, color: axisMuted },
+      },
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: '#FFFFFF',
+    }), { y0: yMin, y1: yMax }), CFG);
 
     const zeroLbl = zeroMode === 'no_zero'
       ? 'Filtro ativo: excluindo participantes com alguma nota zero.'
       : 'Filtro ativo: incluindo todos os participantes efetivos.';
     const lastPos = histYears.length - 1;
-    const lastIdx = histIdx[lastPos];
-    const partLast = series.part?.[lastIdx] || 0;
-    const conclLast = school.concl?.[lastIdx] || 0;
-    const txLast = series.tx?.[lastIdx];
-    title.textContent = `${school.nome} · histórico 2024–${LAST_YEAR}`;
-    note.innerHTML = `${zeroLbl} <b>${LAST_YEAR}:</b> ${NF(partLast)} part. efetivos`
+    const lastAno = histYears[lastPos];
+    const lastIdx = ANOS.indexOf(lastAno);
+    const partLast = lastIdx >= 0 ? (seriesMeta.part?.[lastIdx] || 0) : 0;
+    const conclLast = lastIdx >= 0 ? (school.concl?.[lastIdx] || 0) : 0;
+    const txLast = lastIdx >= 0 ? seriesMeta.tx?.[lastIdx] : null;
+    const rangeLbl = anoMin === anoMax ? String(anoMax) : `${anoMin}–${anoMax}`;
+    const fonteLbl = rankHist ? ' · série histórica 2013–2025' : '';
+    title.textContent = `${school.nome} · histórico ${rangeLbl}`;
+    note.innerHTML = `${zeroLbl}${fonteLbl}${lastIdx >= 0 ? ` <b>${lastAno}:</b> ${NF(partLast)} part. efetivos`
       + `${conclLast ? ` · ${NF(conclLast)} concluintes` : ''}`
-      + `${txLast != null ? ` · taxa ${txLast.toFixed(1)}%` : ''}`
+      + `${txLast != null ? ` · taxa ${txLast.toFixed(1)}%` : ''}` : ''}`
       + `${school.obs ? ` · ${school.obs}` : ''}`;
   }
 
@@ -263,7 +442,23 @@
     document.getElementById('escCard').style.display = 'none';
     document.getElementById('creAreaCard').style.display = 'block';
     document.querySelector('#creAreaTitle span').textContent = `${name} \u00b7 ${ctx.ANOS[0]}\u2013${LAST_YEAR}`;
+    hideCombinedAreaChart();
+    document.getElementById('creAreas').style.display = 'grid';
+    renderAreaKpis(DATA.cre[name].areas, MS_AREA_2024);
     renderAreas('creAreas', DATA.cre[name].areas, MS_AREA_2024);
+    const creTrajCard = document.getElementById('creTrajAreasCard');
+    if (creTrajCard && DATA.cre[name]?.areas) {
+      creTrajCard.style.display = 'block';
+      renderCombinedAreaChart(DATA.cre[name].areas, name, {
+        plotId: 'g_cre_areas',
+        wrapId: 'creTrajAreasCard',
+        titleId: 'creTrajAreasTitle',
+        uirevision: 'cre-traj-areas',
+        showWrap: false,
+      });
+    } else if (creTrajCard) {
+      creTrajCard.style.display = 'none';
+    }
     const muns = (DATA.creMuns[name] || [])
       .map((m) => (DATA.mun[m] ? { nome: m, ...DATA.mun[m] } : null))
       .filter(Boolean);
@@ -280,8 +475,13 @@
     const { DATA, LAST_YEAR, MS_AREA_2024, MS_GERAL_2024, MS_AREA_2024_SEM_ZERO, MS_GERAL_2024_SEM_ZERO } = ctx;
     SEL_MUN = name;
     bread();
+    document.getElementById('creAreaCard').style.display = 'block';
     document.querySelector('#creAreaTitle span').textContent = `${name} \u00b7 ${ctx.ANOS[0]}\u2013${LAST_YEAR}`;
-    if (DATA.mun[name]) renderAreas('creAreas', DATA.mun[name].areas, MS_AREA_2024);
+    if (DATA.mun[name]) {
+      renderAreaKpis(DATA.mun[name].areas, MS_AREA_2024);
+      renderCombinedAreaChart(DATA.mun[name].areas, name);
+      document.getElementById('creAreas').style.display = 'none';
+    }
     const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
     const refArea = zeroMode === 'no_zero' && Object.keys(MS_AREA_2024_SEM_ZERO || {}).length
       ? MS_AREA_2024_SEM_ZERO
@@ -289,6 +489,7 @@
     const refGeral = zeroMode === 'no_zero' && MS_GERAL_2024_SEM_ZERO != null
       ? MS_GERAL_2024_SEM_ZERO
       : MS_GERAL_2024;
+    const refBr = brAreaRefs(ctx, zeroMode);
     const list = (DATA.esc[name] || [])
       .map((s) => {
         if (zeroMode !== 'no_zero') return s;
@@ -312,8 +513,7 @@
     const body = document.getElementById('escBody');
     body.innerHTML = '';
     const cell = (v, k) => {
-      const ref = refArea[k];
-      const cls = ref != null && v < ref ? 'bad' : (ref != null && v >= ref + 8 ? 'ok' : '');
+      const cls = scoreCellClass(v, refArea[k], refBr.areas[k]);
       return `<td class="${cls}">${v.toFixed(0)}</td>`;
     };
     list.forEach((s) => {
@@ -321,7 +521,7 @@
       tr.dataset.schoolId = s.id || '';
       tr.innerHTML = `<td>${s.nome}</td><td>${s.concl != null ? s.concl : '<span class="muted">\u2014</span>'}</td><td>${s.part}</td><td>${s.tx != null ? `${s.tx.toFixed(0)}%` : '<span class="muted">\u2014</span>'}</td>`
         + cell(s.cn, 'CN') + cell(s.ch, 'CH') + cell(s.lc, 'LC') + cell(s.mt, 'MT') + cell(s.red, 'RED')
-        + `<td class="b${refGeral != null && s.geral < refGeral ? ' bad' : ''}">${s.geral.toFixed(0)}</td>`;
+        + `<td class="b ${scoreCellClass(s.geral, refGeral, refBr.geral)}">${s.geral.toFixed(0)}</td>`;
       tr.onclick = () => {
         SEL_ESC = s.id || null;
         setSelectedSchoolRow(SEL_ESC);
@@ -332,7 +532,7 @@
     SEL_ESC = list.some((s) => s.id === SEL_ESC) ? SEL_ESC : (list[0]?.id || null);
     setSelectedSchoolRow(SEL_ESC);
     renderSchoolHistory(name, SEL_ESC);
-    document.getElementById('escCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('creAreaCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function resetDrill() {
@@ -340,15 +540,22 @@
     SEL_MUN = null;
     SEL_ESC = null;
     document.querySelectorAll('.ctile').forEach((t) => t.classList.remove('sel'));
-    ['creAreaCard', 'munRow', 'escCard'].forEach((id) => {
+    ['creAreaCard', 'creTrajAreasCard', 'munRow', 'escCard'].forEach((id) => {
       document.getElementById(id).style.display = 'none';
     });
+    hideCombinedAreaChart();
+    hideCreTrajAreasChart();
+    const kpis = document.getElementById('creAreaKpis');
+    if (kpis) kpis.innerHTML = '';
     bread();
   }
 
   ED.initDrill = function (ctx) {
     _ctx = ctx;
-    const { DATA, ANOS, LAST_INDEX, LAST_YEAR, C, BL, CFG, NF, norm } = ctx;
+    const {
+      DATA, ANOS, LAST_INDEX, LAST_YEAR, PREV_INDEX, PREV_YEAR,
+      MS_GERAL_2024, C, BL, CFG, NF, norm,
+    } = ctx;
     document.querySelectorAll('[data-school-zero-mode]').forEach((el) => {
       if (el.dataset.zeroModeBound === '1') return;
       el.dataset.zeroModeBound = '1';
@@ -360,6 +567,7 @@
       if (SEL_MUN) selectMun(SEL_MUN);
     });
     const row = document.getElementById('creRow');
+    if (row) row.innerHTML = '';
     function creTrajData(o) {
       const xs = [];
       const ys = [];
@@ -389,19 +597,56 @@
       };
     }
 
+    function creMedSeries(o) {
+      const xs = [];
+      const ys = [];
+      ANOS.forEach((a, i) => {
+        const med = o.med?.[i];
+        if (med == null || Number.isNaN(med)) return;
+        xs.push(String(a));
+        ys.push(med);
+      });
+      return { xs, ys };
+    }
+
+    function creYearAdv(o) {
+      const medLast = o.med?.[LAST_INDEX];
+      const medPrev = o.med?.[PREV_INDEX];
+      if (medLast == null || medPrev == null || Number.isNaN(medLast) || Number.isNaN(medPrev)) return null;
+      return medLast >= medPrev;
+    }
+
+    function creBelowMs(o) {
+      const medLast = o.med?.[LAST_INDEX];
+      const refMs = MS_GERAL_2024;
+      if (medLast == null || refMs == null || Number.isNaN(medLast) || Number.isNaN(refMs)) return null;
+      return medLast < refMs;
+    }
+
     Object.keys(DATA.cre || {}).forEach((name) => {
       const o = DATA.cre[name];
-      const adv = o.med[LAST_INDEX] >= o.med[0];
+      const adv = creYearAdv(o);
+      const belowMs = creBelowMs(o);
       const sid = `ct_${norm(name).replace(/ /g, '_')}`;
       const t = document.createElement('div');
-      t.className = 'ctile';
+      t.className = `ctile${belowMs === true ? ' warn' : ''}`;
       t.onclick = () => selectCre(name);
-      t.innerHTML = `<div class="ct"><span>${name}</span><span class="arr" style="color:${adv ? C.verde : C.critico}">${adv ? '\u25B2' : '\u25BC'}</span></div><div id="${sid}" style="height:78px"></div>`;
+      const arr = adv === false ? '\u25BC' : (adv === true ? '\u25B2' : '\u2014');
+      const arrColor = adv === false ? C.critico : (adv === true ? C.verde : C.muted);
+      t.innerHTML = `<div class="ct"><span>${name}</span><span class="arr" style="color:${arrColor}">${arr}</span></div><div id="${sid}" style="height:78px"></div>`;
       row.appendChild(t);
       const traj = creTrajData(o);
       const rng = creTrajRanges(o);
       const traces = [];
+      let dirArrows = [];
       if (traj.xs.length >= 2) {
+        dirArrows = ED.segmentDirectionArrows(traj.xs, traj.ys, {
+          color: 'rgba(10,77,140,.55)',
+          arrowsize: 0.55,
+          arrowwidth: 1.2,
+          standoff: 2,
+          startstandoff: 2,
+        });
         traces.push({
           x: traj.xs, y: traj.ys, customdata: traj.cd, mode: 'lines',
           line: { color: 'rgba(10,77,140,.55)', width: 2 },
@@ -415,40 +660,48 @@
         const li = traj.xs.length - 1;
         traces.push({
           x: [traj.xs[li]], y: [traj.ys[li]], customdata: [traj.cd[li]], mode: 'markers',
-          marker: { color: adv ? C.verde : C.critico, size: 8, line: { color: '#fff', width: 1 } },
+          marker: { color: adv === false ? C.critico : (adv === true ? C.verde : C.muted), size: 8, line: { color: '#fff', width: 1 } },
           hovertemplate: '<b>%{customdata[0]}</b><br>Participa\u00e7\u00e3o: %{x:.1f}%<br>M\u00e9dia: %{y:.0f}<extra></extra>',
         });
       } else {
+        const medSeries = creMedSeries(o);
+        dirArrows = ED.segmentDirectionArrows(medSeries.xs, medSeries.ys, {
+          color: 'rgba(10,77,140,.55)',
+          arrowsize: 0.55,
+          arrowwidth: 1.2,
+          standoff: 2,
+          startstandoff: 2,
+        });
         const medPts = (o.med || []).filter((v) => v != null && !Number.isNaN(v));
         rng.y = medPts.length
           ? [Math.min(...medPts) - 4, Math.max(...medPts) + 4]
           : [460, 535];
         delete rng.x;
         traces.push({
-          x: ANOS.map(String), y: o.med, mode: 'lines+markers',
+          x: ANOS.map(String), y: o.med, mode: 'lines',
           line: { color: 'rgba(10,77,140,.55)', width: 2 },
-          marker: { size: 4, color: C.azul },
           hovertemplate: '<b>%{x}</b><br>M\u00e9dia: %{y:.0f}<extra></extra>',
         });
         traces.push({
-          x: [String(ANOS[0])], y: [o.med[0]], mode: 'markers', marker: { color: C.borda, size: 6 },
-          hovertemplate: '<b>2019</b><br>M\u00e9dia: %{y:.0f}<extra></extra>',
+          x: [String(PREV_YEAR)], y: [o.med[PREV_INDEX]], mode: 'markers', marker: { color: C.borda, size: 6 },
+          hovertemplate: `<b>${PREV_YEAR}</b><br>M\u00e9dia: %{y:.0f}<extra></extra>`,
         });
         traces.push({
           x: [String(ANOS[LAST_INDEX])], y: [o.med[LAST_INDEX]], mode: 'markers',
-          marker: { color: adv ? C.verde : C.critico, size: 8, line: { color: '#fff', width: 1 } },
+          marker: { color: adv === false ? C.critico : (adv === true ? C.verde : C.muted), size: 8, line: { color: '#fff', width: 1 } },
           hovertemplate: `<b>${LAST_YEAR}</b><br>M\u00e9dia: %{y:.0f}<extra></extra>`,
         });
       }
       const xaxis = rng.x
         ? { visible: false, range: rng.x }
         : { visible: false, type: 'category', categoryorder: 'array', categoryarray: ANOS.map(String) };
-      Plotly.newPlot(sid, traces, ED.withPandemia({
+      Plotly.newPlot(sid, traces, {
         ...BL, height: 78, margin: { l: 4, r: 6, t: 4, b: 4 },
         showlegend: false, hovermode: 'closest',
         xaxis,
         yaxis: { visible: false, range: rng.y },
-      }, { anos: ANOS, annotate: false }), CFG);
+        annotations: dirArrows,
+      }, CFG);
     });
     bread();
     if (DATA.cre && DATA.cre['CRE SED']) {

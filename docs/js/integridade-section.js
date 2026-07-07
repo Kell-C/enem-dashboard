@@ -10,11 +10,13 @@
       if (!d) return;
       const txMax = Math.max(...(d.txE || []).filter((v) => v != null), 0) + 1;
       const elimMax = Math.max(
-        ...(d.areaElim?.CN || []),
-        ...(d.areaElim?.CH || []),
-        ...(d.areaElim?.LC || []),
-        ...(d.areaElim?.MT || []),
-        ...(d.er || []),
+        ...AN.map((_, i) => (
+          (d.areaElim?.CN?.[i] || 0)
+          + (d.areaElim?.CH?.[i] || 0)
+          + (d.areaElim?.LC?.[i] || 0)
+          + (d.areaElim?.MT?.[i] || 0)
+          + (d.er?.[i] || 0)
+        )),
         0,
       ) + 5;
       const bars = [
@@ -22,11 +24,11 @@
         { x: AN, y: d.areaElim.CH, name: 'CH', type: 'bar', marker: { color: ICOL.CH }, hovertemplate: 'CH elim. %{x}: %{y}<extra></extra>' },
         { x: AN, y: d.areaElim.LC, name: 'LC', type: 'bar', marker: { color: ICOL.LC }, hovertemplate: 'LC elim. %{x}: %{y}<extra></extra>' },
         { x: AN, y: d.areaElim.MT, name: 'MT', type: 'bar', marker: { color: ICOL.MT }, hovertemplate: 'MT elim. %{x}: %{y}<extra></extra>' },
-        { x: AN, y: d.er, name: 'Redacao', type: 'bar', marker: { color: ICOL.RED }, hovertemplate: 'Redacao elim. %{x}: %{y}<extra></extra>' },
+        { x: AN, y: d.er, name: 'Redacao (anulada)', type: 'bar', marker: { color: ICOL.RED }, hovertemplate: 'Redacao anulada %{x}: %{y}<extra></extra>' },
       ];
       const line = {
-        x: AN, y: d.txE, mode: 'lines+markers', name: 'Taxa elim. (%)', yaxis: 'y2',
-        line: { color: C.critico, width: 2 }, marker: { size: 5 },
+        x: AN, y: d.txE, mode: 'lines', name: 'Taxa elim. (%)', yaxis: 'y2',
+        line: { color: C.critico, width: 2 },
         hovertemplate: 'Taxa eliminacao %{x}: %{y:.2f}%<extra></extra>',
       };
       Plotly.newPlot('g_integ_elim', bars.concat([line]), ED.withPandemia({
@@ -63,7 +65,7 @@
     const txS2024 = compX.map((k) => comps[k].txS[LAST_INDEX]);
     Plotly.newPlot('g_integ_comp', [
       { x: compX, y: txE2024, name: 'Taxa eliminacao (%)', type: 'bar', marker: { color: C.critico }, hovertemplate: '%{x}<br>Eliminacao: %{y:.2f}%<extra></extra>' },
-      { x: compX, y: txS2024, name: 'Sem nota redacao (%)', type: 'bar', marker: { color: C.azul }, hovertemplate: '%{x}<br>Sem nota: %{y:.2f}%<extra></extra>' },
+      { x: compX, y: txS2024, name: 'Redacao em branco (%)', type: 'bar', marker: { color: C.azul }, hovertemplate: '%{x}<br>Em branco (TP_STATUS=4): %{y:.2f}%<extra></extra>' },
     ], {
       ...BL, height: 300, barmode: 'group',
       xaxis: { tickfont: { size: 11 } },

@@ -1,6 +1,6 @@
 {
   "script": "gerar_agregados.py",
-  "timestamp": "2026-07-02T18:52:31.886828Z",
-  "duration_seconds": 37.6,
-  "agregados_folder": "dados\\agregados"
+  "timestamp": "2026-07-06T19:16:29.073709Z",
+  "duration_seconds": 126.2,
+  "agregados_folder": "C:\\painel-em-sedms\\enem-dashboard-backup\\dados\\agregados"
 }
