@@ -398,7 +398,7 @@ def processar_ano_escola(
                 mat_cre = _sum_col(grp, "NU_MATRICULAS")
                 part_cre = _sum_col(grp, "NU_PARTICIPANTES")
                 conc_cre = _concluintes_grupo(ano, grp, conc_esc, cre=str(cre))
-                out["evolucao_cre"].append({
+                cre_row = {
                     "ano": ano,
                     "CRE": cre,
                     "cre_curto": cre_curto(cre),
@@ -407,7 +407,10 @@ def processar_ano_escola(
                     "media_geral": _media_pond(grp, "MEDIA_GERAL"),
                     "tx_part_efetiva": round(100 * part_cre / conc_cre, 1) if conc_cre else None,
                     "fonte": "inep_escola",
-                })
+                }
+                for c in COLS_NOTAS:
+                    cre_row[f"media_{c.lower()}"] = _media_pond(grp, c)
+                out["evolucao_cre"].append(cre_row)
                 out["participacao_cre"].append({
                     "ano": ano,
                     "cre_curto": cre_curto(cre),
@@ -422,14 +425,17 @@ def processar_ano_escola(
             mat_mun = _sum_col(grp, "NU_MATRICULAS")
             part_mun = _sum_col(grp, "NU_PARTICIPANTES")
             conc_mun = _concluintes_grupo(ano, grp, conc_esc, municipio=str(mun))
-            out["evolucao_muni"].append({
+            mun_row = {
                 "ano": ano,
                 "NO_MUNICIPIO_ESC": mun,
                 "dependencia": REDE_REFERENCIA,
                 "estudantes": part_mun,
                 "media_geral": _media_pond(grp, "MEDIA_GERAL"),
                 "fonte": "inep_escola",
-            })
+            }
+            for c in COLS_NOTAS:
+                mun_row[f"media_{c.lower()}"] = _media_pond(grp, c)
+            out["evolucao_muni"].append(mun_row)
             out["participacao_municipios"].append({
                 "ano": ano,
                 "NO_MUNICIPIO_ESC": mun,
