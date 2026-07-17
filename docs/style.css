@@ -61,7 +61,7 @@ body{margin:0;background:linear-gradient(165deg,var(--bg-app) 0%,var(--bg-app2) 
 
 /* ---- abas do painel ---- */
 .dash-tabs{margin:0 0 20px;background:linear-gradient(180deg,#fff,#FAFCFF);border:1px solid var(--borda);border-radius:var(--radius);
-  box-shadow:var(--shadow);padding:16px 18px 20px}
+  box-shadow:var(--shadow);padding:16px 18px 20px;overflow:visible;min-width:0}
 .dash-tablist{display:flex;flex-wrap:wrap;gap:8px;padding:0 0 16px;border-bottom:1px solid var(--borda);margin-bottom:18px;
   overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
 @media (max-width:760px){.dash-tablist{flex-wrap:nowrap;padding-bottom:12px}}
@@ -70,9 +70,9 @@ body{margin:0;background:linear-gradient(165deg,var(--bg-app) 0%,var(--bg-app2) 
   font-family:inherit;line-height:1.2;white-space:nowrap}
 .dash-tab:hover{background:#fff;border-color:var(--borda);color:var(--azul-esc)}
 .dash-tab.is-active{background:linear-gradient(135deg,var(--azul-esc),var(--accent));border-color:var(--accent);color:#fff;box-shadow:0 4px 16px rgba(10,77,140,.32)}
-.dash-tabpanel{display:none}
+.dash-tabpanel{display:none;min-width:0}
 .dash-tabpanel.is-active{display:block}
-.tab-panel-inner{padding:0}
+.tab-panel-inner{padding:0;min-width:0;overflow:visible}
 .tab-panel-inner .kpis{margin-top:0}
 .tab-panel-inner .funil{margin-bottom:var(--card-gap)}
 .tab-panel-title{margin:0 0 4px;font-size:20px;font-weight:800;color:var(--azul-esc);letter-spacing:-.02em}
@@ -156,15 +156,18 @@ body{margin:0;background:linear-gradient(165deg,var(--bg-app) 0%,var(--bg-app2) 
 .traj-charts-stack>.card:first-child{grid-column:1;grid-row:1}
 .traj-charts-stack>.card:nth-child(2){grid-column:1/-1;grid-row:2}
 .traj-charts-stack>.card:nth-child(3){grid-column:2;grid-row:1}
+/* Evita overflow horizontal: min-width:auto em grid corta o Plotly à direita */
+.grid2>.card,.grid2u>.card,.traj-charts-stack>.card{min-width:0;max-width:100%}
 @media (max-width:1200px){.grid2,.grid2u,.traj-charts-stack{grid-template-columns:1fr}.traj-charts-stack>.card:first-child,.traj-charts-stack>.card:nth-child(2),.traj-charts-stack>.card:nth-child(3){grid-column:1;grid-row:auto}}
 
 .card{background:linear-gradient(180deg,#fff 0%,#FAFCFF 100%);border:1px solid var(--borda);border-radius:var(--radius-sm);
-  box-shadow:var(--shadow);padding:18px 20px;transition:box-shadow .15s,border-color .15s}
+  box-shadow:var(--shadow);padding:18px 20px;transition:box-shadow .15s,border-color .15s;overflow:visible}
 .card:hover{box-shadow:var(--shadow-lg);border-color:rgba(10,77,140,.16)}
 .card h3{margin:0;font-size:14px;color:var(--azul-esc);font-weight:800;display:flex;align-items:center;gap:6px;flex-wrap:wrap;letter-spacing:-.01em}
 .card .coh{font-size:11px;color:var(--txt2);margin:6px 0 12px;display:block;line-height:1.45;padding:6px 10px;background:var(--bg-subtle);border-radius:8px;border-left:3px solid var(--accent-light)}
 .card .nota{font-size:11px;color:var(--txt2);margin-top:12px;border-top:1px solid var(--borda);padding-top:10px;line-height:1.5}
-.plot{width:100%;min-height:240px}
+.plot{width:100%;max-width:100%;min-height:240px;min-width:0;overflow:visible}
+.plot .js-plotly-plot,.plot .plot-container,.plot .svg-container{width:100%!important;max-width:100%}
 
 .chart-toolbar{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;padding:10px 12px;
   background:var(--bg-subtle);border:1px solid var(--borda);border-radius:10px;margin:0 0 12px}
@@ -248,15 +251,16 @@ details.more>summary{cursor:pointer;list-style:none;background:var(--bg-card);bo
   border-radius:10px;padding:10px 14px;font-weight:600;color:var(--txt);display:flex;align-items:center;gap:8px}
 details.more>summary::-webkit-details-marker{display:none}
 
-.secacc{margin:0 0 var(--card-gap);border:1px solid var(--borda);border-radius:var(--radius);background:var(--bg-card);box-shadow:var(--shadow);overflow:hidden}
+.secacc{margin:0 0 var(--card-gap);border:1px solid var(--borda);border-radius:var(--radius);background:var(--bg-card);box-shadow:var(--shadow);overflow:visible}
 .secacc summary{cursor:pointer;list-style:none;padding:16px 20px;font-weight:800;color:var(--azul-esc);font-size:16px;
-  display:flex;align-items:center;justify-content:flex-start;gap:10px;text-align:left;background:linear-gradient(180deg,#fff,var(--bg-subtle));border-bottom:1px solid transparent}
+  display:flex;align-items:center;justify-content:flex-start;gap:10px;text-align:left;background:linear-gradient(180deg,#fff,var(--bg-subtle));border-bottom:1px solid transparent;border-radius:var(--radius) var(--radius) 0 0}
+.secacc:not([open])>summary{border-radius:var(--radius)}
 .secacc[open]>summary{border-bottom-color:var(--borda);background:var(--insight)}
 .secacc summary::-webkit-details-marker{display:none}
 .secacc summary .hint{font-weight:500;font-size:12px;color:var(--muted);text-align:left}
 .secacc summary .chev{transition:transform .2s;margin-left:auto;flex-shrink:0;font-size:11px;color:var(--muted);order:3}
 .secacc[open]>summary .chev{transform:rotate(90deg)}
-.secacc .secbody{padding:18px 20px 20px}
+.secacc .secbody{padding:18px 20px 20px;overflow:visible;min-width:0}
 .secacc-primary{border-color:rgba(10,77,140,.2);box-shadow:var(--shadow-lg)}
 .secacc-primary>summary{color:var(--accent)}
 

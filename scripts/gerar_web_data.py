@@ -228,6 +228,24 @@ def _school_history_by_municipality(evol_esc: pd.DataFrame) -> dict:
     return out
 
 
+def _normalize_desempenho_uf(des_uf: pd.DataFrame) -> pd.DataFrame:
+    """Garante media_geral / media_geral_sem_zero (historico 2013-15 gravava media_media_geral)."""
+    if des_uf is None or des_uf.empty:
+        return des_uf
+    df = des_uf.copy()
+    if "media_geral" not in df.columns:
+        df["media_geral"] = pd.NA
+    if "media_media_geral" in df.columns:
+        m = df["media_geral"].isna()
+        df.loc[m, "media_geral"] = df.loc[m, "media_media_geral"]
+    if "media_geral_sem_zero" not in df.columns:
+        df["media_geral_sem_zero"] = pd.NA
+    if "media_media_geral_sem_zero" in df.columns:
+        m = df["media_geral_sem_zero"].isna()
+        df.loc[m, "media_geral_sem_zero"] = df.loc[m, "media_media_geral_sem_zero"]
+    return df
+
+
 def _uf_rank_por_ano(des_uf: pd.DataFrame, col: str = "media_geral") -> dict:
     out = {}
     for a in ANOS:
@@ -415,7 +433,7 @@ def _integ_territorial(df: pd.DataFrame, key_col: str, cre_col: str | None = Non
 def build_painel_data() -> dict:
     part = _ler("participacao_ano")
     des = _ler("desempenho")
-    des_uf = _ler("desempenho_uf")
+    des_uf = _normalize_desempenho_uf(_ler("desempenho_uf"))
     evol_cre = _ler("evolucao_cre")
     evol_muni = _ler("evolucao_muni")
     part_muni = _ler("participacao_municipios")

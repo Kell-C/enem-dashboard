@@ -373,9 +373,12 @@ def processar_ano_escola(
                 "estudantes_sem_zero": _sum_col(grp_sz, "NU_PARTICIPANTES") if not grp_sz.empty else 0,
                 "fonte": "inep_escola",
             }
-            for c in COLS_NOTAS + ["MEDIA_GERAL"]:
+            for c in COLS_NOTAS:
                 rec[f"media_{c.lower()}"] = _media_pond(grp, c)
                 rec[f"media_{c.lower()}_sem_zero"] = _media_pond(grp_sz, c) if not grp_sz.empty else None
+            # MEDIA_GERAL → media_geral (nao media_media_geral); ranking UF depende deste nome
+            rec["media_geral"] = _media_pond(grp, "MEDIA_GERAL")
+            rec["media_geral_sem_zero"] = _media_pond(grp_sz, "MEDIA_GERAL") if not grp_sz.empty else None
             uf_rows.append(rec)
         out["desempenho_uf"].extend(uf_rows)
 

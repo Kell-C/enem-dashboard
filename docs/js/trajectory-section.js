@@ -102,8 +102,14 @@
       const idxLayout = mergeP({
         ...BL, height: 300, dragmode: false, hovermode: 'x unified',
         clickmode: 'event+select', uirevision: 'index',
+        margin: { ...BL.margin, r: Math.max(BL.margin.r || 0, 32), b: Math.max(BL.margin.b || 0, 52) },
         legend: { orientation: 'h', y: -0.22, font: { size: 9.5 } },
-        xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
+        xaxis: {
+          dtick: 1,
+          gridcolor: 'rgba(0,0,0,0)',
+          automargin: true,
+          range: [ANOS[0] - 0.35, ANOS[ANOS.length - 1] + 0.45],
+        },
         yaxis: { title: { text: `\u00edndice (${ANOS[0]}=100)`, font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)', range: [idxLo, idxHi] },
         shapes: [{ type: 'line', x0: ANOS[0], x1: ANOS[ANOS.length - 1], y0: 100, y1: 100, line: { color: C.borda, width: 1, dash: 'dot' } }],
       }, { y0: idxLo, y1: idxHi });
@@ -147,8 +153,14 @@
     const areaArrows = tr.flatMap((t) => t._arrows || []);
     const areaLayout = mergeP({
       ...BL, height: 300, dragmode: false, hovermode: 'x unified', uirevision: 'traj-areas',
+      margin: { ...BL.margin, r: Math.max(BL.margin.r || 0, 32), b: Math.max(BL.margin.b || 0, 52) },
       legend: { orientation: 'h', y: -0.22, font: { size: 9.5 } },
-      xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
+      xaxis: {
+        dtick: 1,
+        gridcolor: 'rgba(0,0,0,0)',
+        automargin: true,
+        range: [ANOS[0] - 0.35, ANOS[ANOS.length - 1] + 0.45],
+      },
       yaxis: {
         title: { text: 'm\u00e9dia (pontos)', font: { size: 10 } },
         gridcolor: 'rgba(0,0,0,0)',
@@ -218,7 +230,13 @@
         showarrow: false,
         font: { size: 9, color: C.muted },
       }] : [];
-      const interactiveMargin = { ...BL.margin, t: 28 };
+      const interactiveMargin = { ...BL.margin, t: 28, r: Math.max(BL.margin.r || 0, 32), b: Math.max(BL.margin.b || 0, 48) };
+      const yearAxis = {
+        dtick: 1,
+        gridcolor: 'rgba(0,0,0,0)',
+        automargin: true,
+        range: [ANOS[0] - 0.35, ANOS[ANOS.length - 1] + 0.45],
+      };
       Plotly.react('g_traj', [{
         x: TX_MS, y: MED_MS, mode: 'lines+text',
         line: { color: 'rgba(10,77,140,.45)', width: 2 },
@@ -232,6 +250,7 @@
           title: { text: 'participa\u00e7\u00e3o efetiva (% dos concluintes)', font: { size: 10 } },
           gridcolor: 'rgba(0,0,0,0)',
           range: [txLo, txHi],
+          automargin: true,
         },
         yaxis: {
           title: { text: 'm\u00e9dia geral', font: { size: 10 } },
@@ -251,8 +270,9 @@
       ED.initIndexDrillUi(ctx);
       mountIndexChart(ctx);
 
-      const yMin = Math.min(...RANK_MS.filter((v) => v != null)) - 2;
-      const yMax = Math.max(...RANK_MS.filter((v) => v != null)) + 2;
+      const ranksOk = RANK_MS.filter((v) => v != null);
+      const yMin = ranksOk.length ? Math.min(...ranksOk) - 2 : 1;
+      const yMax = ranksOk.length ? Math.max(...ranksOk) + 2 : 27;
       const medLo = Math.min(...MED_MS.concat(MED_BR).filter((v) => v != null)) - 3;
       const medHi = Math.max(...MED_MS.concat(MED_BR).filter(v => v != null)) + 3;
 
@@ -265,7 +285,7 @@
         hovertemplate: '%{x}: %{y}\u00ba de 27<extra></extra>',
       }], mergeP({
         ...BL, height: 280, showlegend: false, margin: interactiveMargin,
-        xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
+        xaxis: yearAxis,
         yaxis: {
           autorange: 'reversed', dtick: 2, gridcolor: 'rgba(0,0,0,0)',
           title: { text: 'posi\u00e7\u00e3o (1=melhor)', font: { size: 10 } },
@@ -290,7 +310,7 @@
       ], mergeP({
         ...BL, height: 280, margin: interactiveMargin, hovermode: 'x unified',
         legend: { orientation: 'h', y: -0.2, font: { size: 10 } },
-        xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
+        xaxis: yearAxis,
         yaxis: { range: [medLo, medHi], gridcolor: 'rgba(0,0,0,0)' },
       }, { y0: medLo, y1: medHi }), CFGI);
 

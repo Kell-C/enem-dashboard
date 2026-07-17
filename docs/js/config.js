@@ -8,7 +8,7 @@
   const BL = {
     paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: '#FFFFFF',
     font: { family: 'Segoe UI, system-ui, sans-serif', size: 12, color: C.txt2 },
-    margin: { l: 46, r: 14, t: 8, b: 34 },
+    margin: { l: 46, r: 28, t: 8, b: 34 },
   };
   const CFG = {
     displayModeBar: false,
