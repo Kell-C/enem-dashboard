@@ -627,6 +627,7 @@ def build_painel_data() -> dict:
                     "cre": cre_curto(r.get("CRE")),
                     "nota": item["geral"],
                     "n": part_n,
+                    "concl": conc,
                     "tx": tx,
                     "notaSemZero": item["semZero"]["geral"],
                     "nSemZero": part_n_sem_zero,

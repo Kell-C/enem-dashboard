@@ -1,9 +1,13 @@
 (function (ED) {
   ED.initInteg = function (ctx) {
-    const { DATA, LAST_INDEX, C, BL, CFG, NF } = ctx;
+    const { DATA, LAST_INDEX, LAST_YEAR, C, BL, CFG, NF } = ctx;
     const INT = DATA.integ || {};
-    const AN = DATA.anos;
+    const AN = DATA.anos || [];
     const ICOL = { CN: '#9B59B6', CH: '#3498DB', LC: '#1ABC9C', MT: '#F1C40F', RED: '#E74C3C' };
+
+    let attMode = 'cre';
+    let attFilterCre = null;
+    let attYearIdx = LAST_INDEX;
 
     function renderElim(dep) {
       const d = INT.rede[dep];
@@ -73,50 +77,120 @@
       legend: { orientation: 'h', y: -0.22, font: { size: 9 } },
     }, CFG);
 
+    const anoSel = document.getElementById('integAttAno');
+    const yearLabel = document.getElementById('integAttYearLabel');
+    const yearCoh = document.getElementById('integAttYearCoh');
+
+    function selectedYear() {
+      return AN[attYearIdx] ?? LAST_YEAR;
+    }
+
+    function syncYearLabels() {
+      const y = String(selectedYear());
+      if (yearLabel) yearLabel.textContent = y;
+      if (yearCoh) yearCoh.textContent = y;
+    }
+
+    function seriesAt(o, key, idx) {
+      const arr = o?.[key];
+      if (!arr || idx < 0 || idx >= arr.length) return null;
+      const v = arr[idx];
+      return v == null || Number.isNaN(v) ? null : v;
+    }
+
     function renderIntegTable(mode, filterCre) {
+      if (mode) attMode = mode;
+      if (arguments.length > 1) attFilterCre = filterCre || null;
       const host = document.getElementById('g_integ_table');
+      if (!host) return;
+      const idx = attYearIdx;
+      const year = selectedYear();
+      syncYearLabels();
+
       let rows = [];
-      if (mode === 'cre') {
+      if (attMode === 'cre') {
         Object.entries(INT.cre || {}).forEach(([name, o]) => {
+          const filt = seriesAt(o, 'filt', idx);
+          if (filt == null && seriesAt(o, 'txE', idx) == null) return;
           rows.push({
-            nome: name, cre: name, filt: o.filt[LAST_INDEX] || 0, et: o.et[LAST_INDEX] || 0,
-            em: o.em[LAST_INDEX] || 0, zm: o.zm[LAST_INDEX] || 0, sm: o.sm[LAST_INDEX] || 0,
-            txE: o.txE[LAST_INDEX], txS: o.txS[LAST_INDEX], tipo: 'cre',
+            nome: ED.creDisplay(name),
+            cre: name,
+            filt: filt || 0,
+            et: seriesAt(o, 'et', idx) || 0,
+            em: seriesAt(o, 'em', idx) || 0,
+            zm: seriesAt(o, 'zm', idx) || 0,
+            sm: seriesAt(o, 'sm', idx) || 0,
+            txE: seriesAt(o, 'txE', idx),
+            txS: seriesAt(o, 'txS', idx),
+            tipo: 'cre',
+            key: name,
           });
         });
       } else {
         Object.entries(INT.mun || {}).forEach(([name, o]) => {
-          if (filterCre && o.cre !== filterCre) return;
+          if (attFilterCre && o.cre !== attFilterCre) return;
+          const filt = seriesAt(o, 'filt', idx);
+          if (filt == null && seriesAt(o, 'txE', idx) == null) return;
           rows.push({
-            nome: name, cre: o.cre, filt: o.filt[LAST_INDEX] || 0, et: o.et[LAST_INDEX] || 0,
-            em: o.em[LAST_INDEX] || 0, zm: o.zm[LAST_INDEX] || 0, sm: o.sm[LAST_INDEX] || 0,
-            txE: o.txE[LAST_INDEX], txS: o.txS[LAST_INDEX], tipo: 'mun',
+            nome: name,
+            cre: ED.creDisplay(o.cre),
+            filt: filt || 0,
+            et: seriesAt(o, 'et', idx) || 0,
+            em: seriesAt(o, 'em', idx) || 0,
+            zm: seriesAt(o, 'zm', idx) || 0,
+            sm: seriesAt(o, 'sm', idx) || 0,
+            txE: seriesAt(o, 'txE', idx),
+            txS: seriesAt(o, 'txS', idx),
+            tipo: 'mun',
+            key: name,
           });
         });
       }
       rows.sort((a, b) => (b.txE || 0) - (a.txE || 0));
       const est = INT.rede.Estadual || {};
-      const medE = est.txE ? est.txE[LAST_INDEX] : null;
-      const medS = est.txS ? est.txS[LAST_INDEX] : null;
-      let html = `<div class="scroll"><table class="attbl"><thead><tr><th>${mode === 'cre' ? 'CRE' : 'Municipio'
+      const medE = seriesAt(est, 'txE', idx);
+      const medS = seriesAt(est, 'txS', idx);
+      let html = `<div class="scroll"><table class="attbl"><thead><tr><th>${attMode === 'cre' ? 'CRE' : 'Municipio'
       }</th><th>Part. efetivos</th><th>Eliminados</th><th>Taxa elim. (%)</th><th>Sem nota red.</th><th>Taxa sem nota (%)</th><th title="Eliminados em >=2 areas objetivas">Elim. multipla</th><th title="Zeros em >=2 areas">Zeros multiplo</th><th title="Sem nota em >=2 areas objetivas">Sem nota multipla</th></tr></thead><tbody>`;
+      if (!rows.length) {
+        html += `<tr><td colspan="9" style="text-align:center;color:${C.muted};padding:18px">Sem dados de integridade territorial para ${year}.</td></tr>`;
+      }
       rows.forEach((r) => {
         const warnE = medE != null && (r.txE || 0) > medE;
         const warnS = medS != null && (r.txS || 0) > medS;
-        const esc = String(r.nome).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const esc = String(r.key || r.nome).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         html += `<tr onclick="integClick('${r.tipo}','${esc}')">`
-          + `<td><b>${r.nome}</b>${mode === 'cre' ? '' : ` <span style="font-size:11px;color:${C.borda}">${r.cre}</span>`}</td>`
+          + `<td><b>${r.nome}</b>${attMode === 'cre' ? '' : ` <span style="font-size:11px;color:${C.borda}">${r.cre}</span>`}</td>`
           + `<td>${NF(r.filt)}</td><td>${r.et}</td>`
           + `<td style="color:${warnE ? C.critico : ''}">${r.txE != null ? r.txE.toFixed(2) : '\u2014'}</td>`
-          + `<td>${r.et > 0 ? Math.round(r.filt * r.txS / 100) : '\u2014'}</td>`
+          + `<td>${r.filt > 0 && r.txS != null ? Math.round(r.filt * r.txS / 100) : '\u2014'}</td>`
           + `<td style="color:${warnS ? '#E67E22' : ''}">${r.txS != null ? r.txS.toFixed(2) : '\u2014'}</td>`
           + `<td>${r.em || '\u2014'}</td><td>${r.zm || '\u2014'}</td><td>${r.sm || '\u2014'}</td></tr>`;
       });
       html += '</tbody></table></div>';
-      if (mode === 'mun') {
-        html = '<div style="margin-bottom:8px"><span class="pill" style="cursor:pointer" onclick="renderIntegTable(\'cre\')">\u2190 Voltar as CREs</span></div>' + html;
+      if (attMode === 'mun') {
+        const creLbl = attFilterCre ? ED.creDisplay(attFilterCre) : '';
+        html = `<div style="margin-bottom:8px"><span class="pill" style="cursor:pointer" onclick="renderIntegTable('cre')">\u2190 Voltar as CREs</span>`
+          + (creLbl ? ` <span style="font-size:12px;color:${C.muted}">· ${creLbl} · ${year}</span>` : '')
+          + '</div>' + html;
       }
       host.innerHTML = html;
+    }
+
+    if (anoSel) {
+      AN.forEach((a) => {
+        const o = document.createElement('option');
+        o.value = String(a);
+        o.textContent = a;
+        anoSel.appendChild(o);
+      });
+      anoSel.value = String(LAST_YEAR);
+      anoSel.onchange = () => {
+        const y = Number(anoSel.value);
+        const i = AN.indexOf(y);
+        attYearIdx = i >= 0 ? i : LAST_INDEX;
+        renderIntegTable(attMode, attFilterCre);
+      };
     }
 
     window.renderIntegTable = renderIntegTable;

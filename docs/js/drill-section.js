@@ -8,7 +8,7 @@
     const b = document.getElementById('bread');
     let h = `<span class="crumb ${SEL_CRE ? '' : 'active'}" onclick="resetDrill()">Estado \u00b7 MS</span>`;
     if (SEL_CRE) {
-      h += `<span class="sepc">\u2192</span><span class="crumb ${SEL_MUN ? '' : 'active'}" onclick="selectCre('${SEL_CRE.replace(/'/g, "\\'")}')">${SEL_CRE}</span>`;
+      h += `<span class="sepc">\u2192</span><span class="crumb ${SEL_MUN ? '' : 'active'}" onclick="selectCre('${SEL_CRE.replace(/'/g, "\\'")}')">${ED.creDisplay(SEL_CRE)}</span>`;
     }
     if (SEL_MUN) {
       h += `<span class="sepc">\u2192</span><span class="crumb active">${SEL_MUN}</span>`;
@@ -34,44 +34,85 @@
     return `<span class="trend up">\u25B2 est\u00e1vel vs ${prevYear}</span>`;
   }
 
-  function renderAreaKpis(areas, refMap) {
+  function fmtDeltaPts(delta) {
+    if (delta == null || Number.isNaN(delta)) return null;
+    const n = Math.round(delta);
+    return `${n >= 0 ? '+' : ''}${n}`;
+  }
+
+  function renderAreaKpis(areas, refMap, hostId = 'creAreaKpis', opts = {}) {
     const ctx = _ctx;
-    const { LAST_INDEX, PREV_INDEX, PREV_YEAR, ACOR, C } = ctx;
+    const { LAST_INDEX, PREV_INDEX, PREV_YEAR, ACOR } = ctx;
     const { AREANOME_FULL } = ED.Config;
-    const host = document.getElementById('creAreaKpis');
+    const host = document.getElementById(hostId);
     if (!host) return;
     if (!areas) {
       host.innerHTML = '';
       return;
     }
+    const compareAreas = opts.compareAreas || null;
+    const compareLabel = opts.compareLabel || 'CRE';
+    const refBrMap = opts.refBrMap || null;
     host.innerHTML = ctx.AREAKEYS.map((k) => {
       const name = AREANOME_FULL[k] || k;
       const v25 = areas[k]?.[LAST_INDEX];
       const v24 = areas[k]?.[PREV_INDEX];
       const refMs = refMap?.[k];
-      const warn = v25 != null && refMs != null && v25 < refMs;
+      const warnMs = v25 != null && refMs != null && v25 < refMs;
       const deltaMs = v25 != null && refMs != null ? v25 - refMs : null;
-      const deltaMsHtml = deltaMs == null
-        ? '<span class="kpi-delta">— vs MS</span>'
-        : `<span class="kpi-delta" style="color:${warn ? C.critico : C.verde}">${deltaMs >= 0 ? '+' : ''}${Math.round(deltaMs)} vs MS</span>`;
-      return `<div class="kpi kpi-area rank-area-kpi${warn ? ' warn' : ''}" data-area="${k}" style="--area-accent:${ACOR[k]}">
+      const refBr = refBrMap?.[k];
+      const deltaBr = v25 != null && refBr != null ? v25 - refBr : null;
+      const warnBr = deltaBr != null && deltaBr < 0;
+      const refCmp = compareAreas?.[k]?.[LAST_INDEX] ?? compareAreas?.[k] ?? null;
+      const deltaCmp = v25 != null && refCmp != null ? v25 - refCmp : null;
+      const warnCmp = deltaCmp != null && deltaCmp < 0;
+      const cmpHtml = compareAreas
+        ? (deltaCmp == null
+          ? `<span class="kpi-delta kpi-delta-territory">— vs ${compareLabel}</span>`
+          : `<span class="kpi-delta kpi-delta-territory ${warnCmp ? 'below' : 'above'}">${fmtDeltaPts(deltaCmp)} vs ${compareLabel}</span>`)
+        : '';
+      const msHtml = deltaMs == null
+        ? '<span class="kpi-delta kpi-delta-ms" title="Média MS · escolas estaduais (concluintes, não eliminados)">— vs MS</span>'
+        : `<span class="kpi-delta kpi-delta-ms ${warnMs ? 'below' : 'above'}" title="Média MS · escolas estaduais (concluintes, não eliminados)">${fmtDeltaPts(deltaMs)} vs MS</span>`;
+      const brHtml = refBrMap
+        ? (deltaBr == null
+          ? '<span class="kpi-delta kpi-delta-ms kpi-delta-br" title="Média Brasil · escolas estaduais (concluintes, não eliminados)">— vs BR</span>'
+          : `<span class="kpi-delta kpi-delta-ms kpi-delta-br ${warnBr ? 'below' : 'above'}" title="Média Brasil · escolas estaduais (concluintes, não eliminados)">${fmtDeltaPts(deltaBr)} vs BR</span>`)
+        : '';
+      const secondary = [compareAreas ? msHtml : '', brHtml].filter(Boolean)
+        .map((html) => `<div class="vsub vsub-ms">${html}</div>`).join('');
+      return `<div class="kpi kpi-area rank-area-kpi${warnMs ? ' warn' : ''}${warnCmp ? ' warn-cre' : ''}" data-area="${k}" style="--area-accent:${ACOR[k]}">
         <div class="kpi-area-bar" aria-hidden="true"></div>
         <div class="kpi-area-head">
           <p class="lbl">${name}</p>
-          ${deltaMsHtml}
+          ${cmpHtml || msHtml}
         </div>
         <div class="val" style="color:${ACOR[k]}">${fmtAreaNum(v25)}</div>
         <div class="vsub">${areaTrendHtml(v25, v24, PREV_YEAR)}</div>
+        ${secondary}
       </div>`;
     }).join('');
+  }
+
+  function territoryCmpFlags(v, munRef, creRef) {
+    const bits = [];
+    if (v != null && munRef != null && !Number.isNaN(munRef)) {
+      const above = v >= munRef;
+      bits.push(`<span class="cmp-flag ${above ? 'above' : 'below'}" title="${above ? 'Igual ou acima' : 'Abaixo'} da m\u00e9dia do munic\u00edpio">Mun ${above ? '\u25B2' : '\u25BC'}</span>`);
+    }
+    if (v != null && creRef != null && !Number.isNaN(creRef)) {
+      const above = v >= creRef;
+      bits.push(`<span class="cmp-flag ${above ? 'above' : 'below'}" title="${above ? 'Igual ou acima' : 'Abaixo'} da m\u00e9dia da CRE">CRE ${above ? '\u25B2' : '\u25BC'}</span>`);
+    }
+    return bits.length ? `<div class="cmp-flags">${bits.join('')}</div>` : '';
   }
 
   function renderCombinedAreaChart(areas, label, opts = {}) {
     const ctx = _ctx;
     const { ANOS, AREAKEYS, AREANOME, ACOR, BL, CFG, LAST_YEAR } = ctx;
-    const plotId = opts.plotId || 'g_drill_areas';
-    const wrapId = opts.wrapId || 'drillAreasWrap';
-    const titleId = opts.titleId || 'drillAreasTitle';
+    const plotId = opts.plotId || 'g_mun_areas';
+    const wrapId = opts.wrapId || 'munDetailCard';
+    const titleId = opts.titleId || 'munTrajAreasTitle';
     const uirevision = opts.uirevision || 'drill-areas';
     const wrap = document.getElementById(wrapId);
     const title = document.getElementById(titleId);
@@ -86,6 +127,9 @@
       }
     }
     const mergeP = ED.Config.mergePandemia;
+    const hoverScore = ED.Config.hoverAreaScore || ED.Config.hoverAreaTemplate;
+    const yLo = 0;
+    const yHi = 1000;
     const tr = AREAKEYS.map((k) => {
       const ys = areas[k] || [];
       const arrows = ED.segmentArrowsFromSeries(ANOS, ys, {
@@ -95,19 +139,17 @@
         standoff: 2,
         startstandoff: 2,
       });
+      const nome = (ED.Config.AREANOME_FULL && ED.Config.AREANOME_FULL[k]) || AREANOME[k];
       return {
         x: ANOS,
         y: ys,
         mode: 'lines',
-        name: AREANOME[k],
+        name: nome,
         line: { color: ACOR[k], width: 2.2 },
-        hovertemplate: `${AREANOME[k]} %{x}<br>m\u00e9dia %{y:.1f} pts<extra></extra>`,
+        hovertemplate: hoverScore(nome, 0),
         _arrows: arrows,
       };
     });
-    const allVals = tr.flatMap((t) => t.y).filter((v) => v != null && !Number.isNaN(v));
-    const yLo = allVals.length ? Math.floor(Math.min(...allVals) - 8) : 450;
-    const yHi = allVals.length ? Math.ceil(Math.max(...allVals) + 8) : 650;
     const areaArrows = tr.flatMap((t) => t._arrows || []);
     tr.forEach((t) => { delete t._arrows; });
     Plotly.react(el, tr, mergeP({
@@ -118,14 +160,17 @@
         title: { text: 'm\u00e9dia (pontos)', font: { size: 10 } },
         gridcolor: 'rgba(0,0,0,0)',
         range: [yLo, yHi],
+        dtick: 200,
       },
       annotations: areaArrows,
     }, { y0: yLo, y1: yHi }), CFG);
   }
 
-  function hideCombinedAreaChart() {
-    const wrap = document.getElementById('drillAreasWrap');
-    if (wrap) wrap.style.display = 'none';
+  function hideMunDetailCard() {
+    const card = document.getElementById('munDetailCard');
+    if (card) card.style.display = 'none';
+    const kpis = document.getElementById('munAreaKpis');
+    if (kpis) kpis.innerHTML = '';
   }
 
   function hideCreTrajAreasChart() {
@@ -137,20 +182,39 @@
     const ctx = _ctx;
     const { ANOS, DATA, AREANOME, ACOR, C, BL, CFG } = ctx;
     const host = document.getElementById(containerId);
+    const hoverScore = ED.Config.hoverAreaScore || ED.Config.hoverAreaTemplate;
     host.innerHTML = '';
     ctx.AREAKEYS.forEach((k) => {
       const v = areas[k];
       const last = v[v.length - 1];
       const ref = refMap[k];
-      const warn = last < ref;
+      const brSeries = DATA.msArea?.[k]?.br || [];
+      const brLast = brSeries[brSeries.length - 1];
+      const warn = last != null && ref != null && last < ref;
       const tile = document.createElement('div');
       tile.className = `atile${warn ? ' warn' : ''}`;
-      const delta = last - ref;
-      tile.innerHTML = `<div class="at"><span>${k}</span><span class="fl" style="color:${warn ? C.critico : C.verde}">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}</span></div><div id="${containerId}_${k}" style="height:74px"></div>`;
+      const deltaMs = last != null && ref != null ? last - ref : null;
+      const deltaBr = last != null && brLast != null ? last - brLast : null;
+      const msTxt = deltaMs == null ? '—' : `${deltaMs >= 0 ? '+' : ''}${deltaMs.toFixed(0)}`;
+      const brTxt = deltaBr == null ? '—' : `${deltaBr >= 0 ? '+' : ''}${deltaBr.toFixed(0)}`;
+      tile.innerHTML = `<div class="at"><span>${k}</span><span class="fl" style="color:${warn ? C.critico : C.verde}" title="vs MS (esc. estaduais)">${msTxt}<span class="fl-br" title="vs BR (esc. estaduais)"> · ${brTxt}</span></span></div><div id="${containerId}_${k}" style="height:74px"></div>`;
       host.appendChild(tile);
       Plotly.newPlot(`${containerId}_${k}`, [
-        { x: ANOS, y: DATA.msArea[k].ms, mode: 'lines', line: { color: C.brasil, width: 1.4, dash: 'dot' }, hovertemplate: `${AREANOME[k]} \u00b7 refer\u00eancia MS (esc. estaduais)<br><b>%{x}</b> \u00b7 %{y:.0f} pts<extra></extra>` },
-        { x: ANOS, y: v, mode: 'lines', line: { color: ACOR[k], width: 2 }, hovertemplate: `${AREANOME[k]}<br><b>%{x}</b> \u00b7 %{y:.0f} pts<extra></extra>` },
+        {
+          x: ANOS, y: brSeries, mode: 'lines', name: `${AREANOME[k]} · BR`,
+          line: { color: '#B7C0CC', width: 1.15, dash: 'dash' },
+          hovertemplate: hoverScore(`${AREANOME[k]} · BR`, '%{y:.0f}'),
+        },
+        {
+          x: ANOS, y: DATA.msArea[k].ms, mode: 'lines', name: `${AREANOME[k]} · MS`,
+          line: { color: C.brasil, width: 1.4, dash: 'dot' },
+          hovertemplate: hoverScore(`${AREANOME[k]} · MS`, '%{y:.0f}'),
+        },
+        {
+          x: ANOS, y: v, mode: 'lines', name: AREANOME[k],
+          line: { color: ACOR[k], width: 2 },
+          hovertemplate: hoverScore(AREANOME[k], '%{y:.0f}'),
+        },
       ], ED.withPandemia({
         ...BL, height: 74, margin: { l: 4, r: 6, t: 4, b: 14 },
         showlegend: false, xaxis: { visible: false }, yaxis: { visible: false },
@@ -281,11 +345,6 @@
       hovertemplate: hoverAreaTemplate('Média geral'),
     });
 
-    const lo = Math.min(...vals);
-    const hi = Math.max(...vals);
-    const pad = Math.max(8, (hi - lo) * 0.08);
-    const yMin = Math.floor(lo - pad);
-    const yMax = Math.ceil(hi + pad);
     const anoMin = Math.min(...histYears);
     const anoMax = Math.max(...histYears);
 
@@ -306,8 +365,8 @@
       },
       yaxis: {
         title: { text: 'Nota TRI', font: { size: 9, color: axisMuted } },
-        range: [yMin, yMax],
-        dtick: 20,
+        range: [0, 1000],
+        dtick: 200,
         gridcolor: 'rgba(0,0,0,0)',
         showgrid: false,
         linecolor: '#E5E7EF',
@@ -315,7 +374,7 @@
       },
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: '#FFFFFF',
-    }), { y0: yMin, y1: yMax }), CFG);
+    }), { y0: 0, y1: 1000 }), CFG);
 
     const zeroLbl = zeroMode === 'no_zero'
       ? 'Filtro ativo: excluindo participantes com alguma nota zero.'
@@ -338,8 +397,9 @@
   function renderMun(creName, muns) {
     const ctx = _ctx;
     const { C, BL, CFG, NF, LAST_YEAR, LAST_INDEX, MS_GERAL_2024, MS_AREA_2024 } = ctx;
-    document.getElementById('munTitle').childNodes[0].nodeValue = `Munic\u00edpios de ${creName} \u00b7 participa\u00e7\u00e3o \u00d7 desempenho (${LAST_YEAR}) `;
-    document.getElementById('munAttTitle').childNodes[0].nodeValue = `Aten\u00e7\u00e3o por \u00e1rea \u00b7 munic\u00edpios de ${creName} (${LAST_YEAR}) `;
+    const creLbl = ED.creDisplay(creName);
+    document.getElementById('munTitle').childNodes[0].nodeValue = `Munic\u00edpios de ${creLbl} \u00b7 participa\u00e7\u00e3o \u00d7 desempenho (${LAST_YEAR}) `;
+    document.getElementById('munAttTitle').childNodes[0].nodeValue = `Aten\u00e7\u00e3o por \u00e1rea \u00b7 munic\u00edpios de ${creLbl} (${LAST_YEAR}) `;
     const xs = [];
     const ys = [];
     const sz = [];
@@ -437,19 +497,20 @@
     SEL_MUN = null;
     SEL_ESC = null;
     document.querySelectorAll('.ctile').forEach((t) =>
-      t.classList.toggle('sel', t.querySelector('.ct span').textContent === name)
+      t.classList.toggle('sel', t.querySelector('.ct span').textContent === ED.creDisplay(name))
     );
     document.getElementById('escCard').style.display = 'none';
+    hideMunDetailCard();
     document.getElementById('creAreaCard').style.display = 'block';
-    document.querySelector('#creAreaTitle span').textContent = `${name} \u00b7 ${ctx.ANOS[0]}\u2013${LAST_YEAR}`;
-    hideCombinedAreaChart();
+    document.querySelector('#creAreaTitle span').textContent = `${ED.creDisplay(name)} \u00b7 ${ctx.ANOS[0]}\u2013${LAST_YEAR}`;
     document.getElementById('creAreas').style.display = 'grid';
-    renderAreaKpis(DATA.cre[name].areas, MS_AREA_2024);
+    const creRefBr = brAreaRefs(ctx, ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all');
+    renderAreaKpis(DATA.cre[name].areas, MS_AREA_2024, 'creAreaKpis', { refBrMap: creRefBr.areas });
     renderAreas('creAreas', DATA.cre[name].areas, MS_AREA_2024);
     const creTrajCard = document.getElementById('creTrajAreasCard');
     if (creTrajCard && DATA.cre[name]?.areas) {
       creTrajCard.style.display = 'block';
-      renderCombinedAreaChart(DATA.cre[name].areas, name, {
+      renderCombinedAreaChart(DATA.cre[name].areas, ED.creDisplay(name), {
         plotId: 'g_cre_areas',
         wrapId: 'creTrajAreasCard',
         titleId: 'creTrajAreasTitle',
@@ -472,16 +533,55 @@
 
   function selectMun(name) {
     const ctx = _ctx;
-    const { DATA, LAST_YEAR, MS_AREA_2024, MS_GERAL_2024, MS_AREA_2024_SEM_ZERO, MS_GERAL_2024_SEM_ZERO } = ctx;
+    const {
+      DATA, LAST_YEAR, LAST_INDEX, MS_AREA_2024, MS_GERAL_2024,
+      MS_AREA_2024_SEM_ZERO, MS_GERAL_2024_SEM_ZERO,
+    } = ctx;
     SEL_MUN = name;
     bread();
-    document.getElementById('creAreaCard').style.display = 'block';
-    document.querySelector('#creAreaTitle span').textContent = `${name} \u00b7 ${ctx.ANOS[0]}\u2013${LAST_YEAR}`;
-    if (DATA.mun[name]) {
-      renderAreaKpis(DATA.mun[name].areas, MS_AREA_2024);
-      renderCombinedAreaChart(DATA.mun[name].areas, name);
-      document.getElementById('creAreas').style.display = 'none';
+
+    if (SEL_CRE && DATA.cre[SEL_CRE]) {
+      document.getElementById('creAreaCard').style.display = 'block';
+      document.querySelector('#creAreaTitle span').textContent = `${ED.creDisplay(SEL_CRE)} \u00b7 ${ctx.ANOS[0]}\u2013${LAST_YEAR}`;
+      document.getElementById('creAreas').style.display = 'grid';
+      const creRefBrKeep = brAreaRefs(ctx, ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all');
+      renderAreaKpis(DATA.cre[SEL_CRE].areas, MS_AREA_2024, 'creAreaKpis', { refBrMap: creRefBrKeep.areas });
+      renderAreas('creAreas', DATA.cre[SEL_CRE].areas, MS_AREA_2024);
     }
+
+    const munCard = document.getElementById('munDetailCard');
+    if (munCard && DATA.mun[name]) {
+      munCard.style.display = 'block';
+      const titleSpan = document.querySelector('#munDetailTitle span');
+      if (titleSpan) titleSpan.textContent = `${name} \u00b7 ${ctx.ANOS[0]}\u2013${LAST_YEAR}`;
+      const creAreas = SEL_CRE && DATA.cre[SEL_CRE] ? DATA.cre[SEL_CRE].areas : null;
+      const munRefBr = brAreaRefs(ctx, ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all');
+      renderAreaKpis(DATA.mun[name].areas, MS_AREA_2024, 'munAreaKpis', {
+        compareAreas: creAreas,
+        compareLabel: 'CRE',
+        refBrMap: munRefBr.areas,
+      });
+      renderCombinedAreaChart(DATA.mun[name].areas, name, {
+        plotId: 'g_mun_areas',
+        wrapId: 'munDetailCard',
+        titleId: 'munTrajAreasTitle',
+        uirevision: 'mun-traj-areas',
+        showWrap: false,
+      });
+    } else {
+      hideMunDetailCard();
+    }
+
+    const munMed = DATA.mun[name]?.med?.[LAST_INDEX] ?? null;
+    const creMed = SEL_CRE && DATA.cre[SEL_CRE] ? (DATA.cre[SEL_CRE].med?.[LAST_INDEX] ?? null) : null;
+    const munAreaRef = {};
+    const creAreaRef = {};
+    ctx.AREAKEYS.forEach((k) => {
+      munAreaRef[k] = DATA.mun[name]?.areas?.[k]?.[LAST_INDEX] ?? null;
+      creAreaRef[k] = SEL_CRE && DATA.cre[SEL_CRE]
+        ? (DATA.cre[SEL_CRE].areas?.[k]?.[LAST_INDEX] ?? null)
+        : null;
+    });
     const zeroMode = ED.getSchoolZeroMode ? ED.getSchoolZeroMode() : 'all';
     const refArea = zeroMode === 'no_zero' && Object.keys(MS_AREA_2024_SEM_ZERO || {}).length
       ? MS_AREA_2024_SEM_ZERO
@@ -514,14 +614,16 @@
     body.innerHTML = '';
     const cell = (v, k) => {
       const cls = scoreCellClass(v, refArea[k], refBr.areas[k]);
-      return `<td class="${cls}">${v.toFixed(0)}</td>`;
+      return `<td class="score-cell ${cls}"><span class="score-val">${v.toFixed(0)}</span>${territoryCmpFlags(v, munAreaRef[k], creAreaRef[k])}</td>`;
     };
     list.forEach((s) => {
       const tr = document.createElement('tr');
       tr.dataset.schoolId = s.id || '';
+      const belowMun = munMed != null && s.geral < munMed;
+      if (belowMun) tr.classList.add('below-mun');
       tr.innerHTML = `<td>${s.nome}</td><td>${s.concl != null ? s.concl : '<span class="muted">\u2014</span>'}</td><td>${s.part}</td><td>${s.tx != null ? `${s.tx.toFixed(0)}%` : '<span class="muted">\u2014</span>'}</td>`
         + cell(s.cn, 'CN') + cell(s.ch, 'CH') + cell(s.lc, 'LC') + cell(s.mt, 'MT') + cell(s.red, 'RED')
-        + `<td class="b ${scoreCellClass(s.geral, refGeral, refBr.geral)}">${s.geral.toFixed(0)}</td>`;
+        + `<td class="score-cell b ${scoreCellClass(s.geral, refGeral, refBr.geral)}"><span class="score-val">${s.geral.toFixed(0)}</span>${territoryCmpFlags(s.geral, munMed, creMed)}</td>`;
       tr.onclick = () => {
         SEL_ESC = s.id || null;
         setSelectedSchoolRow(SEL_ESC);
@@ -532,7 +634,8 @@
     SEL_ESC = list.some((s) => s.id === SEL_ESC) ? SEL_ESC : (list[0]?.id || null);
     setSelectedSchoolRow(SEL_ESC);
     renderSchoolHistory(name, SEL_ESC);
-    document.getElementById('creAreaCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const scrollTarget = document.getElementById('munDetailCard') || document.getElementById('escCard');
+    if (scrollTarget) scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function resetDrill() {
@@ -540,10 +643,11 @@
     SEL_MUN = null;
     SEL_ESC = null;
     document.querySelectorAll('.ctile').forEach((t) => t.classList.remove('sel'));
-    ['creAreaCard', 'creTrajAreasCard', 'munRow', 'escCard'].forEach((id) => {
-      document.getElementById(id).style.display = 'none';
+    ['creAreaCard', 'creTrajAreasCard', 'munRow', 'munDetailCard', 'escCard'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
     });
-    hideCombinedAreaChart();
+    hideMunDetailCard();
     hideCreTrajAreasChart();
     const kpis = document.getElementById('creAreaKpis');
     if (kpis) kpis.innerHTML = '';
@@ -633,7 +737,7 @@
       t.onclick = () => selectCre(name);
       const arr = adv === false ? '\u25BC' : (adv === true ? '\u25B2' : '\u2014');
       const arrColor = adv === false ? C.critico : (adv === true ? C.verde : C.muted);
-      t.innerHTML = `<div class="ct"><span>${name}</span><span class="arr" style="color:${arrColor}">${arr}</span></div><div id="${sid}" style="height:78px"></div>`;
+      t.innerHTML = `<div class="ct"><span>${ED.creDisplay(name)}</span><span class="arr" style="color:${arrColor}">${arr}</span></div><div id="${sid}" style="height:78px"></div>`;
       row.appendChild(t);
       const traj = creTrajData(o);
       const rng = creTrajRanges(o);

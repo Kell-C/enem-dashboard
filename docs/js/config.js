@@ -92,6 +92,11 @@
   function hoverAreaTemplate(name, val = '%{y:.0f}') {
     return `${name}: ${val}<extra></extra>`;
   }
+  /** Hover unificado: cabeçalho = ano; cada série = "Nome: valor" (legenda por cor). */
+  function hoverAreaScore(name, decimals = 0) {
+    const val = decimals > 0 ? `%{y:.${decimals}f}` : '%{y:.0f}';
+    return hoverAreaTemplate(name, val);
+  }
   const PANDEMIA = {
     x0: 2019.6,
     x1: 2021.4,
@@ -152,6 +157,6 @@
   }
   ED.Config = {
     C, BL, CFG, CFG_INTERACTIVE, AREAKEYS, AREANOME, AREANOME_FULL, ACOR,
-    HOVER, XSPIKE, YSPIKE, PANDEMIA, layoutLineChart, layoutUnifiedY, hoverAreaTemplate, mergePandemia,
+    HOVER, XSPIKE, YSPIKE, PANDEMIA, layoutLineChart, layoutUnifiedY, hoverAreaTemplate, hoverAreaScore, mergePandemia,
   };
 })(window.EnemDash = window.EnemDash || {});

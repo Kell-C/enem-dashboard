@@ -15,7 +15,7 @@
         mode: 'lines',
         name: `${RN[dep]}${mun ? ' \u00b7 N pequeno' : ''}`,
         line: { color: RC[dep], width: est ? 3.4 : 1.8, dash: mun ? 'dot' : 'solid' },
-        hovertemplate: `${RN[dep]} %{x}<br>M\u00e9dia: %{y:.0f}<br>Participantes efetivos: %{customdata}<extra></extra>`,
+        hovertemplate: ED.Config.hoverAreaTemplate(RN[dep], '%{y:.0f}'),
         customdata: DATA.redes[dep].n.map((n) => NF(n)),
       };
       return t;
@@ -25,7 +25,7 @@
     const yLo = yVals.length ? Math.min(...yVals) - 8 : 450;
     const yHi = yVals.length ? Math.max(...yVals) + 8 : 540;
     Plotly.newPlot('g_redes', tr, mergeP({
-      ...BL, height: 300,
+      ...BL, height: 300, hovermode: 'x unified',
       legend: { orientation: 'h', y: -0.22, font: { size: 9 } },
       xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
       yaxis: { title: { text: 'm\u00e9dia geral', font: { size: 10 } }, gridcolor: 'rgba(0,0,0,0)', range: [yLo, yHi] },

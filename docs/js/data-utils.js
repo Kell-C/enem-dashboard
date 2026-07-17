@@ -31,5 +31,15 @@
       const b = parseInt(h.slice(5, 7), 16);
       return `${r},${g},${b}`;
     },
+    /** Remove o prefixo "CRE " do nome para evitar "CRE · CRE Coxim" na UI. */
+    creDisplay(name) {
+      if (name == null || name === '') return '\u2014';
+      const s = String(name).trim();
+      const stripped = s.replace(/^CRE\s+/i, '').trim();
+      return stripped || s;
+    },
+  };
+  ED.creDisplay = function (name) {
+    return ED.DataUtils.creDisplay(name);
   };
 })(window.EnemDash);
