@@ -81,13 +81,14 @@
       : (DATA.indexAreas || { CN: [], CH: [], LC: [], MT: [], RED: [] });
     const tr = AREAKEYS.map((k) => {
       const b = AS[k][0] || 1;
+      const nome = (ED.Config.AREANOME_FULL && ED.Config.AREANOME_FULL[k]) || AREANOME[k];
       return {
         x: ANOS,
         y: AS[k].map((v) => (v != null && b ? +(v / b * 100).toFixed(1) : null)),
         mode: 'lines',
-        name: AREANOME[k],
+        name: nome,
         line: { color: ACOR[k], width: 2.2 },
-        hovertemplate: `${AREANOME[k]} %{x}<br>\u00edndice %{y:.1f}<extra>Clique para detalhes</extra>`,
+        hovertemplate: ED.Config.hoverAreaTemplate(nome, '%{y:.1f}'),
       };
     });
     const draw = () => {
@@ -99,7 +100,7 @@
       const idxLo = idxVals.length ? Math.min(...idxVals) - 4 : 90;
       const idxHi = idxVals.length ? Math.max(...idxVals) + 4 : 110;
       const idxLayout = mergeP({
-        ...BL, height: 300, dragmode: false, hovermode: 'closest',
+        ...BL, height: 300, dragmode: false, hovermode: 'x unified',
         clickmode: 'event+select', uirevision: 'index',
         legend: { orientation: 'h', y: -0.22, font: { size: 9.5 } },
         xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
@@ -130,19 +131,19 @@
         standoff: 2,
         startstandoff: 2,
       });
+      const nome = (ED.Config.AREANOME_FULL && ED.Config.AREANOME_FULL[k]) || AREANOME[k];
       return {
         x: ANOS,
         y: ys,
         mode: 'lines',
-        name: AREANOME[k],
+        name: nome,
         line: { color: ACOR[k], width: 2.2 },
-        hovertemplate: `${AREANOME[k]} %{x}<br>m\u00e9dia %{y:.1f} pts<extra></extra>`,
+        hovertemplate: (ED.Config.hoverAreaScore || ED.Config.hoverAreaTemplate)(nome, 0),
         _arrows: arrows,
       };
     });
-    const allVals = tr.flatMap((t) => t.y).filter((v) => v != null);
-    const yLo = allVals.length ? Math.floor(Math.min(...allVals) - 8) : 450;
-    const yHi = allVals.length ? Math.ceil(Math.max(...allVals) + 8) : 650;
+    const yLo = 0;
+    const yHi = 1000;
     const areaArrows = tr.flatMap((t) => t._arrows || []);
     const areaLayout = mergeP({
       ...BL, height: 300, dragmode: false, hovermode: 'x unified', uirevision: 'traj-areas',
@@ -152,6 +153,7 @@
         title: { text: 'm\u00e9dia (pontos)', font: { size: 10 } },
         gridcolor: 'rgba(0,0,0,0)',
         range: [yLo, yHi],
+        dtick: 200,
       },
       annotations: areaArrows,
     }, { y0: yLo, y1: yHi });
@@ -272,16 +274,21 @@
       }, { y0: yMin, y1: yMax, annotate: false }), CFGI);
 
       Plotly.react('g_evol', [
-        { x: ANOS, y: MED_BR, mode: 'lines', name: 'Brasil (esc. estaduais)', line: { color: C.brasil, width: 2, dash: 'dot' } },
+        {
+          x: ANOS, y: MED_BR, mode: 'lines', name: 'Brasil (esc. estaduais)',
+          line: { color: C.brasil, width: 2, dash: 'dot' },
+          hovertemplate: ED.Config.hoverAreaTemplate('Brasil (esc. estaduais)', '%{y:.0f}'),
+        },
         {
           x: ANOS, y: MED_MS, mode: 'lines+text', name: 'MS estadual',
           line: { color: C.azul, width: 2.6 },
           marker: { size: 0 },
           text: MED_MS.map((v) => (v != null ? v.toFixed(0) : '')),
           textposition: 'bottom center', textfont: { size: 9, color: C.azulEsc },
+          hovertemplate: ED.Config.hoverAreaTemplate('MS estadual', '%{y:.0f}'),
         },
       ], mergeP({
-        ...BL, height: 280, margin: interactiveMargin,
+        ...BL, height: 280, margin: interactiveMargin, hovermode: 'x unified',
         legend: { orientation: 'h', y: -0.2, font: { size: 10 } },
         xaxis: { dtick: 1, gridcolor: 'rgba(0,0,0,0)' },
         yaxis: { range: [medLo, medHi], gridcolor: 'rgba(0,0,0,0)' },

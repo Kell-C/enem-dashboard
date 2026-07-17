@@ -75,14 +75,7 @@
   }
 
   function yRangeHist(h) {
-    const vals = [];
-    AREA_KEYS.forEach((k) => { (h[k] || []).forEach((v) => { if (v != null && !Number.isNaN(v)) vals.push(v); }); });
-    (h.media || []).forEach((v) => { if (v != null && !Number.isNaN(v)) vals.push(v); });
-    if (!vals.length) return [400, 650];
-    const lo = Math.min(...vals);
-    const hi = Math.max(...vals);
-    const pad = Math.max(8, (hi - lo) * 0.08);
-    return [Math.floor(lo - pad), Math.ceil(hi + pad)];
+    return [0, 1000];
   }
 
   function renderAreaKpis(escola) {
@@ -186,7 +179,7 @@
         yaxis: {
           title: { text: 'Nota TRI', font: { size: 9, color: axisMuted } },
           range: [yMin, yMax],
-          dtick: 20,
+          dtick: 200,
           gridcolor: 'rgba(0,0,0,0)',
           showgrid: false,
           linecolor: '#E5E7EF',
@@ -228,17 +221,14 @@
     if (yearBadge) yearBadge.textContent = `ENEM ${data.ano}`;
     const scopeNote = host.querySelector('.rank-scope-note');
     if (scopeNote) {
-      scopeNote.innerHTML = `Ranking com base no <strong class="rank-enem-ref">ENEM ${data.ano}</strong> · `
-        + 'posições entre <strong>escolas estaduais</strong> (município, MS e Brasil). '
-        + `Fonte: microdados INEP / ENEM.`;
+      scopeNote.innerHTML = 'Posições entre <strong>escolas estaduais</strong> (município, MS e Brasil). '
+        + `Fonte: ${FONTE}.`;
     }
     if (meta) {
       const anos = data.anosHistorico?.length
         ? `${data.anosHistorico[0]}–${data.anosHistorico[data.anosHistorico.length - 1]}`
         : '2013–2025';
-      meta.innerHTML = `${data.totalEscolas} escolas estaduais · `
-        + `<span class="rank-enem-badge rank-enem-badge--inline">ENEM ${data.ano}</span> · `
-        + `histórico ${anos} · ${FONTE}`;
+      meta.innerHTML = `${data.totalEscolas} escolas estaduais · histórico ${anos} · ${FONTE}`;
     }
 
     const munSel = host.querySelector('#rankEscMunicipio');

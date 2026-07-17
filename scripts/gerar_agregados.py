@@ -178,6 +178,174 @@ def _append_integridade(acumulado: dict[str, list], res: dict) -> None:
         acumulado[key].extend(res.get(key, []))
 
 
+def _as_frame(item) -> pd.DataFrame:
+    if isinstance(item, pd.DataFrame):
+        return item
+    if isinstance(item, dict):
+        return pd.DataFrame([item])
+    return pd.DataFrame(item)
+
+
+def _canon_mun_map(acumulado: dict[str, list]) -> dict[str, str]:
+    """Mapa normalizado → nome canônico (prioriza grafias já usadas nos agregados)."""
+    canon: dict[str, str] = {}
+    for item in acumulado.get("evolucao_muni", []):
+        df = _as_frame(item)
+        if "NO_MUNICIPIO_ESC" not in df.columns:
+            continue
+        for raw in df["NO_MUNICIPIO_ESC"].dropna().astype(str):
+            key = normalizar_texto(raw)
+            if not key:
+                continue
+            # Prefer names with mixed case / accents over ALL CAPS
+            prev = canon.get(key)
+            if prev is None or (prev.isupper() and not raw.isupper()):
+                canon[key] = raw
+    return canon
+
+
+def _existing_territorial_keys(
+    acumulado: dict[str, list],
+    table: str,
+    ano: int,
+    name_col: str,
+) -> set[str]:
+    keys: set[str] = set()
+    for item in acumulado.get(table, []):
+        df = _as_frame(item)
+        if df.empty or "ano" not in df.columns or name_col not in df.columns:
+            continue
+        sub = df[df["ano"] == ano]
+        for raw in sub[name_col].dropna().astype(str):
+            keys.add(normalizar_texto(raw))
+    return keys
+
+
+def _merge_territorial_gaps_from_micro(acumulado: dict[str, list], res: dict, ano: int) -> int:
+    """
+    Completa CRE/município ausentes na base INEP-escola (2013-2015) com
+    agregados do microdado individual (mesmo sem CO_ESCOLA preenchido).
+    """
+    canon_mun = _canon_mun_map(acumulado)
+    added = 0
+
+    # Municípios
+    have_mun = _existing_territorial_keys(acumulado, "evolucao_muni", ano, "NO_MUNICIPIO_ESC")
+    for item in res.get("evolucao_muni", []):
+        df = _as_frame(item).copy()
+        if df.empty or "NO_MUNICIPIO_ESC" not in df.columns:
+            continue
+        keep_rows = []
+        for _, row in df.iterrows():
+            raw = str(row["NO_MUNICIPIO_ESC"])
+            key = normalizar_texto(raw)
+            if not key or key in have_mun:
+                continue
+            row = row.copy()
+            row["NO_MUNICIPIO_ESC"] = canon_mun.get(key, raw.title() if raw.isupper() else raw)
+            row["fonte"] = row.get("fonte") if pd.notna(row.get("fonte")) else "inep_micro_gap"
+            keep_rows.append(row)
+            have_mun.add(key)
+            canon_mun.setdefault(key, row["NO_MUNICIPIO_ESC"])
+        if keep_rows:
+            out = pd.DataFrame(keep_rows)
+            acumulado["evolucao_muni"].append(out)
+            # espelha em participacao_municipios se houver match no res
+            added += len(out)
+
+    have_part_mun = _existing_territorial_keys(
+        acumulado, "participacao_municipios", ano, "NO_MUNICIPIO_ESC"
+    )
+    for item in res.get("participacao_municipios", []):
+        df = _as_frame(item).copy()
+        if df.empty or "NO_MUNICIPIO_ESC" not in df.columns:
+            continue
+        keep_rows = []
+        for _, row in df.iterrows():
+            raw = str(row["NO_MUNICIPIO_ESC"])
+            key = normalizar_texto(raw)
+            if not key or key in have_part_mun:
+                continue
+            # só preenche part se também preenchemos (ou faltava) evolucao
+            row = row.copy()
+            row["NO_MUNICIPIO_ESC"] = canon_mun.get(key, raw.title() if raw.isupper() else raw)
+            row["fonte"] = row.get("fonte") if pd.notna(row.get("fonte")) else "inep_micro_gap"
+            keep_rows.append(row)
+            have_part_mun.add(key)
+        if keep_rows:
+            acumulado["participacao_municipios"].append(pd.DataFrame(keep_rows))
+
+    # CREs: preenche só se a CRE do ano estiver ausente
+    have_cre = _existing_territorial_keys(acumulado, "evolucao_cre", ano, "cre_curto")
+    for item in res.get("evolucao_cre", []):
+        df = _as_frame(item).copy()
+        if df.empty:
+            continue
+        name_col = "cre_curto" if "cre_curto" in df.columns else "CRE"
+        if name_col not in df.columns:
+            continue
+        keep_rows = []
+        for _, row in df.iterrows():
+            raw = str(row.get("cre_curto") or row.get("CRE") or "")
+            key = normalizar_texto(raw)
+            if not key or key in have_cre:
+                continue
+            row = row.copy()
+            row["fonte"] = row.get("fonte") if pd.notna(row.get("fonte")) else "inep_micro_gap"
+            keep_rows.append(row)
+            have_cre.add(key)
+        if keep_rows:
+            acumulado["evolucao_cre"].append(pd.DataFrame(keep_rows))
+            added += len(keep_rows)
+
+    have_part_cre = _existing_territorial_keys(acumulado, "participacao_cre", ano, "cre_curto")
+    for item in res.get("participacao_cre", []):
+        df = _as_frame(item).copy()
+        if df.empty or "cre_curto" not in df.columns:
+            continue
+        keep_rows = []
+        for _, row in df.iterrows():
+            key = normalizar_texto(str(row["cre_curto"]))
+            if not key or key in have_part_cre:
+                continue
+            row = row.copy()
+            row["fonte"] = row.get("fonte") if pd.notna(row.get("fonte")) else "inep_micro_gap"
+            keep_rows.append(row)
+            have_part_cre.add(key)
+        if keep_rows:
+            acumulado["participacao_cre"].append(pd.DataFrame(keep_rows))
+
+    return added
+
+
+def _unify_municipio_names(df: pd.DataFrame) -> pd.DataFrame:
+    """Unifica grafias do mesmo município (ex.: AGUA CLARA → Água Clara)."""
+    if df.empty or "NO_MUNICIPIO_ESC" not in df.columns:
+        return df
+    prefs: dict[str, str] = {}
+    ordered = df
+    if "ano" in df.columns:
+        ordered = df.sort_values("ano")
+    for raw in ordered["NO_MUNICIPIO_ESC"].dropna().astype(str):
+        key = normalizar_texto(raw)
+        if not key:
+            continue
+        prev = prefs.get(key)
+        if prev is None:
+            prefs[key] = raw
+            continue
+        # Prefere grafia com acento / mista a ALL CAPS
+        if prev.isupper() and not raw.isupper():
+            prefs[key] = raw
+        elif not prev.isupper() and not raw.isupper() and "ano" in df.columns:
+            prefs[key] = raw  # ano mais recente (já ordenado)
+    out = df.copy()
+    out["NO_MUNICIPIO_ESC"] = out["NO_MUNICIPIO_ESC"].map(
+        lambda x: prefs.get(normalizar_texto(x), x) if pd.notna(x) else x
+    )
+    return out
+
+
 def _cols_parquet() -> list[str]:
     return [
         "NU_ANO",
@@ -578,19 +746,25 @@ def main():
             continue
         df_integ = None
         if csv_disponivel(ano):
-            logger.info("Integridade %s: microdado individual INEP", ano)
+            logger.info("Integridade + gaps territoriais %s: microdado individual INEP", ano)
             df_integ = ler_ano_inep_csv(ano)
         elif parquet.exists():
             df_integ = _ler_ano(ano, cols)
         if df_integ is None or df_integ.empty:
             logger.warning(
-                "%s: eliminados indisponiveis — baixe MICRODADOS/PARTICIPANTES em dados/%s/",
+                "%s: eliminados/gaps indisponiveis — baixe MICRODADOS/PARTICIPANTES em dados/%s/",
                 ano, ano,
             )
             continue
         res = processar_ano(df_integ, cres, mapa_muni, conc_totais, conc_esc)
         _strip_integridade_ano(acumulado, ano)
         _append_integridade(acumulado, res)
+        n_gap = _merge_territorial_gaps_from_micro(acumulado, res, ano)
+        if n_gap:
+            logger.info(
+                "%s: preenchidos %s registros territoriais ausentes na base escola (via microdado)",
+                ano, n_gap,
+            )
         del df_integ
         limpar()
 
@@ -631,6 +805,8 @@ def main():
             else:
                 frames.append(pd.DataFrame(r))
         df_out = pd.concat(frames, ignore_index=True)
+        if nome in ("evolucao_muni", "participacao_municipios", "integridade_muni") and "NO_MUNICIPIO_ESC" in df_out.columns:
+            df_out = _unify_municipio_names(df_out)
         path = PASTA_AGREGADOS / f"{nome}.parquet"
         df_out.to_parquet(path, index=False)
         logger.info("%s: %s linhas", path.name, len(df_out))

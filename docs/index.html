@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Painel ENEM MS — 2019-2025</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A4D8C'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='14' font-family='Segoe UI,sans-serif' fill='white'%3EMS%3C/text%3E%3C/svg%3E" />
-<link rel="stylesheet" href="style.css?v=24">
+<link rel="stylesheet" href="style.css?v=36">
 </head>
 <body>
 <div class="wrap">
@@ -52,12 +52,12 @@
       <div id="rankEscSection" class="tab-panel-inner">
       <div class="rank-panel-head">
         <div class="rank-panel-head-row">
-          <h2>Desempenho e posição no ENEM</h2>
+          <h2>Desempenho e posição</h2>
           <span class="rank-enem-badge" id="rankEscYearBadge">ENEM 2025</span>
         </div>
         <p id="rankEscMeta">Carregando…</p>
       </div>
-      <p class="rank-scope-note">Ranking com base no <strong class="rank-enem-ref">ENEM 2025</strong> · posições entre <strong>escolas estaduais</strong> (município, MS e Brasil). Fonte: microdados INEP / ENEM.</p>
+      <p class="rank-scope-note">Posições entre <strong>escolas estaduais</strong> (município, MS e Brasil). Fonte: microdados INEP / ENEM.</p>
       <div id="rankEscListView" class="rank-list-view">
         <div class="rank-search-wrap">
           <input type="search" class="rank-search" id="rankEscSearch" placeholder="Buscar escola, município ou INEP…" aria-label="Buscar escola" />
@@ -254,22 +254,17 @@
   <!-- Passo 1b: evolução por área da CRE selecionada -->
   <div class="card" id="creAreaCard" style="margin-top:16px;display:none">
     <h3 id="creAreaTitle">Evolução por área · <span></span>
-      <span class="help">i<span class="tip"><b>Como ler:</b> uma mini-série por área (CN, CH, LC, MT, Redação). A linha colorida (cor da área) = a CRE; a pontilhada cinza = MS estadual (referência). Painel com <b>borda vermelha</b> = a CRE está abaixo de MS naquela área em <span data-dyn="lastYear">2025</span> → ponto de atenção.</span></span></h3>
-    <div class="coh"><span class="dot"></span> Linha colorida = CRE (cor da área) · pontilhado cinza = MS estadual · borda vermelha = abaixo de MS (<span data-dyn="lastYear">2025</span>)</div>
+      <span class="help">i<span class="tip"><b>Como ler:</b> uma mini-série por área (CN, CH, LC, MT, Redação). Linha colorida = CRE; pontilhado cinza = MS estadual; tracejado claro = Brasil estadual. Comparações usam a mesma população de referência: <b>estudantes de escolas estaduais, concluintes, não eliminados</b>. Painel com <b>borda vermelha</b> = CRE abaixo de MS na área em <span data-dyn="lastYear">2025</span>.</span></span></h3>
+    <div class="coh"><span class="dot"></span> Linha colorida = CRE · pontilhado = MS estadual · tracejado = BR estadual · borda vermelha = abaixo de MS (<span data-dyn="lastYear">2025</span>)</div>
     <div id="creAreaKpis" class="drill-area-kpis kpis kpis-areas rank-area-kpis" aria-label="Notas por área em 2025"></div>
-    <div id="drillAreasWrap" class="drill-areas-combined" style="display:none">
-      <h4 id="drillAreasTitle" class="drill-areas-title">Trajetória das médias por área</h4>
-      <div class="coh"><span class="dot"></span> Uma linha por área · cores padrão CN / CH / LC / MT / Redação</div>
-      <div id="g_drill_areas" class="plot plot-unified-hover"></div>
-    </div>
     <div id="creAreas" class="areagrid"></div>
   </div>
 
   <!-- Passo 1c: trajetória por área da CRE (antes dos municípios) -->
   <div class="card" id="creTrajAreasCard" style="margin-top:16px;display:none">
     <h3 id="creTrajAreasTitle">Trajetória das médias por área · <span></span>
-      <span class="help">i<span class="tip"><b>Como ler:</b> cada linha é a média anual de uma área na CRE selecionada. Cores padrão CN / CH / LC / MT / Redação. Compare a inclinação de cada linha — escalas diferem entre áreas.</span></span></h3>
-    <div class="coh"><span class="dot"></span> Uma linha por área · cores padrão CN / CH / LC / MT / Redação</div>
+      <span class="help">i<span class="tip"><b>Como ler:</b> cada linha é a média anual de uma área na CRE selecionada. Cores padrão CN / CH / LC / MT / Redação. Escala fixa 0–1000 (TRI).</span></span></h3>
+    <div class="coh"><span class="dot"></span> Uma linha por área · escala 0–1000 · cores padrão CN / CH / LC / MT / Redação</div>
     <div id="g_cre_areas" class="plot plot-unified-hover"></div>
   </div>
 
@@ -290,11 +285,22 @@
     </div>
   </div>
 
+  <!-- Passo 2b: município selecionado (KPIs + trajetória) -->
+  <div class="card" id="munDetailCard" style="margin-top:16px;display:none">
+    <h3 id="munDetailTitle">Município · <span></span>
+      <span class="help">i<span class="tip"><b>Como ler:</b> KPIs com notas de <span data-dyn="lastYear">2025</span> por área. Destaque vs <b>CRE</b>; linhas secundárias vs <b>MS</b> e vs <b>BR</b> (ambos: escolas estaduais, concluintes, não eliminados). Trajetória 2013–<span data-dyn="lastYear">2025</span> na escala 0–1000.</span></span></h3>
+    <div class="coh"><span class="dot"></span> Notas por área · <span data-dyn="lastYear">2025</span> · destaque vs CRE · secundário vs MS e vs BR · seta vs <span data-dyn="prevYear">2024</span></div>
+    <div id="munAreaKpis" class="drill-area-kpis kpis kpis-areas rank-area-kpis" aria-label="Notas por área do município em 2025"></div>
+    <h4 id="munTrajAreasTitle" class="drill-areas-title">Trajetória das médias por área</h4>
+    <div class="coh"><span class="dot"></span> Uma linha por área · escala 0–1000 · cores padrão CN / CH / LC / MT / Redação</div>
+    <div id="g_mun_areas" class="plot plot-unified-hover"></div>
+  </div>
+
   <!-- Passo 3: escolas 2025 -->
   <div class="card" id="escCard" style="margin-top:16px;display:none">
     <h3 id="escTitle">Escolas · 2025
-      <span class="help">i<span class="tip"><b>Como ler:</b> a tabela mostra o retrato de <span data-dyn="lastYear">2025</span> por escola. <b>Vermelho</b> = abaixo da média MS na área; <b>azul</b> = igual ou acima de MS; <b>verde</b> = igual ou acima do Brasil (esc. estaduais). <b>Part.</b> = participantes na população de referência; <b>Tx</b> = participantes ÷ concluintes da escola.</span></span></h3>
-    <div class="coh"><span class="dot"></span> Rede estadual · população de referência unificada · clique numa escola para ver o histórico</div>
+      <span class="help">i<span class="tip"><b>Como ler:</b> a <b>cor do número</b> compara com MS/Brasil (esc. estaduais): vermelho = abaixo de MS; azul = ≥ MS; verde = ≥ Brasil. Os selos <b>Mun</b>/<b>CRE</b> (▲/▼) comparam a escola com o município e a CRE — são independentes da cor vs MS. Linha com fundo rosa = média geral abaixo do município.</span></span></h3>
+    <div class="coh"><span class="dot"></span> Cor do número = vs MS/BR · selos Mun/CRE = território · clique numa escola para o histórico</div>
     <div class="chart-toolbar" role="group" aria-label="Filtros das escolas">
       <div class="chart-field">
         <label for="escZeroMode">Notas zero</label>
@@ -311,9 +317,12 @@
       <div class="nota" id="escHistNota"></div>
     </div>
     <div class="attbl-legend" id="escScoreLegend" aria-label="Legenda das cores das notas">
-      <span class="attbl-leg-item bad">Abaixo da média MS (esc. estaduais)</span>
-      <span class="attbl-leg-item ms-ok">Igual ou acima da média MS</span>
-      <span class="attbl-leg-item br-ok">Igual ou acima da média BR (esc. estaduais)</span>
+      <span class="attbl-leg-item bad">Cor: abaixo da média MS</span>
+      <span class="attbl-leg-item ms-ok">Cor: igual ou acima da média MS</span>
+      <span class="attbl-leg-item br-ok">Cor: igual ou acima da média BR</span>
+      <span class="attbl-leg-item cmp-above">Selo Mun/CRE ▲ = acima do território</span>
+      <span class="attbl-leg-item cmp-below">Selo Mun/CRE ▼ = abaixo do território</span>
+      <span class="attbl-leg-item below-mun">Linha destacada = geral abaixo do município</span>
     </div>
     <div class="scroll">
       <table class="attbl">
@@ -352,8 +361,9 @@
     <div class="dash-tabpanel" id="tab-distribuicao" role="tabpanel" aria-labelledby="tabbtn-distribuicao" hidden>
       <div class="tab-panel-inner">
       <h2 class="tab-panel-title">Distribuição do desempenho</h2>
-      <p class="tab-panel-sub">Boxplot, histograma e dispersão por área ao longo dos anos</p>
-      <div class="chart-toolbar" role="group" aria-label="Filtros da distribuição">
+      <p class="tab-panel-sub">Evolução da distribuição em MS · snapshot MS × Brasil (esc. estaduais) · escolas</p>
+
+      <div class="chart-toolbar dist-toolbar" role="group" aria-label="Filtros da distribuição">
         <div class="chart-field">
           <label for="distZeroMode">Notas zero</label>
           <select id="distZeroMode" class="dash-select" data-school-zero-mode aria-label="Filtrar distribuição por notas zero">
@@ -361,33 +371,50 @@
             <option value="no_zero">Excluir zeros</option>
           </select>
         </div>
-      </div>
-      <div class="dist-grid" style="margin-top:4px">
-        <div class="card card-box">
-          <h3>Boxplot por área · evolução <span data-dyn="range">2019–2025</span>
-            <span class="help">i<span class="tip"><b>Como ler:</b> cada mini-painel mostra a distribuição das notas de uma área, ano a ano. A linha dentro da caixa é a mediana; a caixa vai de Q1 a Q3; os bigodes até mínimo e máximo.</span></span></h3>
-          <div class="coh"><span class="dot"></span> Um painel por área · bigode inferior = mínima &gt; 0 (◆) · zeros ficam fora do whisker</div>
-          <div class="box-grid">
-            <div class="box-mini" data-area="CN"><h4><span class="box-swatch" style="background:var(--verde)"></span>Ciências Nat.</h4><div id="g_box_CN" class="plot plot-sm plot-unified-hover"></div></div>
-            <div class="box-mini" data-area="CH"><h4><span class="box-swatch" style="background:var(--dourado)"></span>Ciências Hum.</h4><div id="g_box_CH" class="plot plot-sm plot-unified-hover"></div></div>
-            <div class="box-mini" data-area="LC"><h4><span class="box-swatch" style="background:var(--azul-claro)"></span>Linguagens</h4><div id="g_box_LC" class="plot plot-sm plot-unified-hover"></div></div>
-            <div class="box-mini" data-area="MT"><h4><span class="box-swatch" style="background:var(--critico)"></span>Matemática</h4><div id="g_box_MT" class="plot plot-sm plot-unified-hover"></div></div>
-            <div class="box-mini" data-area="RED"><h4><span class="box-swatch" style="background:var(--roxo)"></span>Redação</h4><div id="g_box_RED" class="plot plot-sm plot-unified-hover"></div></div>
-          </div>
+        <div class="chart-field">
+          <label for="distArea">Área</label>
+          <select id="distArea" class="dash-select" aria-label="Área da distribuição"></select>
         </div>
+        <div class="chart-field">
+          <label for="distAno">Ano</label>
+          <select id="distAno" class="dash-select" aria-label="Ano do snapshot"></select>
+        </div>
+      </div>
+
+      <div class="dist-stack">
+        <div class="card card-box">
+          <h3 id="distBoxTitle">Evolução da distribuição · <span data-dyn="range">2013–2025</span>
+            <span class="help" tabindex="0">i<span class="tip">
+              <span class="tip-title">Como ler o boxplot</span>
+              <span class="tip-row">Um ano por linha · rede estadual de MS.</span>
+              <ul>
+                <li><b>Mediana</b> — nota do meio (metade acima, metade abaixo).</li>
+                <li><b>Caixa (Q1–Q3)</b> — 50% central das notas.</li>
+                <li><b>IQR</b> — Q3 − Q1 (dispersão; caixa mais larga = mais desigual).</li>
+                <li><b>Bigodes</b> — até o mín. &gt; 0 (◆) e o máximo.</li>
+                <li><b>Pontos cinza</b> — média do Brasil (esc. estaduais).</li>
+              </ul>
+              <span class="tip-row">Clique num ano para abrir o snapshot abaixo.</span>
+            </span></span></h3>
+          <div class="coh"><span class="dot"></span> Caixa = MS · ◆ mín&gt;0 · pontilhado = média BR · IQR = dispersão (Q3−Q1) · clique no ano → snapshot</div>
+          <div id="distAreaStrip" class="dist-area-strip" role="tablist" aria-label="Áreas"></div>
+          <p class="dist-focus-caption" id="distFocusCaption">—</p>
+          <div class="dist-box-stats" id="distBoxStats" aria-live="polite"></div>
+          <div id="g_box_focus" class="plot plot-box-focus plot-unified-hover"></div>
+        </div>
+
         <div class="card card-hist">
-          <h3>Histograma de notas
-            <span class="help">i<span class="tip"><b>Como ler:</b> distribuição percentual das notas em 6 faixas. A barra colorida = MS estadual; cinza = Brasil estadual. Use os filtros acima do gráfico.</span></span></h3>
-          <div class="chart-toolbar" role="group" aria-label="Filtros do histograma">
-            <div class="chart-field">
-              <label for="histArea">Área</label>
-              <select id="histArea" name="histArea" class="dash-select" aria-label="Área do histograma"></select>
-            </div>
-            <div class="chart-field">
-              <label for="histAno">Ano</label>
-              <select id="histAno" name="histAno" class="dash-select" aria-label="Ano do histograma"></select>
-            </div>
-          </div>
+          <h3 id="distSnapTitle">Snapshot MS × Brasil · <span></span>
+            <span class="help" tabindex="0">i<span class="tip">
+              <span class="tip-title">Snapshot MS × Brasil</span>
+              <span class="tip-row">Mesmo recorte: escolas estaduais · concluintes · não eliminados.</span>
+              <ul>
+                <li><b>KPIs</b> — mediana MS, média BR, gap e % em faixas altas (≥600).</li>
+                <li><b>Histograma</b> — % de alunos em cada faixa de nota (MS vs BR).</li>
+              </ul>
+            </span></span></h3>
+          <div class="coh"><span class="dot"></span> Escolas estaduais · concluintes · não eliminados · MS vs Brasil</div>
+          <div id="distSnapKpis" class="dist-snap-kpis" aria-label="Indicadores do snapshot"></div>
           <p class="hist-caption" id="histCaption">—</p>
           <div id="g_histograma" class="plot plot-hist plot-unified-hover"></div>
           <div class="hist-legend">
@@ -395,28 +422,31 @@
             <span><i class="hist-dot hist-dot-br"></i> Brasil estadual</span>
           </div>
         </div>
-      </div>
-      <div class="card card-disp" style="margin-top:16px">
-        <h3>Dispersão: nota vs participação por escola (<span data-dyn="lastYear">2025</span>)
-          <span class="help">i<span class="tip"><b>Como ler:</b> cada bolha é uma escola estadual de MS. <b>Eixo X</b> = taxa de participação efetiva; <b>Eixo Y</b> = média geral da escola. <b>Tamanho</b> = número de alunos. <b>Cor</b> = CRE. Linha vertical tracejada = 100% de participação; horizontal = média de MS. <b style="color:#B45309">Escolas com taxa &gt; 100% indicam que os dados de concluintes da SED incluem todas as modalidades (EJA, etc.).</b></span></span></h3>
-        <div class="coh"><span class="dot"></span> Bolha = escola · tamanho = alunos presentes · cor = CRE · clique na legenda para filtrar</div>
-        <div class="chart-toolbar disp-toolbar" role="group" aria-label="Filtros da dispersão">
-          <div class="chart-field">
-            <label for="dispCre">CRE</label>
-            <select id="dispCre" class="dash-select" aria-label="Filtrar dispersão por CRE"></select>
+
+        <div class="card card-disp">
+          <h3>Escolas · participação × desempenho (<span data-dyn="lastYear">2025</span>)
+            <span class="help" tabindex="0">i<span class="tip">
+              <span class="tip-title">Dispersão por escola</span>
+              <ul>
+                <li><b>Eixo X</b> — participação efetiva (%).</li>
+                <li><b>Eixo Y</b> — média geral.</li>
+                <li><b>Tamanho</b> — nº de participantes; <b>cor</b> — CRE.</li>
+                <li>Linha vertical = 100%; horizontais = médias MS e BR.</li>
+              </ul>
+              <span class="tip-row"><b>Participação &gt; 100%:</b> o denominador SED pode incluir EJA e outras modalidades.</span>
+            </span></span></h3>
+          <div class="coh"><span class="dot"></span> Bolha = escola · tamanho = alunos · cor = CRE · clique na legenda para filtrar</div>
+          <div class="chart-toolbar disp-toolbar" role="group" aria-label="Filtros da dispersão">
+            <div class="chart-field">
+              <label for="dispCre">CRE</label>
+              <select id="dispCre" class="dash-select" aria-label="Filtrar dispersão por CRE"></select>
+            </div>
           </div>
-          <div class="chart-field">
-            <label for="dispZeroMode">Notas zero</label>
-            <select id="dispZeroMode" class="dash-select" data-school-zero-mode aria-label="Filtrar dispersão por notas zero">
-              <option value="all">Incluir zeros</option>
-              <option value="no_zero">Excluir zeros</option>
-            </select>
-          </div>
+          <p class="disp-caption" id="dispCaption">—</p>
+          <div id="g_dispersao" class="plot plot-disp plot-controls-outside plot-unified-hover"></div>
+          <div class="disp-legend" id="dispLegend" aria-label="Legenda por CRE"></div>
+          <p class="disp-note">Participação &gt; 100%: o denominador SED pode incluir EJA e outras modalidades além do EM regular.</p>
         </div>
-        <p class="disp-caption" id="dispCaption">—</p>
-        <div id="g_dispersao" class="plot plot-disp plot-controls-outside plot-unified-hover"></div>
-        <div class="disp-legend" id="dispLegend" aria-label="Legenda por CRE"></div>
-        <p class="disp-note">Participação &gt; 100%: o denominador SED pode incluir EJA e outras modalidades além do EM regular.</p>
       </div>
       </div>
     </div>
@@ -491,9 +521,24 @@
   </div>
 
   <div class="card" style="margin-top:16px">
-    <h3>Pontos de atencao · CREs e municipios (<span data-dyn="rangeAscii">2019-2025</span>)
-      <span class="help">i<span class="tip"><b>Como ler:</b> tabela ordenada pelo maior risco (taxa de eliminacao). <b>Vermelho</b> = taxa acima da media estadual; <b>laranja</b> = taxa de sem nota acima da media. <b>Elim. multipla</b> = eliminados em 2+ areas objetivas; <b>Zeros multiplo</b> = zeros em 2+ areas; <b>Sem nota multipla</b> = sem nota em 2+ areas. <b>Clique</b> numa CRE para ver os municipios; clique num municipio para ver as escolas (<span data-dyn="lastYear">2025</span>).</span></span></h3>
-    <div class="coh"><span class="dot"></span> Ordenado por taxa de eliminação · clique CRE → municípios · clique município → escolas</div>
+    <h3>Pontos de atenção · CREs e municípios · <span id="integAttYearLabel" data-dyn="lastYear">2025</span>
+      <span class="help" tabindex="0">i<span class="tip">
+        <span class="tip-title">Snapshot por ano</span>
+        <span class="tip-row">Os números referem-se ao <b>ENEM do ano selecionado</b> no filtro — não são a soma nem a média do histórico.</span>
+        <ul>
+          <li><b>Vermelho</b> — taxa de eliminação acima da média estadual do mesmo ano.</li>
+          <li><b>Laranja</b> — taxa de sem nota (redação) acima da média estadual.</li>
+          <li><b>Elim. múltipla / zeros / sem nota múltipla</b> — ocorrências em 2+ áreas.</li>
+        </ul>
+        <span class="tip-row">Clique numa CRE para ver municípios; num município para ver escolas.</span>
+      </span></span></h3>
+    <div class="chart-toolbar integ-att-toolbar" role="group" aria-label="Filtro do ano">
+      <div class="chart-field">
+        <label for="integAttAno">Ano (ENEM)</label>
+        <select id="integAttAno" class="dash-select" aria-label="Ano dos pontos de atenção"></select>
+      </div>
+    </div>
+    <div class="coh"><span class="dot"></span> Dados do ENEM <span id="integAttYearCoh" data-dyn="lastYear">2025</span> · ordenado por taxa de eliminação · clique CRE → municípios → escolas</div>
     <div id="g_integ_table" class="plot"></div>
   </div>
       </div>
@@ -511,21 +556,21 @@
     </div>
   </div>
 
-  <div class="footer">Dados: microdado INEP + concluintes SED (<code>Concluintes EM <span data-dyn="fileRange">2019 a 2025</span>.xlsx</code>) · população de referência: presentes em ≥1 área objetiva, sem eliminação (<code>TP_PRESENCA = 2</code> ou <code>TP_STATUS_REDACAO = 2</code>) · redação em branco (<code>TP_STATUS_REDACAO = 4</code>) incluída · paleta SED/MS</div>
+  <div class="footer">Dados: microdado INEP + concluintes SED (<code>Concluintes EM <span data-dyn="fileRange">2019 a 2025</span>.xlsx</code>) · população de referência: presentes em ≥1 área objetiva, sem eliminação (<code>TP_PRESENCA = 2</code> ou <code>TP_STATUS_REDACAO = 2</code>) · redação em branco (<code>TP_STATUS_REDACAO = 4</code>) incluída</div>
 </div>
-<script defer src="js/config.js?v=8" charset="utf-8"></script>
-<script defer src="js/data-utils.js?v=3" charset="utf-8"></script>
+<script defer src="js/config.js?v=9" charset="utf-8"></script>
+<script defer src="js/data-utils.js?v=4" charset="utf-8"></script>
 <script defer src="js/chart-factory.js?v=7" charset="utf-8"></script>
 <script defer src="js/app-context.js?v=4" charset="utf-8"></script>
-<script defer src="js/area-detail.js?v=11" charset="utf-8"></script>
-<script defer src="js/ranking-escolas-section.js?v=12" charset="utf-8"></script>
+<script defer src="js/area-detail.js?v=12" charset="utf-8"></script>
+<script defer src="js/ranking-escolas-section.js?v=14" charset="utf-8"></script>
 <script defer src="js/kpi-section.js?v=9" charset="utf-8"></script>
-<script defer src="js/trajectory-section.js?v=10" charset="utf-8"></script>
-<script defer src="js/redes-section.js?v=6" charset="utf-8"></script>
-<script defer src="js/integridade-section.js?v=7" charset="utf-8"></script>
-<script defer src="js/stats-section.js?v=15" charset="utf-8"></script>
-<script defer src="js/cv-section.js?v=5" charset="utf-8"></script>
-<script defer src="js/drill-section.js?v=23" charset="utf-8"></script>
+<script defer src="js/trajectory-section.js?v=13" charset="utf-8"></script>
+<script defer src="js/redes-section.js?v=7" charset="utf-8"></script>
+<script defer src="js/integridade-section.js?v=9" charset="utf-8"></script>
+<script defer src="js/stats-section.js?v=30" charset="utf-8"></script>
+<script defer src="js/cv-section.js?v=6" charset="utf-8"></script>
+<script defer src="js/drill-section.js?v=29" charset="utf-8"></script>
 <script defer src="js/snapshot-section.js?v=4" charset="utf-8"></script>
 <script defer src="data-loader.js?v=4" charset="utf-8"></script>
 <script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>

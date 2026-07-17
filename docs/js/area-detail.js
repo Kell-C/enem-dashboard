@@ -288,7 +288,7 @@
       }
       const names = rows.map((r) => truncName(r.nome)).reverse();
       const notas = rows.map((r) => r.nota).reverse();
-      const full = rows.map((r) => [r.nome, r.mun || '—', r.cre || '—']).reverse();
+      const full = rows.map((r) => [r.nome, r.mun || '—', ED.creDisplay(r.cre) || '—']).reverse();
       Plotly.react(elId, [{
         y: names,
         x: notas,
