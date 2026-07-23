@@ -276,6 +276,13 @@
         showDetailView(true);
         renderHistChart(escola, refs);
         document.getElementById('rankEscDetailView')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (ED.track) {
+          ED.track('school_view', {
+            inep: key,
+            municipio: escola.municipio || null,
+            source: 'ranking',
+          });
+        }
       } else {
         closeDetailView();
         selectedInep = null;

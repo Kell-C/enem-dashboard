@@ -529,6 +529,7 @@
     if (shouldScroll) {
       document.getElementById('munRow').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
+    if (ED.track) ED.track('cre_select', { cre: name });
   }
 
   function selectMun(name) {
@@ -636,6 +637,7 @@
     renderSchoolHistory(name, SEL_ESC);
     const scrollTarget = document.getElementById('munDetailCard') || document.getElementById('escCard');
     if (scrollTarget) scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (ED.track) ED.track('mun_select', { municipio: name, cre: SEL_CRE || null });
   }
 
   function resetDrill() {
