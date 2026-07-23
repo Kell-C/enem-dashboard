@@ -46,7 +46,7 @@
       <button type="button" class="dash-tab" role="tab" id="tabbtn-redes" aria-selected="false" aria-controls="tab-redes" data-tab="tab-redes">Redes</button>
       <button type="button" class="dash-tab" role="tab" id="tabbtn-consistencia" aria-selected="false" aria-controls="tab-consistencia" data-tab="tab-consistencia">Consistência</button>
       <button type="button" class="dash-tab" role="tab" id="tabbtn-integridade" aria-selected="false" aria-controls="tab-integridade" data-tab="tab-integridade">Integridade</button>
-      <button type="button" class="dash-tab" role="tab" id="tabbtn-analytics" aria-selected="false" aria-controls="tab-analytics" data-tab="tab-analytics">Analítica</button>
+      <button type="button" class="dash-tab" role="tab" id="tabbtn-analytics" aria-selected="false" aria-controls="tab-analytics" data-tab="tab-analytics">Analytics</button>
     </div>
 
     <div class="dash-tabpanel is-active" id="tab-ranking" role="tabpanel" aria-labelledby="tabbtn-ranking">
@@ -502,12 +502,12 @@
 
     <div class="dash-tabpanel" id="tab-analytics" role="tabpanel" aria-labelledby="tabbtn-analytics" hidden>
       <div class="tab-panel-inner">
-        <h2 class="tab-panel-title">Analítica de visitantes</h2>
+        <h2 class="tab-panel-title">Analytics de visitantes</h2>
         <p class="tab-panel-sub">Perfil, navegação e comportamento no painel · dados agregados e sem identificação pessoal</p>
         <div id="anaStatus" class="ana-status ana-status-loading" hidden>Carregando…</div>
-        <div class="ana-toolbar" role="group" aria-label="Filtros da analítica">
+        <div class="ana-toolbar" role="group" aria-label="Filtros do analytics">
           <label>Período
-            <select id="anaPeriod" aria-label="Período da analítica">
+            <select id="anaPeriod" aria-label="Período do analytics">
               <option value="7">Últimos 7 dias</option>
               <option value="30" selected>Últimos 30 dias</option>
               <option value="90">Últimos 90 dias</option>
@@ -570,7 +570,7 @@
             </div>
           </div>
         </div>
-        <p class="nota">A coleta é anônima (ID de sessão no navegador). Buscas registram apenas o tamanho da consulta, não o texto digitado. Para ativar a coleta, sirva o painel com <code>bash abrir_painel.sh</code>.</p>
+        <p class="nota">A coleta é anônima (ID de sessão no navegador). Buscas registram apenas o tamanho da consulta, não o texto digitado. O painel publicado no <strong>GitHub Pages</strong> serve apenas arquivos estáticos — para coletar e ver analytics, rode localmente com <code>bash abrir_painel.sh</code> ou hospede o servidor Python (<code>scripts/serve_painel.py</code>) em outro host.</p>
       </div>
     </div>
 

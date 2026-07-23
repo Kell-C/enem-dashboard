@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Servidor estático do painel ENEM com coleta de analítica de visitantes."""
+"""Servidor estático do painel ENEM com coleta de analytics de visitantes."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ TAB_LABELS = {
     "tab-redes": "Redes",
     "tab-consistencia": "Consistência",
     "tab-integridade": "Integridade",
-    "tab-analytics": "Analítica",
+    "tab-analytics": "Analytics",
 }
 
 
@@ -340,14 +340,14 @@ class PainelHandler(SimpleHTTPRequestHandler):
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Servidor do painel ENEM com analítica")
+    parser = argparse.ArgumentParser(description="Servidor do painel ENEM com analytics")
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8765")))
     args = parser.parse_args()
 
     ensure_analytics_dir()
     server = ThreadingHTTPServer(("127.0.0.1", args.port), PainelHandler)
     print(f"Painel ENEM MS — http://127.0.0.1:{args.port}/index.html")
-    print(f"Analítica: dados em {EVENTS_FILE}")
+    print(f"Analytics: dados em {EVENTS_FILE}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

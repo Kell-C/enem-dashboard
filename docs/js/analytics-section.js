@@ -7,7 +7,7 @@
     'tab-redes': 'Redes',
     'tab-consistencia': 'Consistência',
     'tab-integridade': 'Integridade',
-    'tab-analytics': 'Analítica',
+    'tab-analytics': 'Analytics',
   };
 
   function esc(s) {
@@ -144,7 +144,7 @@
   }
 
   function loadSummary(days) {
-    showStatus('loading', 'Carregando dados de analítica…');
+    showStatus('loading', 'Carregando dados de analytics…');
     return fetch(`/api/analytics/summary?days=${days}`)
       .then((r) => {
         if (!r.ok) throw new Error('summary_failed');
@@ -166,7 +166,7 @@
         renderSessions(data.recent_sessions);
       })
       .catch(() => {
-        showStatus('warn', 'Coleta indisponível. Use bash abrir_painel.sh para ativar o servidor com analítica.');
+        showStatus('warn', 'Coleta indisponível neste host. No GitHub Pages só o painel estático é publicado — use bash abrir_painel.sh localmente ou hospede scripts/serve_painel.py em um servidor com Python.');
         renderKpis(null);
         ['anaDevices', 'anaReferrers', 'anaSchools', 'anaTerritory', 'anaFilters'].forEach((id) => {
           const node = document.getElementById(id);

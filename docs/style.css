@@ -458,7 +458,7 @@ details.more>summary::-webkit-details-marker{display:none}
 .attbl-leg-item.cmp-below::before{background:rgba(192,96,32,.45);border:1px solid #7A3E12}
 .rank-hist-plot{margin-top:4px}
 
-/* ---- analítica de visitantes ---- */
+/* ---- analytics de visitantes ---- */
 .ana-status{margin:0 0 14px;padding:10px 14px;border-radius:var(--radius-sm);font-size:12px;font-weight:600}
 .ana-status-loading{background:var(--accent-soft);color:var(--accent);border:1px solid rgba(10,77,140,.15)}
 .ana-status-ok{background:#EEF8F2;color:#1B6B45;border:1px solid rgba(46,173,110,.25)}

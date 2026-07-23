@@ -27,5 +27,5 @@ fi
 
 echo "http://127.0.0.1:$PORT/index.html"
 echo "(Execute a partir de enem-dashboard/, nao de docs/)"
-echo "Analitica de visitantes: aba Analitica no painel"
+echo "Analytics de visitantes: aba Analytics no painel"
 python3 "$ROOT/scripts/serve_painel.py" --port "$PORT"
