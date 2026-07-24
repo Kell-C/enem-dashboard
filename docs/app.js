@@ -57,10 +57,6 @@ function bootDashboard() {
 
   applyDynamicStaticText(ctx);
 
-  if (ED.initAnalytics) {
-    ED.initAnalytics((window.PAINEL_DATA || {}).meta || {});
-  }
-
   if (ED.initDashTabs) ED.initDashTabs();
 
   if (ED.initRankingEscolas) ED.initRankingEscolas();
@@ -73,7 +69,6 @@ function bootDashboard() {
   ED.lazyTabPanel('tab-redes', () => ED.initRedes(ctx));
   ED.lazyTabPanel('tab-consistencia', () => ED.initCv(ctx));
   ED.lazyTabPanel('tab-integridade', () => ED.initInteg(ctx));
-  ED.lazyTabPanel('tab-analytics', () => ED.initAnalyticsSection && ED.initAnalyticsSection());
   ED.lazyDetails('details.more', () => ED.initSnapshot(ctx));
 }
 

@@ -25,7 +25,7 @@ if [[ "$IN_USE" -gt 0 ]]; then
   exit 0
 fi
 
+cd "$DOCS"
 echo "http://127.0.0.1:$PORT/index.html"
 echo "(Execute a partir de enem-dashboard/, nao de docs/)"
-echo "Analitica de visitantes: aba Analitica no painel"
-python3 "$ROOT/scripts/serve_painel.py" --port "$PORT"
+python3 -m http.server "$PORT"
