@@ -49,17 +49,18 @@
       }, { y0: 0, y1: elimMax, annotate: false }), CFG);
     }
 
-    const sel = document.createElement('select');
-    sel.style.cssText = `margin-top:8px;padding:4px 8px;border:1px solid ${C.borda};border-radius:6px;font-size:12px;background:#fff;color:${C.azul}`;
-    ['Estadual', 'Federal', 'Municipal', 'Privada', 'Brasil-Estadual'].forEach((o) => {
-      const op = document.createElement('option');
-      op.value = o;
-      op.textContent = o === 'Brasil-Estadual' ? 'Brasil \u00b7 rede estadual' : o;
-      sel.appendChild(op);
-    });
-    sel.value = 'Estadual';
-    sel.onchange = () => renderElim(sel.value);
-    document.getElementById('g_integ_elim').parentNode.appendChild(sel);
+    const sel = document.getElementById('integRedeSel');
+    if (sel) {
+      sel.innerHTML = '';
+      ['Estadual', 'Federal', 'Municipal', 'Privada', 'Brasil-Estadual'].forEach((o) => {
+        const op = document.createElement('option');
+        op.value = o;
+        op.textContent = o === 'Brasil-Estadual' ? 'Brasil \u00b7 rede estadual' : o;
+        sel.appendChild(op);
+      });
+      sel.value = 'Estadual';
+      sel.onchange = () => renderElim(sel.value);
+    }
     renderElim('Estadual');
 
     const comps = INT.rede || {};

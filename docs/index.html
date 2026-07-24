@@ -527,9 +527,11 @@
       <h3 id="redeGapTitle">Distância por área · estadual − outras redes de MS (2025)
         <span class="help">i<span class="tip"><b>Como ler:</b> barras agrupadas por área mostram a diferença entre a rede estadual de MS e cada outra rede de MS no ano selecionado. <b>Negativo (abaixo de zero)</b> = estadual abaixo da rede; positivo = acima. Cor = rede.</span></span></h3>
       <div class="coh"><span class="dot"></span> Estadual menos a outra rede de MS · abaixo de zero = estadual atrás</div>
-      <div style="display:flex;gap:10px;margin:8px 0;align-items:center;flex-wrap:wrap">
-        <span style="font-size:12px;color:var(--muted)">Ano:</span>
-        <select id="redeGapAno" name="redeGapAno" aria-label="Ano da distância por rede" style="padding:4px 8px;border:1px solid var(--borda);border-radius:6px;font-size:12px"></select>
+      <div class="chart-toolbar" role="group" aria-label="Ano da distância por rede">
+        <div class="chart-field">
+          <label for="redeGapAno">Ano</label>
+          <select id="redeGapAno" name="redeGapAno" class="dash-select" aria-label="Ano da distância por rede"></select>
+        </div>
       </div>
       <div id="g_redegap" class="plot"></div>
       <div class="nota">A maior distância está ante a rede privada de MS; ante a municipal a comparação é frágil pelo N pequeno.</div>
@@ -577,7 +579,13 @@
     <div class="card card--chart card--insight">
       <h3>Eliminados por edição
         <span class="help">i<span class="tip"><b>O que é:</b> candidatos eliminados em alguma área (<code>TP_PRESENCA = 2</code>) ou na redação (<code>TP_STATUS_REDACAO = 2</code>, anulada). <b>Como ler:</b> barras empilhadas por motivo (CN/CH/LC/MT + redação anulada). A linha vermelha = taxa total de eliminação sobre o compareceu (%). <code>TP_STATUS_REDACAO = 4</code> (em branco) entra em “sem nota”, não aqui.</span></span></h3>
-      <div class="coh"><span class="dot"></span> Barras = eliminados absolutos · linha = % do compareceu · seletor de rede abaixo</div>
+      <div class="coh"><span class="dot"></span> Barras = eliminados absolutos · linha = % do compareceu · filtro de rede acima do gráfico</div>
+      <div class="chart-toolbar" role="group" aria-label="Filtro de rede">
+        <div class="chart-field">
+          <label for="integRedeSel">Rede</label>
+          <select id="integRedeSel" class="dash-select" aria-label="Rede para eliminados por edição"></select>
+        </div>
+      </div>
       <div id="g_integ_elim" class="plot"></div>
       <div class="nota">No recorte de <span data-dyn="rangeText">2019 a 2025</span>, Linguagens e Ciências Humanas concentram boa parte das eliminações, sem predominância consistente da redação.</div>
     </div>
@@ -636,8 +644,8 @@
 <script defer src="js/ranking-escolas-section.js?v=15" charset="utf-8"></script>
 <script defer src="js/kpi-section.js?v=9" charset="utf-8"></script>
 <script defer src="js/trajectory-section.js?v=15" charset="utf-8"></script>
-<script defer src="js/redes-section.js?v=7" charset="utf-8"></script>
-<script defer src="js/integridade-section.js?v=9" charset="utf-8"></script>
+<script defer src="js/redes-section.js?v=8" charset="utf-8"></script>
+<script defer src="js/integridade-section.js?v=10" charset="utf-8"></script>
 <script defer src="js/stats-section.js?v=30" charset="utf-8"></script>
 <script defer src="js/cv-section.js?v=6" charset="utf-8"></script>
 <script defer src="js/drill-section.js?v=29" charset="utf-8"></script>
