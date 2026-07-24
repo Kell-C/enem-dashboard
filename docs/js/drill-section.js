@@ -529,6 +529,7 @@
     if (shouldScroll) {
       document.getElementById('munRow').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
+    if (ED.track) ED.track('cre_select', { cre: name });
   }
 
   function selectMun(name) {
@@ -628,6 +629,13 @@
         SEL_ESC = s.id || null;
         setSelectedSchoolRow(SEL_ESC);
         renderSchoolHistory(name, SEL_ESC);
+        if (ED.track) {
+          ED.track('school_view', {
+            inep: s.id || null,
+            municipio: name,
+            source: 'territorio',
+          });
+        }
       };
       body.appendChild(tr);
     });
@@ -636,6 +644,7 @@
     renderSchoolHistory(name, SEL_ESC);
     const scrollTarget = document.getElementById('munDetailCard') || document.getElementById('escCard');
     if (scrollTarget) scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (ED.track) ED.track('mun_select', { municipio: name, cre: SEL_CRE || null });
   }
 
   function resetDrill() {

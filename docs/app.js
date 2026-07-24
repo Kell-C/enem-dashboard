@@ -57,6 +57,10 @@ function bootDashboard() {
 
   applyDynamicStaticText(ctx);
 
+  if (ED.initGa4) {
+    ED.initGa4((window.PAINEL_DATA || {}).meta || {});
+  }
+
   if (ED.initDashTabs) ED.initDashTabs();
 
   if (ED.initRankingEscolas) ED.initRankingEscolas();

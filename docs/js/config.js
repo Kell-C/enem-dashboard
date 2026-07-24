@@ -158,5 +158,9 @@
   ED.Config = {
     C, BL, CFG, CFG_INTERACTIVE, AREAKEYS, AREANOME, AREANOME_FULL, ACOR,
     HOVER, XSPIKE, YSPIKE, PANDEMIA, layoutLineChart, layoutUnifiedY, hoverAreaTemplate, hoverAreaScore, mergePandemia,
+    /** Google Analytics 4 — Measurement ID (G-XXXXXXXXXX). Alternativa: meta name="enem-ga4-id" em index.html */
+    GA4_MEASUREMENT_ID: '',
+    /** true = não envia eventos em localhost (recomendado em desenvolvimento) */
+    GA4_SKIP_LOCALHOST: true,
   };
 })(window.EnemDash = window.EnemDash || {});
