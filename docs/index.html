@@ -28,7 +28,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A4D8C'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='14' font-family='Segoe UI,sans-serif' fill='white'%3EMS%3C/text%3E%3C/svg%3E" />
-<link rel="stylesheet" href="style.css?v=40">
+<link rel="stylesheet" href="style.css?v=41">
 </head>
 <body class="dash-loading">
 <div class="wrap">
@@ -100,14 +100,22 @@
         </div>
         <div class="rank-table-wrap">
           <table class="rank-table" aria-describedby="rankEscMeta">
+            <colgroup>
+              <col class="rk-col-pos">
+              <col class="rk-col-nome">
+              <col class="rk-col-num">
+              <col class="rk-col-rank">
+              <col class="rk-col-rank">
+              <col class="rk-col-rank">
+            </colgroup>
             <thead>
               <tr>
-                <th>#</th>
-                <th>Escola</th>
-                <th>Média</th>
-                <th>Município</th>
-                <th>MS</th>
-                <th>Brasil</th>
+                <th class="rk-th-pos" scope="col">#</th>
+                <th class="rk-th-nome" scope="col">Escola</th>
+                <th class="rk-th-num" scope="col">Média</th>
+                <th class="rk-th-rank" scope="col">Município</th>
+                <th class="rk-th-rank" scope="col">MS</th>
+                <th class="rk-th-rank" scope="col">Brasil</th>
               </tr>
             </thead>
             <tbody id="rankEscBody">
@@ -625,7 +633,7 @@
 <script defer src="js/chart-factory.js?v=8" charset="utf-8"></script>
 <script defer src="js/app-context.js?v=4" charset="utf-8"></script>
 <script defer src="js/area-detail.js?v=12" charset="utf-8"></script>
-<script defer src="js/ranking-escolas-section.js?v=14" charset="utf-8"></script>
+<script defer src="js/ranking-escolas-section.js?v=15" charset="utf-8"></script>
 <script defer src="js/kpi-section.js?v=9" charset="utf-8"></script>
 <script defer src="js/trajectory-section.js?v=15" charset="utf-8"></script>
 <script defer src="js/redes-section.js?v=7" charset="utf-8"></script>

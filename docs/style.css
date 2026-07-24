@@ -453,11 +453,17 @@ details.more>summary::-webkit-details-marker{display:none}
 .rank-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin:0 0 14px;padding:12px 14px;background:var(--bg-subtle);border-radius:var(--radius-sm);border:1px solid var(--borda)}
 .rank-toolbar label{font-size:10px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.04em;display:flex;flex-direction:column;gap:4px}
 .rank-toolbar input,.rank-toolbar select{padding:9px 12px;border:1px solid var(--borda);border-radius:10px;font-size:13px;background:#fff;min-width:160px;color:var(--txt)}
-.rank-table-wrap{overflow:auto;max-height:min(68vh,640px);border:1px solid var(--borda);border-radius:var(--radius-sm);background:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
-.rank-table{width:100%;border-collapse:collapse;font-size:13px}
+.rank-table-wrap{overflow:auto;max-height:min(68vh,640px);border:1px solid var(--borda);border-radius:var(--radius-sm);background:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.8);scrollbar-gutter:stable}
+.rank-table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+.rank-table .rk-col-pos{width:52px}
+.rank-table .rk-col-num{width:88px}
+.rank-table .rk-col-rank{width:96px}
 .rank-table thead th{position:sticky;top:0;background:linear-gradient(180deg,#fff,#F5F8FC);z-index:2;padding:13px 12px;text-align:left;
   font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--txt2);
   border-bottom:2px solid var(--borda);white-space:nowrap}
+.rank-table thead th.rk-th-pos{width:52px;text-align:center}
+.rank-table thead th.rk-th-num,
+.rank-table thead th.rk-th-rank{text-align:right}
 .rank-table tbody td{padding:13px 12px;border-bottom:1px solid var(--bg-subtle);vertical-align:middle;color:var(--txt)}
 .rank-table tbody tr:nth-child(even){background:rgba(248,250,252,.7)}
 .rank-table tbody tr:last-child td{border-bottom:none}
@@ -580,13 +586,14 @@ details.more>summary::-webkit-details-marker{display:none}
 .rank-table tbody tr.rk-top-3{background:linear-gradient(90deg,rgba(205,127,50,.12),rgba(255,255,255,0) 55%)!important}
 .rank-table tbody tr.rk-top-1 .rk-pos,
 .rank-table tbody tr.rk-top-2 .rk-pos,
-.rank-table tbody tr.rk-top-3 .rk-pos{
+.rank-table tbody tr.rk-top-3 .rk-pos{text-align:center;vertical-align:middle}
+.rank-table .rk-pos-badge{
   display:inline-flex;align-items:center;justify-content:center;
-  width:34px;height:34px;border-radius:50%;font-size:15px;font-weight:900;margin:0 auto
+  width:34px;height:34px;border-radius:50%;font-size:15px;font-weight:900;line-height:1
 }
-.rank-table tbody tr.rk-top-1 .rk-pos{background:linear-gradient(145deg,#F2C230,#C9920A);color:#fff;box-shadow:0 2px 8px rgba(201,146,10,.35)}
-.rank-table tbody tr.rk-top-2 .rk-pos{background:linear-gradient(145deg,#D8DCE3,#A8B0BC);color:#fff;box-shadow:0 2px 8px rgba(120,130,145,.25)}
-.rank-table tbody tr.rk-top-3 .rk-pos{background:linear-gradient(145deg,#E0985A,#B87333);color:#fff;box-shadow:0 2px 8px rgba(184,115,51,.28)}
+.rank-table tbody tr.rk-top-1 .rk-pos-badge{background:linear-gradient(145deg,#F2C230,#C9920A);color:#fff;box-shadow:0 2px 8px rgba(201,146,10,.35)}
+.rank-table tbody tr.rk-top-2 .rk-pos-badge{background:linear-gradient(145deg,#D8DCE3,#A8B0BC);color:#fff;box-shadow:0 2px 8px rgba(120,130,145,.25)}
+.rank-table tbody tr.rk-top-3 .rk-pos-badge{background:linear-gradient(145deg,#E0985A,#B87333);color:#fff;box-shadow:0 2px 8px rgba(184,115,51,.28)}
 .rank-table tbody tr.rk-top-1 .rk-nome .b{color:#8A6A00}
 .rank-table tbody tr.rk-highlight.rk-top-1,
 .rank-table tbody tr.rk-highlight.rk-top-2,
