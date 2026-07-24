@@ -115,6 +115,7 @@
     const panels = root.querySelectorAll('.dash-tabpanel');
 
     function showPanel(id) {
+      root.dataset.activeTab = id;
       tabs.forEach((tab) => {
         const on = tab.dataset.tab === id;
         tab.classList.toggle('is-active', on);
@@ -142,6 +143,7 @@
     const initial = root.querySelector('.dash-tab.is-active')?.dataset.tab
       || panels[0]?.id;
     if (initial) showPanel(initial);
+    else if (panels[0]?.id) root.dataset.activeTab = panels[0].id;
 
     if (!root.dataset.sticky) {
       root.dataset.sticky = '1';
