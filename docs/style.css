@@ -130,8 +130,8 @@ body{margin:0;background:linear-gradient(165deg,var(--bg-app) 0%,var(--bg-app2) 
 .kpi-areas-section{margin:0 0 var(--card-gap);padding:16px 18px 18px;background:var(--bg-card);border:1px solid var(--borda);
   border-radius:var(--radius);box-shadow:var(--shadow)}
 .kpi-areas-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
-.kpi-areas-title{margin:0;font-size:15px;font-weight:800;color:var(--azul-esc)}
-.kpi-areas-hint{margin:0;font-size:11px;color:var(--muted);max-width:42ch;text-align:right}
+.kpi-areas-title{margin:0;font-size:16px;font-weight:800;color:var(--azul-esc)}
+.kpi-areas-hint{margin:0;font-size:var(--text-xs);color:var(--muted);max-width:42ch;text-align:right}
 @media (max-width:900px){.kpi-areas-hint{text-align:left;max-width:none}}
 @media (max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}.kpis-areas{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:700px){.kpis-areas{grid-template-columns:repeat(2,1fr)}}
