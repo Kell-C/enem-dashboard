@@ -3,7 +3,7 @@
     azul: '#0C4A7A', azulEsc: '#082F4F', brasil: '#7A8FA6', verde: '#268A58',
     laranja: '#D96A1A', dourado: '#C99210', critico: '#C23D36', roxo: '#5E4588',
     azulC: '#4BA3EF', muted: '#5A6D82', borda: '#C5D4E6', subtle: '#F5F8FC',
-    plotBg: '#F8FAFD', txt: '#0B1F33', txt2: '#2E4058',
+    plotBg: '#EEF4FA', txt: '#0B1F33', txt2: '#2E4058',
   };
   const BL = {
     paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: C.plotBg,
