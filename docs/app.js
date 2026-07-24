@@ -74,6 +74,8 @@ function bootDashboard() {
   ED.lazyTabPanel('tab-consistencia', () => ED.initCv(ctx));
   ED.lazyTabPanel('tab-integridade', () => ED.initInteg(ctx));
   ED.lazyDetails('details.more', () => ED.initSnapshot(ctx));
+
+  document.body.classList.remove('dash-loading');
 }
 
 function tryBootDashboard() {

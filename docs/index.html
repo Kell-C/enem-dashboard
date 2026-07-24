@@ -25,9 +25,9 @@
 </script>
 <title>Painel ENEM MS — 2019-2025</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A4D8C'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='14' font-family='Segoe UI,sans-serif' fill='white'%3EMS%3C/text%3E%3C/svg%3E" />
-<link rel="stylesheet" href="style.css?v=37">
+<link rel="stylesheet" href="style.css?v=38">
 </head>
-<body>
+<body class="dash-loading">
 <div class="wrap">
 
   <header class="page-header">
@@ -39,9 +39,9 @@
         <p class="page-sub">Rede estadual · <span data-dyn="range">2019–2025</span> · população de referência: escolas estaduais</p>
       </div>
       <div class="page-header-badges" aria-label="Recorte do painel">
-        <span class="hdr-badge hdr-badge-primary"><strong id="hdrMedBadge">—</strong><small>Média geral</small></span>
-        <span class="hdr-badge"><strong id="hdrPartBadge">—</strong><small>Participação</small></span>
-        <span class="hdr-badge"><strong id="hdrRankBadge">—</strong><small>Posição MS</small></span>
+        <span class="hdr-badge hdr-badge-primary"><strong id="hdrMedBadge" class="skeleton skeleton-val">—</strong><small>Média geral</small></span>
+        <span class="hdr-badge"><strong id="hdrPartBadge" class="skeleton skeleton-val">—</strong><small>Participação</small></span>
+        <span class="hdr-badge"><strong id="hdrRankBadge" class="skeleton skeleton-val">—</strong><small>Posição MS</small></span>
       </div>
     </div>
   </header>
@@ -70,12 +70,12 @@
 
     <div class="dash-tabpanel is-active" id="tab-ranking" role="tabpanel" aria-labelledby="tabbtn-ranking">
       <div id="rankEscSection" class="tab-panel-inner">
-      <div class="rank-panel-head">
-        <div class="rank-panel-head-row">
+      <div class="rank-panel-head tab-hero">
+        <div class="rank-panel-head-row tab-hero-row">
           <h2>Desempenho e posição</h2>
-          <span class="rank-enem-badge" id="rankEscYearBadge">ENEM 2025</span>
+          <span class="rank-enem-badge tab-hero-badge" id="rankEscYearBadge">ENEM 2025</span>
         </div>
-        <p id="rankEscMeta">Carregando…</p>
+        <p id="rankEscMeta"><span class="skeleton skeleton-text">Carregando ranking…</span></p>
       </div>
       <p class="rank-scope-note">Posições entre <strong>escolas estaduais</strong> (município, MS e Brasil). Fonte: microdados INEP / ENEM.</p>
       <div id="rankEscListView" class="rank-list-view">
@@ -107,7 +107,14 @@
                 <th>Brasil</th>
               </tr>
             </thead>
-            <tbody id="rankEscBody"></tbody>
+            <tbody id="rankEscBody">
+              <tr class="skeleton-row" aria-hidden="true"><td><span class="sk w25"></span></td><td><span class="sk w60"></span></td><td><span class="sk w25"></span></td><td><span class="sk w40"></span></td><td><span class="sk w25"></span></td><td><span class="sk w25"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td><span class="sk w25"></span></td><td><span class="sk w60"></span></td><td><span class="sk w25"></span></td><td><span class="sk w40"></span></td><td><span class="sk w25"></span></td><td><span class="sk w25"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td><span class="sk w25"></span></td><td><span class="sk w60"></span></td><td><span class="sk w25"></span></td><td><span class="sk w40"></span></td><td><span class="sk w25"></span></td><td><span class="sk w25"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td><span class="sk w25"></span></td><td><span class="sk w60"></span></td><td><span class="sk w25"></span></td><td><span class="sk w40"></span></td><td><span class="sk w25"></span></td><td><span class="sk w25"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td><span class="sk w25"></span></td><td><span class="sk w60"></span></td><td><span class="sk w25"></span></td><td><span class="sk w40"></span></td><td><span class="sk w25"></span></td><td><span class="sk w25"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td><span class="sk w25"></span></td><td><span class="sk w60"></span></td><td><span class="sk w25"></span></td><td><span class="sk w40"></span></td><td><span class="sk w25"></span></td><td><span class="sk w25"></span></td></tr>
+            </tbody>
           </table>
         </div>
         <div class="attbl-legend rank-score-legend" aria-label="Legenda das cores da média">
@@ -136,29 +143,36 @@
 
     <div class="dash-tabpanel" id="tab-panorama" role="tabpanel" aria-labelledby="tabbtn-panorama" hidden>
       <div class="tab-panel-inner">
+  <div class="tab-hero">
+    <div class="tab-hero-row">
+      <h2>Indicadores da rede estadual</h2>
+      <span class="tab-hero-badge tab-hero-badge--muted">Panorama · <span data-dyn="lastYear">2025</span></span>
+    </div>
+    <p class="tab-hero-sub">Médias, participação, posição nacional e evolução <span data-dyn="range">2019–2025</span> · escolas estaduais de MS</p>
+  </div>
   <section class="kpi-hero" aria-label="Indicadores principais">
     <div class="kpi-hero-main">
       <div class="kpi kpi-primary">
         <p class="lbl">Média geral · estadual <span class="help">i<span class="tip"><b>O que é:</b> média das notas disponíveis (CN, CH, LC, MT, Redação) dos participantes na população de referência. <b>Como ler:</b> o número mostra <span data-dyn="lastYear">2025</span>; a mini-linha acompanha a trajetória <span data-dyn="range">2019–2025</span>. Subir é melhor.</span></span></p>
-        <div class="rowv"><div class="val" id="kpiMedVal">—</div><div id="s_media" class="spark spark-lg"></div></div>
-        <div class="vsub" id="kpiMedSub">—</div>
+        <div class="rowv"><div class="val skeleton skeleton-val lg" id="kpiMedVal">—</div><div id="s_media" class="spark spark-lg skeleton skeleton-spark lg"></div></div>
+        <div class="vsub" id="kpiMedSub"><span class="skeleton skeleton-text sm">—</span></div>
       </div>
       <div class="kpi kpi-primary kpi-accent-green">
         <p class="lbl">Participação <span class="help">i<span class="tip"><b>O que é:</b> participantes na população de referência ÷ <b>concluintes</b> do EM (matrícula SED). Inclui quem concluiu ao menos uma área objetiva, sem eliminação.</span></span></p>
-        <div class="rowv"><div class="val" id="kpiPartVal">—</div><div id="s_part" class="spark spark-lg"></div></div>
-        <div class="vsub" id="kpiPartSub">—</div>
+        <div class="rowv"><div class="val skeleton skeleton-val lg" id="kpiPartVal">—</div><div id="s_part" class="spark spark-lg skeleton skeleton-spark lg"></div></div>
+        <div class="vsub" id="kpiPartSub"><span class="skeleton skeleton-text sm">—</span></div>
       </div>
     </div>
     <div class="kpi-hero-side">
       <div class="kpi">
         <p class="lbl">Posição nacional <span class="help">i<span class="tip"><b>O que é:</b> posição de MS entre as 27 redes estaduais, pela média geral. <b>Como ler:</b> 1º = melhor; a linha cai quando MS perde posições.</span></span></p>
-        <div class="rowv"><div class="val val-sm" id="kpiRankVal">—</div><div id="s_rank" class="spark"></div></div>
-        <div class="vsub" id="kpiRankSub">—</div>
+        <div class="rowv"><div class="val val-sm skeleton skeleton-val" id="kpiRankVal">—</div><div id="s_rank" class="spark skeleton skeleton-spark"></div></div>
+        <div class="vsub" id="kpiRankSub"><span class="skeleton skeleton-text sm">—</span></div>
       </div>
       <div class="kpi" id="kpiGapCard">
         <p class="lbl">Defasagem vs Brasil (esc. estaduais) <span class="help">i<span class="tip"><b>O que é:</b> média de MS menos média do Brasil entre <b>estudantes de escolas estaduais</b> (mesma população de referência). <b>Como ler:</b> negativo = abaixo do Brasil; aproximar-se de zero é melhor.</span></span></p>
-        <div class="rowv"><div class="val val-sm" id="kpiGapVal">—</div><div id="s_gap" class="spark"></div></div>
-        <div class="vsub" id="kpiGapSub">—</div>
+        <div class="rowv"><div class="val val-sm skeleton skeleton-val" id="kpiGapVal">—</div><div id="s_gap" class="spark skeleton skeleton-spark"></div></div>
+        <div class="vsub" id="kpiGapSub"><span class="skeleton skeleton-text sm">—</span></div>
       </div>
       <div class="kpi kpi-extra">
         <p class="lbl">Taxa de eliminação <span class="help">i<span class="tip"><b>O que é:</b> % dos que compareceram em ao menos uma área objetiva e foram eliminados em alguma prova (<code>TP_PRESENCA = 2</code>) ou na redação (<code>TP_STATUS_REDACAO = 2</code>, anulada). <b>Como ler:</b> quanto menor, melhor. <code>TP_STATUS_REDACAO = 4</code> (em branco) não conta como eliminação.</span></span></p>
@@ -252,8 +266,13 @@
 
     <div class="dash-tabpanel" id="tab-territorio" role="tabpanel" aria-labelledby="tabbtn-territorio" hidden>
       <div class="tab-panel-inner">
-      <h2 class="tab-panel-title">Detalhamento territorial</h2>
-      <p class="tab-panel-sub">Coordenadoria → Município → Escola (tabela <span data-dyn="lastYear">2025</span> + histórico da escola)</p>
+      <div class="tab-hero">
+        <div class="tab-hero-row">
+          <h2>Detalhamento territorial</h2>
+          <span class="tab-hero-badge tab-hero-badge--muted">CRE · Município · Escola</span>
+        </div>
+        <p class="tab-hero-sub">Coordenadoria → Município → Escola (tabela <span data-dyn="lastYear">2025</span> + histórico da escola)</p>
+      </div>
 
   <div class="bread" id="bread"></div>
 
@@ -380,8 +399,13 @@
 
     <div class="dash-tabpanel" id="tab-distribuicao" role="tabpanel" aria-labelledby="tabbtn-distribuicao" hidden>
       <div class="tab-panel-inner">
-      <h2 class="tab-panel-title">Distribuição do desempenho</h2>
-      <p class="tab-panel-sub">Evolução da distribuição em MS · snapshot MS × Brasil (esc. estaduais) · escolas</p>
+      <div class="tab-hero">
+        <div class="tab-hero-row">
+          <h2>Distribuição do desempenho</h2>
+          <span class="tab-hero-badge tab-hero-badge--muted">Histograma · Boxplot</span>
+        </div>
+        <p class="tab-hero-sub">Evolução da distribuição em MS · snapshot MS × Brasil (esc. estaduais) · escolas</p>
+      </div>
 
       <div class="chart-toolbar dist-toolbar" role="group" aria-label="Filtros da distribuição">
         <div class="chart-field">
@@ -473,8 +497,13 @@
 
     <div class="dash-tabpanel" id="tab-redes" role="tabpanel" aria-labelledby="tabbtn-redes" hidden>
       <div class="tab-panel-inner">
-      <h2 class="tab-panel-title">Comparação entre redes de MS</h2>
-      <p class="tab-panel-sub">Mesma população de referência · redes do estado de MS</p>
+      <div class="tab-hero">
+        <div class="tab-hero-row">
+          <h2>Comparação entre redes de MS</h2>
+          <span class="tab-hero-badge tab-hero-badge--muted">Estadual · Municipal · Privada</span>
+        </div>
+        <p class="tab-hero-sub">Mesma população de referência · redes do estado de MS</p>
+      </div>
   <div class="grid2" style="margin-top:4px">
     <div class="card">
       <h3>Média geral por rede de MS · <span data-dyn="range">2019–2025</span>
@@ -500,8 +529,13 @@
 
     <div class="dash-tabpanel" id="tab-consistencia" role="tabpanel" aria-labelledby="tabbtn-consistencia" hidden>
       <div class="tab-panel-inner">
-      <h2 class="tab-panel-title">Consistência e variação</h2>
-      <p class="tab-panel-sub">Desvio padrão e coeficiente de variação por área ao longo do tempo</p>
+      <div class="tab-hero">
+        <div class="tab-hero-row">
+          <h2>Consistência e variação</h2>
+          <span class="tab-hero-badge tab-hero-badge--muted">DP · CV</span>
+        </div>
+        <p class="tab-hero-sub">Desvio padrão e coeficiente de variação por área ao longo do tempo</p>
+      </div>
       <div class="grid2" style="margin-top:4px">
         <div class="card">
           <h3>Evolução do desvio padrão por área
@@ -521,8 +555,13 @@
 
     <div class="dash-tabpanel" id="tab-integridade" role="tabpanel" aria-labelledby="tabbtn-integridade" hidden>
       <div class="tab-panel-inner">
-      <h2 class="tab-panel-title">Integridade &amp; qualidade da participação</h2>
-      <p class="tab-panel-sub">Eliminados, notas zeradas e sem nota · por edição, área, rede e território</p>
+      <div class="tab-hero">
+        <div class="tab-hero-row">
+          <h2>Integridade &amp; qualidade da participação</h2>
+          <span class="tab-hero-badge tab-hero-badge--muted">Eliminação · Sem nota</span>
+        </div>
+        <p class="tab-hero-sub">Eliminados, notas zeradas e sem nota · por edição, área, rede e território</p>
+      </div>
   <div class="grid2" style="margin-top:4px">
     <div class="card">
       <h3>Eliminados por edição
