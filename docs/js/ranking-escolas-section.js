@@ -311,8 +311,11 @@
         const msUf = e.estaduaisMs?.uf;
         const brEst = e.estaduaisBr?.brasil;
         const medCls = scoreCellClass(e.mediaGeral, refs.refMs, refs.refBr);
+        const posInner = i < 3
+          ? `<span class="rk-pos-badge">${i + 1}</span>`
+          : String(i + 1);
         return `<tr class="rk-row${tr}${topCls}${sel}" data-inep="${e.coInep}" tabindex="0" role="button" aria-label="Ver detalhes de ${escHtml(e.nome)}">
-        <td class="rk-pos">${i + 1}</td>
+        <td class="rk-pos">${posInner}</td>
         <td class="rk-nome"><span class="b">${escHtml(e.nome)}</span><span class="rk-sub">${escHtml(e.municipio)} · INEP ${e.coInep}</span></td>
         <td class="rk-num ${medCls}">${fmtNum(e.mediaGeral)}</td>
         <td class="rk-rank ${badgeClass(msMun, e.estaduaisMs?.totalMunicipio)}">${fmtRank(msMun, e.estaduaisMs?.totalMunicipio)}</td>
