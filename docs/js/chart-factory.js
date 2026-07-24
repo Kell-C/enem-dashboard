@@ -142,6 +142,13 @@
     const initial = root.querySelector('.dash-tab.is-active')?.dataset.tab
       || panels[0]?.id;
     if (initial) showPanel(initial);
+
+    if (!root.dataset.sticky) {
+      root.dataset.sticky = '1';
+      const syncScroll = () => root.classList.toggle('is-scrolled', window.scrollY > 80);
+      window.addEventListener('scroll', syncScroll, { passive: true });
+      syncScroll();
+    }
   };
 
   ED.lazyDetails = function (selector, fn) {

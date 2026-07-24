@@ -1,13 +1,13 @@
 (function (ED) {
   const C = {
-    azul: '#0A4D8C', azulEsc: '#053B71', brasil: '#8A9BB0', verde: '#2EAD6E',
-    laranja: '#F07A28', dourado: '#F2C230', critico: '#D6453D', roxo: '#6B4A9F',
-    azulC: '#3BA4E8', muted: '#5A718A', borda: '#CDD8E8', subtle: '#F2F6FB',
-    txt: '#0A2540', txt2: '#2A4562',
+    azul: '#0C4A7A', azulEsc: '#082F4F', brasil: '#7A8FA6', verde: '#268A58',
+    laranja: '#D96A1A', dourado: '#C99210', critico: '#C23D36', roxo: '#5E4588',
+    azulC: '#4BA3EF', muted: '#5A6D82', borda: '#C5D4E6', subtle: '#F5F8FC',
+    plotBg: '#F8FAFD', txt: '#0B1F33', txt2: '#2E4058',
   };
   const BL = {
-    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: '#FFFFFF',
-    font: { family: 'Segoe UI, system-ui, sans-serif', size: 12, color: C.txt2 },
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: C.plotBg,
+    font: { family: '"Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif', size: 12, color: C.txt2 },
     margin: { l: 46, r: 28, t: 8, b: 34 },
   };
   const CFG = {
@@ -47,8 +47,8 @@
   };
   const HOVER = {
     bgcolor: '#FFFFFF',
-    bordercolor: '#CDD8E8',
-    font: { family: 'Segoe UI, system-ui, sans-serif', size: 13, color: '#0A2540' },
+    bordercolor: C.borda,
+    font: { family: '"Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif', size: 13, color: C.txt },
     align: 'left',
   };
   const XSPIKE = {
