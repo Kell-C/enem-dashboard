@@ -5,6 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <!-- Google Analytics 4: preencha com G-XXXXXXXXXX (ou defina GA4_MEASUREMENT_ID em js/config.js) -->
 <meta name="enem-ga4-id" content="G-2ZJDR0L0TR" />
+<script>
+(function () {
+  var host = location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') return;
+  var id = (document.querySelector('meta[name="enem-ga4-id"]') || {}).content;
+  id = id && id.trim();
+  if (!id || !/^G-[A-Z0-9]+$/i.test(id)) return;
+  var s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(id);
+  document.head.appendChild(s);
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  window.gtag = gtag;
+  gtag('js', new Date());
+  gtag('config', id);
+})();
+</script>
 <title>Painel ENEM MS — 2019-2025</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A4D8C'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='14' font-family='Segoe UI,sans-serif' fill='white'%3EMS%3C/text%3E%3C/svg%3E" />
 <link rel="stylesheet" href="style.css?v=37">
@@ -574,7 +592,7 @@
 <script defer src="js/cv-section.js?v=6" charset="utf-8"></script>
 <script defer src="js/drill-section.js?v=29" charset="utf-8"></script>
 <script defer src="js/snapshot-section.js?v=4" charset="utf-8"></script>
-<script defer src="js/ga4.js?v=1" charset="utf-8"></script>
+<script defer src="js/ga4.js?v=2" charset="utf-8"></script>
 <script defer src="data-loader.js?v=4" charset="utf-8"></script>
 <script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script defer src="app.js?v=5" charset="utf-8"></script>
