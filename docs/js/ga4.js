@@ -11,6 +11,7 @@
 
   let enabled = false;
   let measurementId = null;
+  let listenersBound = false;
 
   function readMeasurementId() {
     const meta = document.querySelector('meta[name="enem-ga4-id"]');
@@ -22,7 +23,7 @@
   }
 
   function isLocalHost() {
-    return ['localhost', '127.0.0.1', ''].includes(window.location.hostname);
+    return ['localhost', '127.0.0.1'].includes(window.location.hostname);
   }
 
   function sanitizeParams(props) {
@@ -37,27 +38,15 @@
     return out;
   }
 
-  function loadGtag(id) {
-    window.dataLayer = window.dataLayer || [];
-    window.gtag = window.gtag || function gtag() { window.dataLayer.push(arguments); };
-    window.gtag('js', new Date());
-    window.gtag('config', id, {
-      send_page_view: false,
-      cookie_flags: 'SameSite=None;Secure',
-    });
-
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`;
-    document.head.appendChild(script);
-  }
-
   function track(event, props) {
     if (!enabled || typeof window.gtag !== 'function') return;
     window.gtag('event', event, sanitizeParams(props));
   }
 
   function bindGlobalListeners() {
+    if (listenersBound) return;
+    listenersBound = true;
+
     document.addEventListener('dash-tab-show', (e) => {
       const tab = e.detail?.id;
       if (!tab) return;
@@ -101,7 +90,7 @@
     }, true);
   }
 
-  ED.initGa4 = function (meta) {
+  function activate(meta) {
     measurementId = readMeasurementId();
     if (!measurementId) return;
 
@@ -109,19 +98,27 @@
     if (skipLocal && isLocalHost()) return;
 
     if (!window.location.protocol.startsWith('http')) return;
+    if (typeof window.gtag !== 'function') return;
 
-    loadGtag(measurementId);
     enabled = true;
     bindGlobalListeners();
 
-    track('page_view', {
-      page_title: document.title,
-      page_location: window.location.href,
-      data_version: meta?.gerado_em || null,
-    });
-  };
+    if (meta?.gerado_em) {
+      track('dashboard_ready', {
+        data_version: meta.gerado_em,
+      });
+    }
+  }
+
+  ED.initGa4 = activate;
 
   ED.track = track;
   ED.ga4Enabled = function () { return enabled; };
   ED.ga4MeasurementId = function () { return measurementId; };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => activate());
+  } else {
+    activate();
+  }
 })(window.EnemDash = window.EnemDash || {});
