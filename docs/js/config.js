@@ -162,5 +162,9 @@
     GA4_MEASUREMENT_ID: '',
     /** true = não envia eventos em localhost (recomendado em desenvolvimento) */
     GA4_SKIP_LOCALHOST: true,
+    /** true = envia só traffic_class=external (owner/cursor/bot ficam de fora) */
+    GA4_ONLY_EXTERNAL: false,
+    /** false = também envia eventos classificados como bot (com tag traffic_class=bot) */
+    GA4_SKIP_BOTS: false,
   };
 })(window.EnemDash = window.EnemDash || {});
