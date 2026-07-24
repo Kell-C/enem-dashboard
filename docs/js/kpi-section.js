@@ -1,5 +1,7 @@
 (function (ED) {
   ED.initKpi = function (ctx) {
+    document.querySelectorAll('#kpiMedVal,#kpiPartVal,#kpiRankVal,#kpiGapVal,#kpiElimVal,#s_media,#s_part,#s_rank,#s_gap,#s_elim,#hdrMedBadge,#hdrPartBadge,#hdrRankBadge')
+      .forEach((el) => el?.classList.remove('skeleton', 'skeleton-val', 'skeleton-text', 'skeleton-spark', 'lg', 'sm'));
     const {
       ANOS, LAST_YEAR, PREV_YEAR, MED_MS, TX_MS, RANK_MS, GAP, DATA, FMT, NF, trendTag,
       AREAKEYS, AREANOME, ACOR,

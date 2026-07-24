@@ -207,8 +207,12 @@
     const data = window.RANKING_ESCOLAS_2025;
     const host = document.getElementById('rankEscSection');
     if (!host) return;
+    const meta = host.querySelector('#rankEscMeta');
+    const tbody = host.querySelector('#rankEscBody');
     if (!data || !Array.isArray(data.escolas) || !data.escolas.length) {
       host.querySelector('.rank-empty')?.classList.add('on');
+      if (tbody) tbody.innerHTML = '';
+      if (meta) meta.textContent = 'Dados de ranking não disponíveis.';
       return;
     }
 
@@ -216,7 +220,6 @@
     let selectedInep = null;
     const refs = panelRefMedias();
 
-    const meta = host.querySelector('#rankEscMeta');
     const yearBadge = host.querySelector('#rankEscYearBadge');
     if (yearBadge) yearBadge.textContent = `ENEM ${data.ano}`;
     const scopeNote = host.querySelector('.rank-scope-note');
@@ -234,7 +237,6 @@
     const munSel = host.querySelector('#rankEscMunicipio');
     const search = host.querySelector('#rankEscSearch');
     const sortSel = host.querySelector('#rankEscSort');
-    const tbody = host.querySelector('#rankEscBody');
     const closeBtn = document.getElementById('rankEscHistClose');
     const allRows = data.escolas;
 
@@ -304,11 +306,12 @@
       tbody.innerHTML = sorted.map((e, i) => {
         const sel = String(e.coInep) === selectedInep ? ' rk-row-sel' : '';
         const tr = i < TOP_N ? ' rk-highlight' : '';
+        const topCls = i === 0 ? ' rk-top-1' : i === 1 ? ' rk-top-2' : i === 2 ? ' rk-top-3' : '';
         const msMun = e.estaduaisMs?.municipio;
         const msUf = e.estaduaisMs?.uf;
         const brEst = e.estaduaisBr?.brasil;
         const medCls = scoreCellClass(e.mediaGeral, refs.refMs, refs.refBr);
-        return `<tr class="rk-row${tr}${sel}" data-inep="${e.coInep}" tabindex="0" role="button" aria-label="Ver detalhes de ${escHtml(e.nome)}">
+        return `<tr class="rk-row${tr}${topCls}${sel}" data-inep="${e.coInep}" tabindex="0" role="button" aria-label="Ver detalhes de ${escHtml(e.nome)}">
         <td class="rk-pos">${i + 1}</td>
         <td class="rk-nome"><span class="b">${escHtml(e.nome)}</span><span class="rk-sub">${escHtml(e.municipio)} · INEP ${e.coInep}</span></td>
         <td class="rk-num ${medCls}">${fmtNum(e.mediaGeral)}</td>
