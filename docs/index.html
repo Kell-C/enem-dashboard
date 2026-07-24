@@ -46,7 +46,6 @@
       <button type="button" class="dash-tab" role="tab" id="tabbtn-redes" aria-selected="false" aria-controls="tab-redes" data-tab="tab-redes">Redes</button>
       <button type="button" class="dash-tab" role="tab" id="tabbtn-consistencia" aria-selected="false" aria-controls="tab-consistencia" data-tab="tab-consistencia">Consistência</button>
       <button type="button" class="dash-tab" role="tab" id="tabbtn-integridade" aria-selected="false" aria-controls="tab-integridade" data-tab="tab-integridade">Integridade</button>
-      <button type="button" class="dash-tab" role="tab" id="tabbtn-analytics" aria-selected="false" aria-controls="tab-analytics" data-tab="tab-analytics">Analítica</button>
     </div>
 
     <div class="dash-tabpanel is-active" id="tab-ranking" role="tabpanel" aria-labelledby="tabbtn-ranking">
@@ -500,80 +499,6 @@
       </div>
     </div>
 
-    <div class="dash-tabpanel" id="tab-analytics" role="tabpanel" aria-labelledby="tabbtn-analytics" hidden>
-      <div class="tab-panel-inner">
-        <h2 class="tab-panel-title">Analítica de visitantes</h2>
-        <p class="tab-panel-sub">Perfil, navegação e comportamento no painel · dados agregados e sem identificação pessoal</p>
-        <div id="anaStatus" class="ana-status ana-status-loading" hidden>Carregando…</div>
-        <div class="ana-toolbar" role="group" aria-label="Filtros da analítica">
-          <label>Período
-            <select id="anaPeriod" aria-label="Período da analítica">
-              <option value="7">Últimos 7 dias</option>
-              <option value="30" selected>Últimos 30 dias</option>
-              <option value="90">Últimos 90 dias</option>
-            </select>
-          </label>
-          <button type="button" id="anaRefresh">Atualizar</button>
-        </div>
-        <div class="ana-kpis kpis" id="anaKpis" aria-label="Indicadores de visitantes"></div>
-        <div class="card" style="margin-bottom:14px">
-          <h3>Visitas por dia</h3>
-          <div class="coh"><span class="dot"></span> Page views registrados no período</div>
-          <div id="g_ana_daily" class="plot"></div>
-        </div>
-        <div class="ana-grid">
-          <div class="card">
-            <h3>Seções mais acessadas</h3>
-            <div id="g_ana_tabs" class="plot"></div>
-          </div>
-          <div class="card">
-            <h3>Horários de acesso</h3>
-            <div id="g_ana_hourly" class="plot"></div>
-          </div>
-          <div class="card">
-            <h3>Dispositivos</h3>
-            <div id="anaDevices"></div>
-          </div>
-          <div class="card">
-            <h3>Origem do tráfego</h3>
-            <div id="anaReferrers"></div>
-          </div>
-          <div class="card">
-            <h3>Escolas mais consultadas</h3>
-            <div id="anaSchools"></div>
-          </div>
-          <div class="card">
-            <h3>Território explorado</h3>
-            <div id="anaTerritory"></div>
-          </div>
-          <div class="card">
-            <h3>Filtros utilizados</h3>
-            <div id="anaFilters"></div>
-          </div>
-          <div class="card">
-            <h3>Sessões recentes</h3>
-            <div class="ana-table-wrap">
-              <table class="ana-table" aria-label="Sessões recentes">
-                <thead>
-                  <tr>
-                    <th>Início</th>
-                    <th>Dispositivo</th>
-                    <th>Navegador</th>
-                    <th>Duração</th>
-                    <th>Abas</th>
-                    <th>Eventos</th>
-                    <th>Tipo</th>
-                  </tr>
-                </thead>
-                <tbody id="anaSessionsBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        <p class="nota">A coleta é anônima (ID de sessão no navegador). Buscas registram apenas o tamanho da consulta, não o texto digitado. Para ativar a coleta, sirva o painel com <code>bash abrir_painel.sh</code>.</p>
-      </div>
-    </div>
-
     <div class="dash-tabpanel" id="tab-integridade" role="tabpanel" aria-labelledby="tabbtn-integridade" hidden>
       <div class="tab-panel-inner">
       <h2 class="tab-panel-title">Integridade &amp; qualidade da participação</h2>
@@ -647,8 +572,6 @@
 <script defer src="js/cv-section.js?v=6" charset="utf-8"></script>
 <script defer src="js/drill-section.js?v=29" charset="utf-8"></script>
 <script defer src="js/snapshot-section.js?v=4" charset="utf-8"></script>
-<script defer src="js/analytics.js?v=1" charset="utf-8"></script>
-<script defer src="js/analytics-section.js?v=1" charset="utf-8"></script>
 <script defer src="data-loader.js?v=4" charset="utf-8"></script>
 <script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script defer src="app.js?v=5" charset="utf-8"></script>
