@@ -1,6 +1,6 @@
 # Enem Dashboard — pipeline_dashboard/enem-dashboard
 
-Breve guia de setup e execução local do painel ENEM MS (2019–2024).
+Breve guia de setup e execução local do painel ENEM MS (2013–2024).
 
 Pré-requisitos
 - Python 3.10+
