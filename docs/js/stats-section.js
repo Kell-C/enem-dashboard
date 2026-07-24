@@ -590,7 +590,7 @@
       corumba: '#2E7D32',       /* verde */
       corumbá: '#2E7D32',
       coxim: '#EF6C00',         /* laranja — longe do verde de Corumbá */
-      'ponta pora': '#AD1457',  /* magenta — longe do azul da SED */
+      'ponta pora': '#AD1457',  /* magenta — longe do índigo principal */
       'ponta porã': '#AD1457',
       aquidauana: '#1565C0',    /* azul */
       dourados: '#6A1B9A',      /* roxo */
