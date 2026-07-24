@@ -1,4 +1,6 @@
 (function (ED) {
+  const AREA_TAG = { CN: 'CN', CH: 'CH', LC: 'LC', MT: 'MT', RED: 'Red.' };
+
   ED.initKpi = function (ctx) {
     document.querySelectorAll('#kpiMedVal,#kpiPartVal,#kpiRankVal,#kpiGapVal,#kpiElimVal,#s_media,#s_part,#s_rank,#s_gap,#s_elim,#hdrMedBadge,#hdrPartBadge,#hdrRankBadge')
       .forEach((el) => el?.classList.remove('skeleton', 'skeleton-val', 'skeleton-text', 'skeleton-spark', 'lg', 'sm'));
@@ -83,13 +85,20 @@
     const msArea = DATA.msArea || {};
     if (areaHost && AREAKEYS) {
       const rangeLabel = `${ANOS[0]}\u2013${LAST_YEAR}`;
+      areaHost.className = 'area-chips';
       areaHost.innerHTML = AREAKEYS.map((k) =>
-        `<div class="kpi kpi-area" data-area="${k}" style="--area-accent:${ACOR[k]}">
-          <div class="kpi-area-bar" aria-hidden="true"></div>
-          <p class="lbl">${AREANOME[k]} <span class="help">i<span class="tip"><b>O que é:</b> média de ${AREANOME[k]} na população de referência (rede estadual MS). Comparação com Brasil = média entre estudantes de <b>escolas estaduais</b>. <b>Como ler:</b> valor de ${LAST_YEAR}; a linha acompanha ${rangeLabel}.</span></span></p>
-          <div class="rowv"><div class="val" id="kpiAreaVal_${k}">\u2014</div><div id="s_area_${k}" class="spark"></div></div>
-          <div class="vsub" id="kpiAreaSub_${k}">\u2014</div>
-        </div>`
+        `<article class="area-chip" data-area="${k}" style="--chip-color:${ACOR[k]}">
+          <header class="area-chip-head">
+            <span class="area-chip-tag">${AREA_TAG[k] || k}</span>
+            <span class="area-chip-name">${AREANOME[k]}</span>
+          </header>
+          <div class="area-chip-body">
+            <span class="area-chip-val" id="kpiAreaVal_${k}">\u2014</span>
+            <div class="area-chip-spark spark" id="s_area_${k}"></div>
+          </div>
+          <p class="area-chip-sub" id="kpiAreaSub_${k}">\u2014</p>
+          <span class="help area-chip-help">i<span class="tip"><b>O que é:</b> média de ${AREANOME[k]} na população de referência (rede estadual MS). Comparação com Brasil = média entre estudantes de <b>escolas estaduais</b>. <b>Como ler:</b> valor de ${LAST_YEAR}; a linha acompanha ${rangeLabel}.</span></span>
+        </article>`
       ).join('');
 
       AREAKEYS.forEach((k) => {
@@ -112,12 +121,11 @@
         const subEl = document.getElementById(`kpiAreaSub_${k}`);
         if (valEl) {
           valEl.textContent = val != null ? FMT(val) : '\u2014';
-          valEl.style.color = ACOR[k];
         }
         if (subEl) {
           let sub = `${LAST_YEAR} \u00b7 <span class="${t.cls}">${t.txt}</span> vs ${baseYear}`;
           if (peak != null) sub += ` \u00b7 pico ${FMT(peak)} em ${peakYear}`;
-          if (gapBr != null) sub += ` \u00b7 ${gapBr >= 0 ? '+' : ''}${FMT(gapBr)} vs Brasil (esc. estaduais)`;
+          if (gapBr != null) sub += ` \u00b7 ${gapBr >= 0 ? '+' : ''}${FMT(gapBr)} vs BR`;
           subEl.innerHTML = sub;
         }
         ED.spark(ctx, `s_area_${k}`, series, ACOR[k]);
@@ -125,18 +133,29 @@
     }
 
     const f = DATA.funil2024 && DATA.funil2024.Estadual;
-    if (f) {
+    const funnelHost = document.getElementById('fstages');
+    if (f && funnelHost) {
       const nf = (n) => n.toLocaleString('pt-BR');
-      const pc = (n) => `${(100 * n / f.concluintes).toFixed(0)}%`;
+      const base = f.concluintes || 1;
+      const pc = (n) => `${(100 * n / base).toFixed(0)}%`;
       const st = [
         { k: 'Concluintes do EM', v: f.concluintes, p: 'universo da rede (matr\u00edcula)', hl: false },
         { k: 'Inscritos no ENEM', v: f.inscritos, p: `${pc(f.inscritos)} dos concluintes`, hl: false },
         { k: 'Presentes em ao menos uma \u00e1rea', v: f.presentes, p: `${pc(f.presentes)} dos concluintes`, hl: false },
-        { k: 'Participantes presentes nos 2 dias', v: f.presentes_2d, p: `${pc(f.presentes_2d)} dos concluintes \u00b7 sem elimina\u00e7\u00e3o`, hl: true },
+        { k: 'Participantes nos 2 dias', v: f.presentes_2d, p: `${pc(f.presentes_2d)} dos concluintes \u00b7 sem elimina\u00e7\u00e3o`, hl: true },
       ];
-      document.getElementById('fstages').innerHTML = st.map((s) =>
-        `<div class="fstage${s.hl ? ' hl' : ''}"><div class="fk">${s.k}</div><div class="fv">${nf(s.v)}</div><div class="fp">${s.p}</div></div>`
-      ).join('');
+      funnelHost.className = 'fstages fstages-funnel';
+      funnelHost.innerHTML = st.map((s) => {
+        const pct = Math.round((100 * s.v) / base);
+        const flex = Math.max(0.55, s.v / base).toFixed(3);
+        return `<div class="fstage${s.hl ? ' hl' : ''}" style="--stage-flex:${flex};--stage-pct:${pct}">
+          <div class="fstage-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>
+          ${s.hl ? '<span class="fstage-badge">Participa\u00e7\u00e3o efetiva</span>' : ''}
+          <div class="fk">${s.k}</div>
+          <div class="fv">${nf(s.v)}</div>
+          <div class="fp">${s.p}</div>
+        </div>`;
+      }).join('');
     }
   };
 })(window.EnemDash);

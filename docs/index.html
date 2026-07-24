@@ -24,8 +24,11 @@
 })();
 </script>
 <title>Painel ENEM MS — 2019-2025</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A4D8C'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='14' font-family='Segoe UI,sans-serif' fill='white'%3EMS%3C/text%3E%3C/svg%3E" />
-<link rel="stylesheet" href="style.css?v=38">
+<link rel="stylesheet" href="style.css?v=39">
 </head>
 <body class="dash-loading">
 <div class="wrap">
@@ -59,13 +62,13 @@
 
   <div class="dash-tabs" id="dashTabs">
     <div class="dash-tablist" role="tablist" aria-label="Seções do painel">
-      <button type="button" class="dash-tab is-active" role="tab" id="tabbtn-ranking" aria-selected="true" aria-controls="tab-ranking" data-tab="tab-ranking">Ranking das escolas</button>
-      <button type="button" class="dash-tab" role="tab" id="tabbtn-panorama" aria-selected="false" aria-controls="tab-panorama" data-tab="tab-panorama">Indicadores</button>
-      <button type="button" class="dash-tab" role="tab" id="tabbtn-territorio" aria-selected="false" aria-controls="tab-territorio" data-tab="tab-territorio">Território</button>
-      <button type="button" class="dash-tab" role="tab" id="tabbtn-distribuicao" aria-selected="false" aria-controls="tab-distribuicao" data-tab="tab-distribuicao">Distribuição</button>
-      <button type="button" class="dash-tab" role="tab" id="tabbtn-redes" aria-selected="false" aria-controls="tab-redes" data-tab="tab-redes">Redes</button>
-      <button type="button" class="dash-tab" role="tab" id="tabbtn-consistencia" aria-selected="false" aria-controls="tab-consistencia" data-tab="tab-consistencia">Consistência</button>
-      <button type="button" class="dash-tab" role="tab" id="tabbtn-integridade" aria-selected="false" aria-controls="tab-integridade" data-tab="tab-integridade">Integridade</button>
+      <button type="button" class="dash-tab is-active" role="tab" id="tabbtn-ranking" aria-selected="true" aria-controls="tab-ranking" data-tab="tab-ranking"><svg class="dash-tab-icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M3 4h14v2H3V4zm0 4h9v2H3V8zm0 4h11v2H3v-2zm0 4h7v2H3v-2z"/></svg>Ranking das escolas</button>
+      <button type="button" class="dash-tab" role="tab" id="tabbtn-panorama" aria-selected="false" aria-controls="tab-panorama" data-tab="tab-panorama"><svg class="dash-tab-icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M3 14h3V8H3v6zm5 0h3V4H8v10zm5 0h3V11h-3v3z"/></svg>Indicadores</button>
+      <button type="button" class="dash-tab" role="tab" id="tabbtn-territorio" aria-selected="false" aria-controls="tab-territorio" data-tab="tab-territorio"><svg class="dash-tab-icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 2a6 6 0 00-6 6c0 4.5 6 10 6 10s6-5.5 6-10a6 6 0 00-6-6zm0 8a2 2 0 110-4 2 2 0 010 4z"/></svg>Território</button>
+      <button type="button" class="dash-tab" role="tab" id="tabbtn-distribuicao" aria-selected="false" aria-controls="tab-distribuicao" data-tab="tab-distribuicao"><svg class="dash-tab-icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M4 15V9h2v6H4zm4 0V5h2v10H8zm4 0V7h2v8h-2zm4 0V3h2v12h-2z"/></svg>Distribuição</button>
+      <button type="button" class="dash-tab" role="tab" id="tabbtn-redes" aria-selected="false" aria-controls="tab-redes" data-tab="tab-redes"><svg class="dash-tab-icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 2l2.5 4.5L17 7l-3.5 3.5L14 15l-4-2.5L6 15l.5-4.5L3 7l4.5-.5L10 2z"/></svg>Redes</button>
+      <button type="button" class="dash-tab" role="tab" id="tabbtn-consistencia" aria-selected="false" aria-controls="tab-consistencia" data-tab="tab-consistencia"><svg class="dash-tab-icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M3 14l3-4 3 2 5-7 3 2v7H3z"/></svg>Consistência</button>
+      <button type="button" class="dash-tab" role="tab" id="tabbtn-integridade" aria-selected="false" aria-controls="tab-integridade" data-tab="tab-integridade"><svg class="dash-tab-icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 2l7 3v5c0 4.4-3 7.8-7 8-4-.2-7-3.6-7-8V5l7-3zm0 2.2L5 6.3V10c0 3.2 2.2 5.8 5 6 2.8-.2 5-2.8 5-6V6.3l-5-2.1z"/></svg>Integridade</button>
     </div>
 
     <div class="dash-tabpanel is-active" id="tab-ranking" role="tabpanel" aria-labelledby="tabbtn-ranking">
@@ -187,7 +190,7 @@
       <h3 class="kpi-areas-title">Médias por área · <span data-dyn="lastYear">2025</span></h3>
       <p class="kpi-areas-hint">Comparativo com Brasil (escolas estaduais) · clique em Indicadores → Trajetória para detalhar ano a ano</p>
     </div>
-    <div class="kpis kpis-areas" id="kpiAreas" aria-label="Médias por área de conhecimento · rede estadual MS"></div>
+    <div class="area-chips" id="kpiAreas" aria-label="Médias por área de conhecimento · rede estadual MS"></div>
   </section>
 
   <!-- FUNIL DINÂMICO -->
@@ -197,7 +200,7 @@
       <span class="help">i<span class="tip"><b>O que é:</b> do universo de <b>concluintes do EM</b> (matrícula da rede) até os participantes na população de referência. A <b>participação efetiva</b> = quem concluiu ao menos uma área objetiva, sem eliminação, ÷ concluintes. Fonte: microdados ENEM <span data-dyn="lastYear">2025</span> + matrícula SED/MS.</span></span>
       <span class="fsub">extraído dos microdados ENEM <span data-dyn="lastYear">2025</span></span>
     </div>
-    <div class="fstages" id="fstages"></div>
+    <div class="fstages fstages-funnel" id="fstages"></div>
   </div>
 
   <details class="secacc secacc-primary" id="trajSection" open>
